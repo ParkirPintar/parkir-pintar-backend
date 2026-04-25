@@ -1,0 +1,135 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reservation-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - reservation-service
+  http:
+    - timeout: 5s
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: reservation-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: billing-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - billing-service
+  http:
+    - timeout: 5s
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: billing-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: payment-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - payment-service
+  http:
+    - timeout: 10s
+      retries:
+        attempts: 2
+        perTryTimeout: 5s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: payment-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: search-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - search-service
+  http:
+    - timeout: 3s
+      retries:
+        attempts: 2
+        perTryTimeout: 1s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: search-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: presence-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - presence-service
+  http:
+    - timeout: 30s
+      route:
+        - destination:
+            host: presence-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: notification-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - notification-service
+  http:
+    - timeout: 5s
+      retries:
+        attempts: 2
+        perTryTimeout: 2s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: notification-service
+            port:
+              number: 50051
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: analytics-service
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - analytics-service
+  http:
+    - timeout: 5s
+      retries:
+        attempts: 2
+        perTryTimeout: 2s
+        retryOn: unavailable,reset
+      route:
+        - destination:
+            host: analytics-service
+            port:
+              number: 50051

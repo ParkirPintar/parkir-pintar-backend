@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-gateway
+  namespace: parkir-pintar
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kong-gateway
+  template:
+    metadata:
+      labels:
+        app: kong-gateway
+        version: v1
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.6
+          ports:
+            - containerPort: 8000
+              name: proxy
+            - containerPort: 8443
+              name: proxy-ssl
+            - containerPort: 8001
+              name: admin
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_PROXY_LISTEN
+              value: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: "/etc/kong/kong.yml"
+          volumeMounts:
+            - name: kong-config
+              mountPath: /etc/kong
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: kong-config
+          configMap:
+            name: kong-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-gateway
+  namespace: parkir-pintar
+spec:
+  selector:
+    app: kong-gateway
+  ports:
+    - name: proxy
+      port: 80
+      targetPort: 8000
+    - name: proxy-ssl
+      port: 443
+      targetPort: 8443
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: parkir-pintar
+data:
+  kong.yml: |
+    _format_version: "3.0"
+
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify: [exp]
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local
+
+    services:
+      - name: search
+        url: grpc://search-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: search-route
+            paths: ["/v1/availability"]
+            methods: ["GET"]
+
+      - name: reservation
+        url: grpc://reservation-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: reservation-route
+            paths: ["/v1/reservations", "/v1/spots"]
+            methods: ["POST", "DELETE"]
+
+      - name: billing
+        url: grpc://billing-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: checkout-route
+            paths: ["/v1/checkout"]
+            methods: ["POST"]
+
+      - name: payment
+        url: grpc://payment-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: payment-route
+            paths: ["/v1/payments"]
+            methods: ["POST"]
+
+      - name: presence
+        url: grpc://presence-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: presence-route
+            paths: ["/v1/presence"]

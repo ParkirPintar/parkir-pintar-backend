@@ -1,0 +1,65 @@
+syntax = "proto3";
+package reservation;
+option go_package = "github.com/parkir-pintar/proto/reservation";
+
+service ReservationService {
+  rpc CreateReservation(CreateReservationRequest) returns (ReservationResponse);
+  rpc HoldSpot(HoldSpotRequest) returns (HoldSpotResponse);
+  rpc CancelReservation(CancelReservationRequest) returns (CancelReservationResponse);
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse);
+  rpc GetReservation(GetReservationRequest) returns (ReservationResponse);
+}
+
+message CreateReservationRequest {
+  string mode = 1;           // SYSTEM_ASSIGNED | USER_SELECTED
+  string vehicle_type = 2;
+  string spot_id = 3;        // required if USER_SELECTED
+  string idempotency_key = 4;
+}
+
+message ReservationResponse {
+  string reservation_id = 1;
+  string spot_id = 2;
+  string mode = 3;
+  string status = 4;
+  int64 booking_fee = 5;
+  string confirmed_at = 6;
+  string expires_at = 7;
+}
+
+message HoldSpotRequest {
+  string spot_id = 1;
+  string driver_id = 2;
+}
+
+message HoldSpotResponse {
+  string spot_id = 1;
+  string held_until = 2;
+}
+
+message CancelReservationRequest {
+  string reservation_id = 1;
+}
+
+message CancelReservationResponse {
+  string reservation_id = 1;
+  string status = 2;
+  int64 cancellation_fee = 3;
+}
+
+message CheckInRequest {
+  string reservation_id = 1;
+  string actual_spot_id = 2;
+}
+
+message CheckInResponse {
+  string reservation_id = 1;
+  string status = 2;
+  string checkin_at = 3;
+  bool wrong_spot = 4;
+  int64 penalty_applied = 5;
+}
+
+message GetReservationRequest {
+  string reservation_id = 1;
+}

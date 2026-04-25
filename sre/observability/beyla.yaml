@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beyla
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: beyla
+  template:
+    metadata:
+      labels:
+        app: beyla
+    spec:
+      hostPID: true
+      containers:
+        - name: beyla
+          image: grafana/beyla:latest
+          securityContext:
+            privileged: true
+          env:
+            - name: BEYLA_OPEN_PORT
+              value: "50051,8080"
+            - name: BEYLA_SERVICE_NAME
+              value: "parkirpintar"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/beyla
+      volumes:
+        - name: config
+          configMap:
+            name: beyla-config

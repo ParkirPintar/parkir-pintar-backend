@@ -1,0 +1,1063 @@
+openapi: 3.0.3
+info:
+  title: ParkirPintar API
+  description: |
+    Smart Parking Marketplace — REST API exposed via Kong Gateway.
+
+    **Auth**: All endpoints (except `/v1/auth/token`) require `Authorization: Bearer <jwt>`.
+
+    **Idempotency**: POST endpoints that mutate state accept an `Idempotency-Key` header (UUID).
+    Duplicate requests with the same key return the original response.
+
+    **Pricing Summary**:
+    - Booking fee: 5.000 IDR (charged on confirm)
+    - Hourly: ceil(duration_hours) × 5.000 IDR
+    - Overnight (crosses midnight): +20.000 IDR flat
+    - Wrong spot penalty: 200.000 IDR
+    - Cancel ≤ 2 min: 0 IDR
+    - Cancel > 2 min: 5.000 IDR
+    - No-show (> 1 hour): 10.000 IDR
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8000
+    description: Local (Kong Gateway)
+  - url: https://api.parkir-pintar.id
+    description: Production
+
+tags:
+  - name: Auth
+    description: Driver authentication — license plate + vehicle type → JWT
+  - name: Search
+    description: Spot availability queries
+  - name: Reservation
+    description: Create, hold, cancel reservations
+  - name: Check-in
+    description: Driver check-in (correct spot or wrong spot penalty)
+  - name: Billing & Checkout
+    description: Checkout, invoice, pricing
+  - name: Payment
+    description: QRIS payment processing and settlement
+  - name: Presence
+    description: Location streaming / geofence check-in
+
+# ---------------------------------------------------------------------------
+# SECURITY
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # -------------------------------------------------------------------------
+  # SCHEMAS
+  # -------------------------------------------------------------------------
+  schemas:
+
+    # --- Auth ---
+    AuthRequest:
+      type: object
+      required: [license_plate, vehicle_type]
+      properties:
+        license_plate:
+          type: string
+          example: B1234XYZ
+        vehicle_type:
+          type: string
+          enum: [CAR, MOTORCYCLE]
+          example: CAR
+        phone_number:
+          type: string
+          example: "+628123456789"
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_at:
+          type: string
+          format: date-time
+        driver_id:
+          type: string
+          format: uuid
+
+    # --- Search ---
+    SpotStatus:
+      type: string
+      enum: [AVAILABLE, LOCKED, RESERVED, OCCUPIED]
+      description: |
+        - AVAILABLE: spot is free
+        - LOCKED: short hold (60s) by a driver selecting spot
+        - RESERVED: confirmed reservation, spot held up to 1 hour
+        - OCCUPIED: driver checked in, billing active
+
+    SpotSummary:
+      type: object
+      properties:
+        spot_id:
+          type: string
+          example: 1-CAR-01
+        floor:
+          type: integer
+          example: 1
+        vehicle_type:
+          type: string
+          enum: [CAR, MOTORCYCLE]
+        status:
+          $ref: '#/components/schemas/SpotStatus'
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        floor:
+          type: integer
+          example: 1
+        vehicle_type:
+          type: string
+          enum: [CAR, MOTORCYCLE]
+        total_available:
+          type: integer
+          example: 28
+        spots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpotSummary'
+
+    # --- Reservation ---
+    ReservationMode:
+      type: string
+      enum: [SYSTEM_ASSIGNED, USER_SELECTED]
+
+    ReservationStatus:
+      type: string
+      enum: [RESERVED, ACTIVE, COMPLETED, CANCELLED, EXPIRED]
+
+    CreateReservationRequest:
+      type: object
+      required: [mode, vehicle_type]
+      properties:
+        mode:
+          $ref: '#/components/schemas/ReservationMode'
+        vehicle_type:
+          type: string
+          enum: [CAR, MOTORCYCLE]
+        spot_id:
+          type: string
+          description: Required when mode=USER_SELECTED
+          example: 1-CAR-01
+
+    ReservationResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        spot_id:
+          type: string
+          example: 1-CAR-01
+        mode:
+          $ref: '#/components/schemas/ReservationMode'
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        booking_fee:
+          type: integer
+          example: 5000
+        confirmed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          description: Reservation auto-expires after 1 hour if no check-in
+
+    HoldResponse:
+      type: object
+      properties:
+        spot_id:
+          type: string
+          example: 1-CAR-01
+        held_until:
+          type: string
+          format: date-time
+          description: Hold expires after 60 seconds
+
+    CancelResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: CANCELLED
+        cancellation_fee:
+          type: integer
+          description: 0 if cancelled ≤ 2 min, 5000 if > 2 min
+          example: 0
+
+    # --- Check-in ---
+    CheckInRequest:
+      type: object
+      required: [reservation_id, actual_spot_id]
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        actual_spot_id:
+          type: string
+          description: The spot the driver physically parked at
+          example: 1-CAR-01
+
+    CheckInResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: ACTIVE
+        checkin_at:
+          type: string
+          format: date-time
+        wrong_spot:
+          type: boolean
+          example: false
+        penalty_applied:
+          type: integer
+          description: 200000 if wrong spot, 0 otherwise
+          example: 0
+
+    # --- Billing & Checkout ---
+    CheckoutRequest:
+      type: object
+      required: [reservation_id]
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+
+    InvoiceResponse:
+      type: object
+      properties:
+        invoice_id:
+          type: string
+          format: uuid
+        reservation_id:
+          type: string
+          format: uuid
+        booking_fee:
+          type: integer
+          example: 5000
+        hourly_fee:
+          type: integer
+          example: 10000
+        overnight_fee:
+          type: integer
+          description: 20000 IDR flat if session crossed midnight (00:00), 0 otherwise
+          example: 0
+        penalty:
+          type: integer
+          description: 200000 IDR if wrong spot was used at check-in, 0 otherwise
+          example: 0
+        noshow_fee:
+          type: integer
+          description: 10000 IDR if reservation expired due to no-show (> 1 hour), 0 otherwise
+          example: 0
+        cancellation_fee:
+          type: integer
+          description: 0 if cancelled ≤ 2 min, 5000 if cancelled > 2 min
+          example: 0
+        total:
+          type: integer
+          example: 15000
+        status:
+          type: string
+          enum: [PENDING, PAID, FAILED]
+        qr_code:
+          type: string
+          description: QRIS QR code string for payment
+        payment_id:
+          type: string
+          format: uuid
+
+    # --- Payment ---
+    PaymentStatusResponse:
+      type: object
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        invoice_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, PAID, FAILED]
+        amount:
+          type: integer
+          example: 15000
+        method:
+          type: string
+          example: QRIS
+        updated_at:
+          type: string
+          format: date-time
+
+    # --- Presence ---
+    LocationUpdateRequest:
+      type: object
+      required: [reservation_id, latitude, longitude]
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+          format: double
+          example: -6.200000
+        longitude:
+          type: number
+          format: double
+          example: 106.816666
+
+    PresenceEventResponse:
+      type: object
+      properties:
+        reservation_id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          enum: [GEOFENCE_ENTERED, GEOFENCE_EXITED, CHECKIN_TRIGGERED, WRONG_SPOT_DETECTED]
+        spot_id:
+          type: string
+          example: 1-CAR-01
+        timestamp:
+          type: string
+          format: date-time
+
+    # --- Errors ---
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: SPOT_UNAVAILABLE
+        message:
+          type: string
+          example: The requested spot is no longer available
+
+# ---------------------------------------------------------------------------
+# GLOBAL SECURITY
+# ---------------------------------------------------------------------------
+security:
+  - BearerAuth: []
+
+# ---------------------------------------------------------------------------
+# PATHS
+# ---------------------------------------------------------------------------
+paths:
+
+  # ==========================================================================
+  # AUTH
+  # ==========================================================================
+  /v1/auth/token:
+    post:
+      operationId: authToken
+      tags: [Auth]
+      summary: Authenticate driver and issue JWT
+      description: |
+        Driver authenticates with license plate + vehicle type.
+        Phone number is optional. Returns a JWT used for all subsequent calls.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+            examples:
+              car_driver:
+                summary: CAR driver
+                value:
+                  license_plate: B1234XYZ
+                  vehicle_type: CAR
+              moto_driver:
+                summary: MOTORCYCLE driver
+                value:
+                  license_plate: B9999ABC
+                  vehicle_type: MOTORCYCLE
+                  phone_number: "+628123456789"
+      responses:
+        '200':
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_CREDENTIALS
+                message: License plate or vehicle type not found
+
+  # ==========================================================================
+  # SEARCH
+  # ==========================================================================
+  /v1/availability:
+    get:
+      operationId: getAvailability
+      tags: [Search]
+      summary: Get available spots per floor and vehicle type
+      description: |
+        Returns list of available spots. Results are served from Redis cache (TTL 10s),
+        falling back to PostgreSQL read replica on cache miss.
+      parameters:
+        - name: floor
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+          example: 1
+        - name: vehicle_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [CAR, MOTORCYCLE]
+          example: CAR
+      responses:
+        '200':
+          description: Availability list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityResponse'
+              examples:
+                floor1_car:
+                  summary: Floor 1 CAR availability
+                  value:
+                    floor: 1
+                    vehicle_type: CAR
+                    total_available: 28
+                    spots:
+                      - spot_id: 1-CAR-01
+                        floor: 1
+                        vehicle_type: CAR
+                        status: AVAILABLE
+                      - spot_id: 1-CAR-02
+                        floor: 1
+                        vehicle_type: CAR
+                        status: AVAILABLE
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================================================
+  # RESERVATION
+  # ==========================================================================
+  /v1/spots/{spot_id}/hold:
+    post:
+      operationId: holdSpot
+      tags: [Reservation]
+      summary: Hold a specific spot for 60 seconds (user-selected mode)
+      description: |
+        Acquires a short-lived hold (Redis SETNX, TTL 60s) on a spot before confirming reservation.
+        Returns 409 if spot is already held by another driver.
+      parameters:
+        - name: spot_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 1-CAR-01
+      responses:
+        '200':
+          description: Spot held for 60 seconds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldResponse'
+        '409':
+          description: Spot already held by another driver
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: SPOT_HELD
+                message: Spot is currently held by another driver, try another spot
+        '401':
+          description: Unauthorized
+
+  /v1/reservations:
+    post:
+      operationId: createReservation
+      tags: [Reservation]
+      summary: Create a reservation (system-assigned or user-selected)
+      description: |
+        Creates a reservation and charges booking fee (5.000 IDR).
+
+        - `SYSTEM_ASSIGNED`: system picks first available spot, no prior hold needed.
+        - `USER_SELECTED`: requires prior `POST /v1/spots/{spot_id}/hold`. Returns 409 if hold expired.
+
+        Idempotent — duplicate requests with same `Idempotency-Key` return original response.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequest'
+            examples:
+              system_assigned:
+                summary: System-assigned (no spot selection)
+                value:
+                  mode: SYSTEM_ASSIGNED
+                  vehicle_type: CAR
+              user_selected:
+                summary: User-selected spot
+                value:
+                  mode: USER_SELECTED
+                  vehicle_type: CAR
+                  spot_id: 1-CAR-01
+      responses:
+        '201':
+          description: Reservation confirmed, booking fee charged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+              example:
+                reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                spot_id: 1-CAR-01
+                mode: SYSTEM_ASSIGNED
+                status: RESERVED
+                booking_fee: 5000
+                confirmed_at: "2024-01-15T08:00:00Z"
+                expires_at: "2024-01-15T09:00:00Z"
+        '200':
+          description: Idempotent — existing reservation returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+        '409':
+          description: No spot available or hold expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_spot:
+                  value:
+                    code: SPOT_UNAVAILABLE
+                    message: No available spot for the requested vehicle type
+                hold_expired:
+                  value:
+                    code: HOLD_EXPIRED
+                    message: Hold expired, please re-select a spot
+                spot_taken:
+                  value:
+                    code: SPOT_TAKEN
+                    message: Spot was taken by another driver
+        '401':
+          description: Unauthorized
+
+  /v1/reservations/{reservation_id}:
+    get:
+      operationId: getReservation
+      tags: [Reservation]
+      summary: Get reservation detail and current status
+      description: |
+        Returns current reservation state. Useful for polling expiry status
+        and verifying spot release after no-show or cancellation.
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponse'
+              examples:
+                reserved:
+                  summary: Active reservation
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    spot_id: 1-CAR-01
+                    mode: SYSTEM_ASSIGNED
+                    status: RESERVED
+                    booking_fee: 5000
+                    confirmed_at: "2024-01-15T08:00:00Z"
+                    expires_at: "2024-01-15T09:00:00Z"
+                expired:
+                  summary: Expired reservation (no-show)
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440002
+                    spot_id: 1-CAR-02
+                    mode: SYSTEM_ASSIGNED
+                    status: EXPIRED
+                    booking_fee: 5000
+                    confirmed_at: "2024-01-15T07:00:00Z"
+                    expires_at: "2024-01-15T08:00:00Z"
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+    delete:
+      operationId: cancelReservation
+      tags: [Reservation]
+      summary: Cancel a reservation
+      description: |
+        Cancels a reservation with the following fee policy:
+        - ≤ 2 minutes after confirmation: **0 IDR**
+        - > 2 minutes, before check-in: **5.000 IDR**
+        - No-show > 1 hour: auto-expired by system, **10.000 IDR** (not via this endpoint)
+
+        Only reservations with status `RESERVED` can be cancelled.
+      parameters:
+        - name: reservation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelResponse'
+              examples:
+                free_cancel:
+                  summary: Cancelled within 2 minutes (free)
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    status: CANCELLED
+                    cancellation_fee: 0
+                late_cancel:
+                  summary: Cancelled after 2 minutes (5.000 IDR fee)
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    status: CANCELLED
+                    cancellation_fee: 5000
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Cannot cancel — reservation is ACTIVE or already COMPLETED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_STATE
+                message: Cannot cancel an active or completed reservation
+        '401':
+          description: Unauthorized
+
+  # ==========================================================================
+  # CHECK-IN
+  # ==========================================================================
+  /v1/checkin:
+    post:
+      operationId: checkIn
+      tags: [Check-in]
+      summary: Driver check-in — correct spot or wrong spot penalty
+      description: |
+        Triggered by geofence auto-detection or manual tap.
+
+        - If `actual_spot_id` matches reserved spot: billing session starts, status → ACTIVE.
+        - If `actual_spot_id` differs: **200.000 IDR penalty** applied, billing still starts.
+
+        Reservation must be in `RESERVED` status.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+            examples:
+              correct_spot:
+                summary: Check-in at correct spot
+                value:
+                  reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                  actual_spot_id: 1-CAR-01
+              wrong_spot:
+                summary: Check-in at wrong spot (penalty applied)
+                value:
+                  reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                  actual_spot_id: 1-CAR-05
+      responses:
+        '200':
+          description: Check-in successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckInResponse'
+              examples:
+                correct:
+                  summary: Correct spot
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    status: ACTIVE
+                    checkin_at: "2024-01-15T08:05:00Z"
+                    wrong_spot: false
+                    penalty_applied: 0
+                wrong:
+                  summary: Wrong spot — penalty 200.000 IDR
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    status: ACTIVE
+                    checkin_at: "2024-01-15T08:05:00Z"
+                    wrong_spot: true
+                    penalty_applied: 200000
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Reservation not in RESERVED status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_STATE
+                message: Reservation is not in RESERVED status
+        '401':
+          description: Unauthorized
+
+  # ==========================================================================
+  # BILLING & CHECKOUT
+  # ==========================================================================
+  /v1/checkout:
+    post:
+      operationId: checkout
+      tags: [Billing & Checkout]
+      summary: Checkout — calculate total, generate invoice, initiate QRIS payment
+      description: |
+        Ends the parking session and generates an invoice.
+
+        **Fee calculation**:
+        ```
+        total = booking_fee + ceil(duration_hours) × 5000 + overnight_fee + penalty
+        ```
+        - `overnight_fee` = 20.000 IDR if session crossed midnight (00:00)
+        - `penalty` = 200.000 IDR if wrong spot was used at check-in
+        - No overstay penalty — standard hourly rate continues
+
+        Returns a QRIS QR code for payment. Idempotent via `Idempotency-Key`.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+            example:
+              reservation_id: 550e8400-e29b-41d4-a716-446655440001
+      responses:
+        '200':
+          description: Invoice generated, QRIS QR code returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+              examples:
+                standard_2h:
+                  summary: 2-hour session, no overnight, no penalty
+                  value:
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440001
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    booking_fee: 5000
+                    hourly_fee: 10000
+                    overnight_fee: 0
+                    penalty: 0
+                    cancellation_fee: 0
+                    total: 15000
+                    status: PENDING
+                    qr_code: "00020101021226..."
+                    payment_id: 770e8400-e29b-41d4-a716-446655440001
+                overnight:
+                  summary: Session crossed midnight (+20.000 IDR)
+                  value:
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440002
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440002
+                    booking_fee: 5000
+                    hourly_fee: 15000
+                    overnight_fee: 20000
+                    penalty: 0
+                    cancellation_fee: 0
+                    total: 40000
+                    status: PENDING
+                    qr_code: "00020101021226..."
+                    payment_id: 770e8400-e29b-41d4-a716-446655440002
+                with_penalty:
+                  summary: Wrong spot penalty included
+                  value:
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440003
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440003
+                    booking_fee: 5000
+                    hourly_fee: 5000
+                    overnight_fee: 0
+                    penalty: 200000
+                    cancellation_fee: 0
+                    total: 210000
+                    status: PENDING
+                    qr_code: "00020101021226..."
+                    payment_id: 770e8400-e29b-41d4-a716-446655440003
+                extended_stay:
+                  summary: Extended stay 5 hours (no overstay penalty)
+                  value:
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440004
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440004
+                    booking_fee: 5000
+                    hourly_fee: 25000
+                    overnight_fee: 0
+                    penalty: 0
+                    cancellation_fee: 0
+                    total: 30000
+                    status: PENDING
+                    qr_code: "00020101021226..."
+                    payment_id: 770e8400-e29b-41d4-a716-446655440004
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Reservation not in ACTIVE status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_STATE
+                message: Reservation must be ACTIVE to checkout
+        '401':
+          description: Unauthorized
+
+  # ==========================================================================
+  # PAYMENT
+  # ==========================================================================
+  /v1/payments/{payment_id}/retry:
+    post:
+      operationId: retryPayment
+      tags: [Payment]
+      summary: Retry payment for a failed invoice
+      description: |
+        Generates a new QRIS QR code for a `FAILED` payment.
+        Idempotent — same `Idempotency-Key` returns existing retry attempt.
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: New QRIS QR code generated for retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '409':
+          description: Payment is not in FAILED status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_STATE
+                message: Only FAILED payments can be retried
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+  /v1/payments/{payment_id}:
+    get:
+      operationId: getPaymentStatus
+      tags: [Payment]
+      summary: Get payment status (poll for QRIS settlement)
+      description: |
+        Poll this endpoint after presenting the QRIS QR code to the driver.
+
+        Settlement is checked via HTTP call to the Settlement Stub (Pondo Ngopi mock),
+        wrapped with `sony/gobreaker`. If the circuit breaker is OPEN, status stays `PENDING`.
+
+        Expected statuses:
+        - `PENDING` — awaiting payment
+        - `PAID` — settlement confirmed, reservation → COMPLETED
+        - `FAILED` — payment failed or expired
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatusResponse'
+              examples:
+                paid:
+                  summary: Payment successful
+                  value:
+                    payment_id: 770e8400-e29b-41d4-a716-446655440001
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440001
+                    status: PAID
+                    amount: 15000
+                    method: QRIS
+                    updated_at: "2024-01-15T10:05:00Z"
+                failed:
+                  summary: Payment failed
+                  value:
+                    payment_id: 770e8400-e29b-41d4-a716-446655440002
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440002
+                    status: FAILED
+                    amount: 15000
+                    method: QRIS
+                    updated_at: "2024-01-15T10:10:00Z"
+                pending:
+                  summary: Still pending (circuit breaker open or not yet paid)
+                  value:
+                    payment_id: 770e8400-e29b-41d4-a716-446655440003
+                    invoice_id: 660e8400-e29b-41d4-a716-446655440003
+                    status: PENDING
+                    amount: 15000
+                    method: QRIS
+                    updated_at: "2024-01-15T10:00:00Z"
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+  # ==========================================================================
+  # PRESENCE
+  # ==========================================================================
+  /v1/presence/checkin:
+    post:
+      operationId: presenceCheckin
+      tags: [Presence]
+      summary: Submit location update for geofence-based check-in
+      description: |
+        Software agent / mobile app submits location. Presence Service evaluates
+        geofence and triggers check-in if driver is at the reserved spot.
+
+        Location updates should be sent every ≤ 30 seconds while driver is approaching.
+
+        This is the REST equivalent of the gRPC bidirectional stream `StreamLocation`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdateRequest'
+            example:
+              reservation_id: 550e8400-e29b-41d4-a716-446655440001
+              latitude: -6.200000
+              longitude: 106.816666
+      responses:
+        '200':
+          description: Location processed, presence event returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceEventResponse'
+              examples:
+                entered:
+                  summary: Driver entered geofence
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    event: GEOFENCE_ENTERED
+                    spot_id: 1-CAR-01
+                    timestamp: "2024-01-15T08:04:50Z"
+                checkin_triggered:
+                  summary: Check-in auto-triggered
+                  value:
+                    reservation_id: 550e8400-e29b-41d4-a716-446655440001
+                    event: CHECKIN_TRIGGERED
+                    spot_id: 1-CAR-01
+                    timestamp: "2024-01-15T08:05:00Z"
+        '404':
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized

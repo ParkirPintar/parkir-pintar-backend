@@ -1,0 +1,51 @@
+syntax = "proto3";
+package billing;
+option go_package = "github.com/parkir-pintar/proto/billing";
+
+service BillingService {
+  rpc ChargeBookingFee(ChargeBookingFeeRequest) returns (BillingResponse);
+  rpc StartBillingSession(StartBillingSessionRequest) returns (BillingResponse);
+  rpc ApplyPenalty(ApplyPenaltyRequest) returns (BillingResponse);
+  rpc Checkout(CheckoutRequest) returns (InvoiceResponse);
+}
+
+message ChargeBookingFeeRequest {
+  string reservation_id = 1;
+  int64 amount = 2;
+}
+
+message StartBillingSessionRequest {
+  string reservation_id = 1;
+  string checkin_at = 2;
+}
+
+message ApplyPenaltyRequest {
+  string reservation_id = 1;
+  string reason = 2;
+  int64 amount = 3;
+}
+
+message BillingResponse {
+  string billing_id = 1;
+  string status = 2;
+}
+
+message CheckoutRequest {
+  string reservation_id = 1;
+  string idempotency_key = 2;
+}
+
+message InvoiceResponse {
+  string invoice_id = 1;
+  string reservation_id = 2;
+  int64 booking_fee = 3;
+  int64 hourly_fee = 4;
+  int64 overnight_fee = 5;
+  int64 penalty = 6;
+  int64 noshow_fee = 7;
+  int64 cancellation_fee = 8;
+  int64 total = 9;
+  string status = 10;
+  string qr_code = 11;
+  string payment_id = 12;
+}

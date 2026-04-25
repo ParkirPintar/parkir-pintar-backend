@@ -1,0 +1,21 @@
+syntax = "proto3";
+package presence;
+option go_package = "github.com/parkir-pintar/proto/presence";
+
+service PresenceService {
+  rpc StreamLocation(stream LocationUpdate) returns (stream PresenceEvent);
+}
+
+message LocationUpdate {
+  string reservation_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  string timestamp = 4;
+}
+
+message PresenceEvent {
+  string reservation_id = 1;
+  string event = 2;   // GEOFENCE_ENTERED | GEOFENCE_EXITED | CHECKIN_TRIGGERED | WRONG_SPOT_DETECTED
+  string spot_id = 3;
+  string timestamp = 4;
+}

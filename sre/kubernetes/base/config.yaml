@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parkirpintar-config
+  namespace: parkir-pintar
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.monitoring.svc.cluster.local:4317"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  GRPC_PORT: "50051"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reservation-db-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  DB_HOST: "<reservation-db-endpoint>"
+  DB_PORT: "5432"
+  DB_NAME: "reservation"
+  DB_USER: "<db_username>"
+  DB_PASSWORD: "<db_password>"
+  DB_REPLICA_HOST: "<reservation-replica-endpoint>"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: billing-db-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  DB_HOST: "<billing-db-endpoint>"
+  DB_PORT: "5432"
+  DB_NAME: "billing"
+  DB_USER: "<db_username>"
+  DB_PASSWORD: "<db_password>"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-db-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  DB_HOST: "<payment-db-endpoint>"
+  DB_PORT: "5432"
+  DB_NAME: "payment"
+  DB_USER: "<db_username>"
+  DB_PASSWORD: "<db_password>"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: analytics-db-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  DB_HOST: "<analytics-db-endpoint>"
+  DB_PORT: "5432"
+  DB_NAME: "analytics"
+  DB_USER: "<db_username>"
+  DB_PASSWORD: "<db_password>"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  REDIS_HOST: "<redis-endpoint>"
+  REDIS_PORT: "6379"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+  namespace: parkir-pintar
+type: Opaque
+stringData:
+  RABBITMQ_URL: "<rabbitmq-endpoint>"
