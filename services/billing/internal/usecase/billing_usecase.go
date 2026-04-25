@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -20,14 +19,17 @@ type BillingUsecase interface {
 }
 
 type billingUsecase struct {
-	repo           repository.BillingRepository
-	mu             sync.RWMutex
-	ruleVersion    int
-	// engine      *gorules.Engine  // TODO: wire gorules engine
+	repo        repository.BillingRepository
+	mu          sync.RWMutex
+	ruleVersion int
+	engine      *PricingEngine
 }
 
 func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository) BillingUsecase {
-	uc := &billingUsecase{repo: repo}
+	uc := &billingUsecase{
+		repo:   repo,
+		engine: NewPricingEngine(nil), // start with Go fallback
+	}
 	go uc.hotReload(ctx)
 	return uc
 }
@@ -41,7 +43,7 @@ func (u *billingUsecase) hotReload(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			_, version, err := u.repo.GetActivePricingRule(ctx)
+			content, version, err := u.repo.GetActivePricingRule(ctx)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to poll pricing rules")
 				continue
@@ -49,7 +51,7 @@ func (u *billingUsecase) hotReload(ctx context.Context) {
 			u.mu.Lock()
 			if version != u.ruleVersion {
 				u.ruleVersion = version
-				// TODO: u.engine.Reload(content)
+				u.engine = NewPricingEngine(content)
 				log.Info().Int("version", version).Msg("pricing rules reloaded")
 			}
 			u.mu.Unlock()
@@ -94,42 +96,20 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 	now := time.Now()
 	b.SessionEnd = &now
 
-	// TODO: replace with gorules engine evaluation
+	u.mu.RLock()
+	engine := u.engine
+	u.mu.RUnlock()
+
 	input := model.PricingInput{
 		DurationHours:   now.Sub(*b.SessionStart).Hours(),
 		CrossesMidnight: crossesMidnight(*b.SessionStart, now),
+		BookingFee:      b.BookingFee,
 	}
-	output := evaluatePricing(input)
+	output := engine.Evaluate(input)
 
 	b.HourlyFee = output.HourlyFee
 	b.OvernightFee = output.OvernightFee
 	b.Total = b.BookingFee + b.HourlyFee + b.OvernightFee + b.Penalty + b.NoshowFee + b.CancelFee
 
 	return b, u.repo.Update(ctx, b)
-}
-
-// evaluatePricing is a fallback pure-Go pricing engine (gorules replaces this).
-func evaluatePricing(in model.PricingInput) model.PricingOutput {
-	out := model.PricingOutput{BookingFee: 5000}
-	out.HourlyFee = int64(math.Ceil(in.DurationHours)) * 5000
-	if in.CrossesMidnight {
-		out.OvernightFee = 20000
-	}
-	if in.WrongSpot {
-		out.Penalty = 200000
-	}
-	if in.IsNoshow {
-		out.Penalty = 10000
-	}
-	if in.CancelElapsedMinutes > 2 {
-		out.CancellationFee = 5000
-	}
-	out.Total = out.BookingFee + out.HourlyFee + out.OvernightFee + out.Penalty + out.CancellationFee
-	return out
-}
-
-func crossesMidnight(start, end time.Time) bool {
-	startDay := start.Truncate(24 * time.Hour)
-	endDay := end.Truncate(24 * time.Hour)
-	return endDay.After(startDay)
 }

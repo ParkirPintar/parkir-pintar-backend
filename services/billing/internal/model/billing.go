@@ -26,11 +26,12 @@ type BillingRecord struct {
 }
 
 type PricingInput struct {
-	DurationHours         float64
-	CrossesMidnight       bool
-	WrongSpot             bool
-	CancelElapsedMinutes  float64
-	IsNoshow              bool
+	DurationHours        float64
+	CrossesMidnight      bool
+	WrongSpot            bool
+	IsNoshow             bool
+	CancelElapsedMinutes float64
+	BookingFee           int64
 }
 
 type PricingOutput struct {
@@ -38,6 +39,7 @@ type PricingOutput struct {
 	HourlyFee       int64
 	OvernightFee    int64
 	Penalty         int64
+	NoshowFee       int64
 	CancellationFee int64
 	Total           int64
 }

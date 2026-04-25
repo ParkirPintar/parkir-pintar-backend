@@ -10,8 +10,8 @@ const (
 )
 
 type Spot struct {
-	SpotID      string     `db:"spot_id"`
-	Floor       int        `db:"floor"`
-	VehicleType string     `db:"vehicle_type"`
-	Status      SpotStatus `db:"status"`
+	SpotID      string     `db:"spot_id" json:"spot_id"`
+	Floor       int        `db:"floor" json:"floor"`
+	VehicleType string     `db:"vehicle_type" json:"vehicle_type"`
+	Status      SpotStatus `db:"status" json:"status"`
 }
