@@ -28,12 +28,17 @@ func (u *analyticsUsecase) RecordEvent(ctx context.Context, body []byte) error {
 		return err
 	}
 	event := &model.TransactionEvent{
-		ID:         uuid.NewString(),
-		EventType:  strVal(raw, "type"),
+		ID:            uuid.NewString(),
+		EventType:     strVal(raw, "type"),
 		ReservationID: strVal(raw, "reservation_id"),
-		SpotID:     strVal(raw, "spot_id"),
-		Payload:    body,
-		RecordedAt: time.Now(),
+		DriverID:      strVal(raw, "driver_id"),
+		SpotID:        strVal(raw, "spot_id"),
+		VehicleType:   strVal(raw, "vehicle_type"),
+		Payload:       body,
+		RecordedAt:    time.Now(),
+	}
+	if v, ok := raw["amount"].(float64); ok {
+		event.Amount = int64(v)
 	}
 	return u.repo.Save(ctx, event)
 }
