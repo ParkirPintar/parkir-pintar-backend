@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/rs/zerolog v1.35.1
+	github.com/sony/gobreaker/v2 v2.4.0
 )
 
 require (
