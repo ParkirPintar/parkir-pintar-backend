@@ -86,3 +86,48 @@ func (r *reservationRepo) LockSpot(ctx context.Context, spotID string) error {
 	}
 	return nil
 }
+
+func (r *reservationRepo) ReleaseLock(ctx context.Context, spotID string) error {
+	return r.redis.Del(ctx, fmt.Sprintf("lock:%s", spotID)).Err()
+}
+
+func (r *reservationRepo) GetHoldOwner(ctx context.Context, spotID string) (string, error) {
+	val, err := r.redis.Get(ctx, fmt.Sprintf("hold:%s", spotID)).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
+
+func (r *reservationRepo) SetCheckinAt(ctx context.Context, id string, t time.Time) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE reservations SET checkin_at=$1, status='ACTIVE' WHERE id=$2`, t, id)
+	return err
+}
+
+func (r *reservationRepo) GetExpiredReservations(ctx context.Context) ([]*model.Reservation, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, driver_id, spot_id, mode, status, booking_fee, confirmed_at, expires_at, checkin_at, idempotency_key
+		 FROM reservations WHERE status='RESERVED' AND expires_at < now()`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*model.Reservation
+	for rows.Next() {
+		var res model.Reservation
+		if err := rows.Scan(&res.ID, &res.DriverID, &res.SpotID, &res.Mode, &res.Status,
+			&res.BookingFee, &res.ConfirmedAt, &res.ExpiresAt, &res.CheckinAt, &res.IdempotencyKey); err != nil {
+			return nil, err
+		}
+		results = append(results, &res)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
