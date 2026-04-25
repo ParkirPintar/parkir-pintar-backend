@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,13 +37,22 @@ func NewPaymentUsecase(repo repository.PaymentRepository, settlement settlementC
 		Interval:    10 * time.Second,
 		Timeout:     30 * time.Second,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			return counts.ConsecutiveFailures > 5
+			return counts.ConsecutiveFailures >= 5
 		},
 	})
 	return &paymentUsecase{repo: repo, cb: cb, settlement: settlement}
 }
 
 func (u *paymentUsecase) CreatePayment(ctx context.Context, invoiceID string, amount int64, idempotencyKey string) (*model.Payment, error) {
+	// Idempotency check: return existing payment if one exists for this key.
+	if idempotencyKey != "" {
+		existing, err := u.repo.GetByIdempotencyKey(ctx, idempotencyKey)
+		if err == nil && existing != nil {
+			return existing, nil
+		}
+		// If error is "no rows" or similar, continue to create a new payment.
+	}
+
 	p, err := u.cb.Execute(func() (*model.Payment, error) {
 		qr, err := u.settlement.RequestQRIS(ctx, invoiceID, amount)
 		if err != nil {
@@ -59,6 +69,24 @@ func (u *paymentUsecase) CreatePayment(ctx context.Context, invoiceID string, am
 		}
 		return payment, u.repo.Create(ctx, payment)
 	})
+
+	// Circuit breaker OPEN state fallback: return a PENDING payment without QR code.
+	if err != nil && errors.Is(err, gobreaker.ErrOpenState) {
+		payment := &model.Payment{
+			ID:             uuid.NewString(),
+			InvoiceID:      invoiceID,
+			Amount:         amount,
+			Status:         model.PaymentPending,
+			Method:         "QRIS",
+			QRCode:         "",
+			IdempotencyKey: idempotencyKey,
+		}
+		if createErr := u.repo.Create(ctx, payment); createErr != nil {
+			return nil, fmt.Errorf("create fallback payment: %w", createErr)
+		}
+		return payment, nil
+	}
+
 	return p, err
 }
 
