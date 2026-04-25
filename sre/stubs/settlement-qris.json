@@ -1,0 +1,20 @@
+{
+    "request": {
+        "method": "POST",
+        "urlPathPattern": "/v1/qris/create"
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "qr_code": "STUB-QR-{{randomValue type='UUID'}}",
+            "payment_id": "{{randomValue type='UUID'}}",
+            "status": "PENDING"
+        },
+        "transformers": [
+            "response-template"
+        ]
+    }
+}

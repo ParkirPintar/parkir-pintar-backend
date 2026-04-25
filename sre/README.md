@@ -1,5 +1,78 @@
 # sre
 
+## Local Development (Docker Compose)
+
+Docker Compose untuk spin up semua infra dependencies + services secara lokal. File: [`docker-compose.yaml`](./docker-compose.yaml)
+
+### Quick Start
+
+```bash
+cd sre
+
+# Start semua (infra + services)
+docker compose up -d
+
+# Atau infra only (jalankan services via `go run` di terminal masing-masing)
+docker compose up -d postgres redis rabbitmq settlement-stub
+
+# Check status
+docker compose ps
+
+# Tail logs
+docker compose logs -f reservation billing
+
+# Teardown + hapus volumes
+docker compose down -v
+```
+
+### Services & Ports
+
+| Service | Port | URL |
+|---|---|---|
+| PostgreSQL | 5432 | `postgres://parkir:parkir@localhost:5432/{db_name}` |
+| Redis | 6379 | `localhost:6379` |
+| RabbitMQ | 5672 / 15672 | AMQP: `localhost:5672`, Management UI: `http://localhost:15672` (guest/guest) |
+| Settlement Stub (WireMock) | 8080 | `http://localhost:8080` |
+| User Service | 50051 | `localhost:50051` (gRPC) |
+| Reservation Service | 50052 | `localhost:50052` (gRPC) |
+| Billing Service | 50053 | `localhost:50053` (gRPC) |
+| Payment Service | 50054 | `localhost:50054` (gRPC) |
+| Search Service | 50055 | `localhost:50055` (gRPC) |
+| Presence Service | 50056 | `localhost:50056` (gRPC) |
+
+### Databases
+
+Satu PostgreSQL instance, 5 databases (dibuat otomatis via `init-db.sql`):
+
+| Database | Service |
+|---|---|
+| `user_db` | User Service |
+| `reservation_db` | Reservation Service + Search Service (read) |
+| `billing_db` | Billing Service |
+| `payment_db` | Payment Service |
+| `analytics_db` | Analytics Service |
+
+### Settlement Stub
+
+WireMock stub untuk simulasi payment gateway (Pondo Ngopi). Mappings di `sre/stubs/`:
+- `POST /v1/qris/create` → return QR code + payment_id
+- `GET /v1/settlement/{id}` → return status PAID
+
+### Infra-Only Mode
+
+Kalau mau develop satu service dan run via `go run`:
+
+```bash
+# Start infra only
+cd sre && docker compose up -d postgres redis rabbitmq settlement-stub
+
+# Run service langsung
+cd ../services/reservation
+DATABASE_URL=postgres://parkir:parkir@localhost:5432/reservation_db REDIS_ADDR=localhost:6379 go run ./cmd
+```
+
+---
+
 ## API Documentation (Swagger)
 
 OpenAPI 3.0 spec: [`e2e/swagger.yaml`](./e2e/swagger.yaml)
@@ -120,6 +193,58 @@ terraform plan -var github_org=<your-org> -var github_repo=<your-repo> ...
 terraform apply -var github_org=<your-org> -var github_repo=<your-repo> ...
 ```
 
+### Terraform Destroy (Teardown)
+
+> **PENTING**: Jangan langsung `terraform destroy`. Hapus semua Kubernetes resources dulu, baru destroy infra. Kalau langsung destroy, EKS node masih hold ENI/ELB/SG yang bikin Terraform stuck atau error.
+
+**Urutan teardown yang benar:**
+
+```bash
+# 1. Hapus semua workload di namespace parkir-pintar
+kubectl delete namespace parkir-pintar --wait=true
+
+# 2. Hapus observability stack
+kubectl delete namespace monitoring --wait=true
+
+# 3. Uninstall Istio (hapus CRDs, ingress gateway, istiod)
+istioctl uninstall --purge -y
+kubectl delete namespace istio-system --wait=true
+
+# 4. Verify semua namespace sudah terminated
+kubectl get namespaces
+# Pastikan parkir-pintar, monitoring, istio-system sudah hilang
+
+# 5. Hapus aws-auth configmap custom entries (optional, EKS akan di-destroy)
+# kubectl edit configmap aws-auth -n kube-system  # revert manual changes
+
+# 6. Baru destroy Terraform
+cd terraform
+terraform destroy -var github_org=<your-org> -var github_repo=<your-repo> ...
+```
+
+**Kenapa harus urutan ini?**
+
+| Step | Alasan |
+|---|---|
+| Delete namespace dulu | Pod yang running hold ENI di subnet. Kalau subnet di-destroy duluan → ENI orphan → Terraform stuck |
+| Uninstall Istio | Istio Ingress Gateway buat AWS ELB. Kalau ELB masih ada → SG dependency → VPC destroy gagal |
+| Wait for termination | Kubernetes finalizer butuh waktu cleanup. `--wait=true` memastikan semua resource benar-benar hilang |
+| Terraform destroy terakhir | Setelah semua K8s resources clean, Terraform bisa hapus EKS, RDS, ElastiCache, MQ, VPC tanpa conflict |
+
+**Kalau Terraform destroy stuck:**
+
+```bash
+# Cek resource yang masih nempel
+aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=<vpc-id>" --query 'NetworkInterfaces[*].{ID:NetworkInterfaceId,Status:Status,Description:Description}'
+
+# Force detach ENI yang orphan
+aws ec2 detach-network-interface --attachment-id <attachment-id> --force
+aws ec2 delete-network-interface --network-interface-id <eni-id>
+
+# Retry destroy
+terraform destroy -var github_org=<your-org> -var github_repo=<your-repo> ...
+```
+
 ## Post-Terraform Setup
 
 Setelah `terraform apply` selesai, jalankan langkah-langkah berikut secara berurutan.
@@ -210,13 +335,15 @@ Tambahkan di bawah `mapRoles`:
 
 ## Deploy App (manual)
 
+K8s manifests are centralized in `sre/kubernetes/base/`. Sudah di-apply di [Post-Terraform Setup → Step 4](#4-deploy-kubernetes-manifests).
+
+Untuk redeploy manual per service:
 ```bash
-# apply per service
-kubectl apply -f services/reservation/deployments/deployment.yaml
+# apply satu service
+kubectl apply -f kubernetes/base/reservation-service.yaml
+
 # atau semua sekaligus
-for svc in reservation billing payment search presence notification analytics; do
-  kubectl apply -f services/$svc/deployments/deployment.yaml
-done
+kubectl apply -f kubernetes/base/
 ```
 
 ## Check Deployment

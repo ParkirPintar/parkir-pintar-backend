@@ -1,0 +1,187 @@
+# docker-compose.yaml — Local development environment for ParkirPintar
+# Spins up all infrastructure dependencies + all 8 services
+#
+# Usage:
+#   cd sre
+#   docker compose up -d                    # start all infra + services
+#   docker compose up -d postgres redis rabbitmq  # infra only (run services via `go run`)
+#   docker compose down -v                  # teardown + remove volumes
+#   docker compose logs -f reservation      # tail logs for one service
+
+version: "3.9"
+
+x-common-env: &common-env
+  REDIS_ADDR: redis:6379
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+  JWT_SECRET: dev-secret-do-not-use-in-prod
+  OTEL_EXPORTER_OTLP_ENDPOINT: ""
+  LOG_LEVEL: debug
+
+services:
+  # ─── Infrastructure ───────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: parkir
+      POSTGRES_PASSWORD: parkir
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parkir"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI: http://localhost:15672 (guest/guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ─── Services ─────────────────────────────────────────────────────
+
+  user:
+    build:
+      context: ../services/user
+      dockerfile: build/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50051"
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/user_db?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  reservation:
+    build:
+      context: ../services/reservation
+      dockerfile: build/Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50052"
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/reservation_db?sslmode=disable
+      SEARCH_ADDR: search:50055
+      BILLING_ADDR: billing:50053
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  billing:
+    build:
+      context: ../services/billing
+      dockerfile: build/Dockerfile
+    ports:
+      - "50053:50053"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50053"
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/billing_db?sslmode=disable
+      PAYMENT_ADDR: payment:50054
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  payment:
+    build:
+      context: ../services/payment
+      dockerfile: build/Dockerfile
+    ports:
+      - "50054:50054"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50054"
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/payment_db?sslmode=disable
+      SETTLEMENT_URL: http://settlement-stub:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  search:
+    build:
+      context: ../services/search
+      dockerfile: build/Dockerfile
+    ports:
+      - "50055:50055"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50055"
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/reservation_db?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  presence:
+    build:
+      context: ../services/presence
+      dockerfile: build/Dockerfile
+    ports:
+      - "50056:50056"
+    environment:
+      <<: *common-env
+      GRPC_ADDR: ":50056"
+      RESERVATION_ADDR: reservation:50052
+    depends_on:
+      reservation: { condition: service_started }
+
+  notification:
+    build:
+      context: ../services/notification
+      dockerfile: build/Dockerfile
+    environment:
+      <<: *common-env
+      RABBITMQ_QUEUE: notification.queue
+      NOTIF_PROVIDER_URL: http://settlement-stub:8080/notify
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+
+  analytics:
+    build:
+      context: ../services/analytics
+      dockerfile: build/Dockerfile
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/analytics_db?sslmode=disable
+      RABBITMQ_QUEUE: analytics.queue
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  # ─── Stubs ────────────────────────────────────────────────────────
+
+  settlement-stub:
+    image: wiremock/wiremock:3.5.4
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./stubs:/home/wiremock/mappings:ro
+    command: ["--verbose"]
+
+volumes:
+  pgdata:

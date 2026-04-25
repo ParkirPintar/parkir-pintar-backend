@@ -28,6 +28,16 @@ spec:
                 name: parkirpintar-config
             - secretRef:
                 name: payment-db-secret
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
           resources:
             requests:
               cpu: 100m

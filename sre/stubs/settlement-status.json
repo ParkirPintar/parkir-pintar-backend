@@ -1,0 +1,15 @@
+{
+    "request": {
+        "method": "GET",
+        "urlPathPattern": "/v1/settlement/.*"
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "status": "PAID"
+        }
+    }
+}

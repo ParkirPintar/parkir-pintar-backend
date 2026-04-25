@@ -7,14 +7,14 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 .
 ├── .github/
 │   └── workflows/
-│       ├── ci-reservation.yml    # CI/CD — triggered only on services/reservation/** changes
-│       ├── ci-billing.yml        # CI/CD — triggered only on services/billing/** changes
-│       ├── ci-payment.yml        # CI/CD — triggered only on services/payment/** changes
-│       ├── ci-search.yml         # CI/CD — triggered only on services/search/** changes
-│       ├── ci-presence.yml       # CI/CD — triggered only on services/presence/** changes
-│       ├── ci-notification.yml   # CI/CD — triggered only on services/notification/** changes
-│       ├── ci-analytics.yml      # CI/CD — triggered only on services/analytics/** changes
-│       └── ci-user.yml           # CI/CD — triggered only on services/user/** changes
+│       ├── ci-reservation.yml    # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-billing.yml        # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-payment.yml        # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-search.yml         # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-presence.yml       # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-analytics.yml      # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       └── ci-user.yml           # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │
 ├── proto/                        # Shared protobuf definitions (gRPC contracts)
 │   ├── billing/
@@ -74,11 +74,8 @@ services/{service}/
 │   └── model/                # Domain models & DTOs
 ├── pkg/                      # Internal reusable utilities (idempotency, lock helper, etc.)
 ├── configs/                  # Default config, env schema
-├── deployments/
-│   └── deployment.yaml       # Kubernetes Deployment + Service manifest (per service)
 ├── build/
-│   ├── Dockerfile
-│   └── ci/                   # CI tool config (.travis-ci.yml, .gitlab-ci.yml, etc.)
+│   └── Dockerfile
 └── go.mod
 ```
 
