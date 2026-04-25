@@ -74,4 +74,8 @@ func (UnimplementedUserServiceServer) UpdateProfile(_ interface{}, _ *UpdateProf
 	return nil, nil
 }
 
+func RegisterUserServiceServer(s *grpc.Server, srv interface{}) {
+	// TODO: replace with generated registration
+}
+
 var _ grpc.ServiceRegistrar = nil // ensure grpc import used

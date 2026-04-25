@@ -3,10 +3,19 @@ package main
 import (
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/parkir-pintar/presence/internal/adapter"
+	"github.com/parkir-pintar/presence/internal/handler"
+	"github.com/parkir-pintar/presence/internal/usecase"
+	pb "github.com/parkir-pintar/presence/pkg/proto"
+	"github.com/parkir-pintar/user/pkg/interceptor"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -14,21 +23,59 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	addr := envOr("GRPC_ADDR", ":50055")
+	// Redis (for auth interceptor blacklist checks)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: envOr("REDIS_ADDR", "localhost:6379"),
+	})
+	defer rdb.Close()
+
+	// Reservation gRPC client
+	reservationConn, err := grpc.NewClient(
+		envOr("RESERVATION_ADDR", "localhost:50052"),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to Reservation Service")
+	}
+	defer reservationConn.Close()
+
+	reservationClient := adapter.NewReservationClient(reservationConn)
+
+	// Load geofence configuration
+	geofencePath := envOr("GEOFENCE_CONFIG", "configs/geofences.json")
+	geofences, err := usecase.LoadGeofences(geofencePath)
+	if err != nil {
+		log.Fatal().Err(err).Str("path", geofencePath).Msg("failed to load geofence config")
+	}
+
+	// Usecase
+	uc := usecase.NewPresenceUsecase(reservationClient, geofences)
+
+	// Handler
+	h := handler.NewPresenceHandler(uc)
+
+	// gRPC server with auth interceptor
+	addr := envOr("GRPC_ADDR", ":50056")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 
-	// TODO: init reservation gRPC client, wire dependencies
-	// reservationConn, _ := grpc.Dial(os.Getenv("RESERVATION_ADDR"), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	// reservationClient := adapter.NewReservationClient(reservationConn)
-	// uc := usecase.NewPresenceUsecase(reservationClient)
-	// h := handler.NewPresenceHandler(uc)
-
-	srv := grpc.NewServer()
-	// pb.RegisterPresenceServiceServer(srv, h)
+	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
+	)
+	pb.RegisterPresenceServiceServer(srv, h)
 	reflection.Register(srv)
+
+	// Graceful shutdown
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		<-sigCh
+		log.Info().Msg("shutting down presence service")
+		srv.GracefulStop()
+	}()
 
 	log.Info().Str("addr", addr).Msg("presence service starting")
 	if err := srv.Serve(lis); err != nil {

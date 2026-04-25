@@ -4,6 +4,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/parkir-pintar/presence/internal/model"
 	"github.com/parkir-pintar/presence/internal/usecase"
 	pb "github.com/parkir-pintar/presence/pkg/proto"
@@ -12,17 +13,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// PresenceHandler implements the PresenceServiceServer gRPC interface.
 type PresenceHandler struct {
 	pb.UnimplementedPresenceServiceServer
 	uc usecase.PresenceUsecase
 }
 
+// NewPresenceHandler creates a PresenceHandler with the given usecase.
 func NewPresenceHandler(uc usecase.PresenceUsecase) *PresenceHandler {
 	return &PresenceHandler{uc: uc}
 }
 
+// StreamLocation handles the bidirectional gRPC stream for real-time location updates.
 func (h *PresenceHandler) StreamLocation(stream pb.PresenceService_StreamLocationServer) error {
 	ctx := stream.Context()
+
+	// Generate a unique stream ID for tracking per-stream geofence state.
+	streamID := uuid.New().String()
+	defer h.uc.RemoveStream(streamID)
+
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -32,7 +41,7 @@ func (h *PresenceHandler) StreamLocation(stream pb.PresenceService_StreamLocatio
 			return status.Errorf(codes.Internal, "recv: %v", err)
 		}
 
-		event, err := h.uc.ProcessLocation(ctx, model.LocationUpdate{
+		event, err := h.uc.ProcessLocation(ctx, streamID, model.LocationUpdate{
 			ReservationID: req.ReservationId,
 			Latitude:      req.Latitude,
 			Longitude:     req.Longitude,
