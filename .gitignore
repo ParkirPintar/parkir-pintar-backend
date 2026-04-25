@@ -54,6 +54,14 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Istio binary distribution (large, not needed in repo)
+sre/istio-1.29.2/
+istio-*/
+
+# Terraform provider binaries
+sre/terraform/.terraform/
+sre/terraform/istio-1.29.2/
+
 # Environment variables
 .env
 .env.local
