@@ -8,6 +8,7 @@ import "google.golang.org/grpc"
 type RegisterRequest struct {
 	LicensePlate string
 	VehicleType  string
+	Password     string
 	Name         string
 	PhoneNumber  string
 }
@@ -15,11 +16,24 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	LicensePlate string
 	VehicleType  string
+	Password     string
 }
 
 type LoginResponse struct {
 	UserId       string
 	AccessToken  string
+	RefreshToken string
+}
+
+type LogoutRequest struct {
+	AccessToken string
+}
+
+type LogoutResponse struct {
+	Success bool
+}
+
+type RefreshTokenRequest struct {
 	RefreshToken string
 }
 
@@ -36,6 +50,7 @@ type UserResponse struct {
 	LicensePlate string
 	VehicleType  string
 	Name         string
+	PhoneNumber  string
 }
 
 type UnimplementedUserServiceServer struct{}
@@ -44,6 +59,12 @@ func (UnimplementedUserServiceServer) Register(_ interface{}, _ *RegisterRequest
 	return nil, nil
 }
 func (UnimplementedUserServiceServer) Login(_ interface{}, _ *LoginRequest) (*LoginResponse, error) {
+	return nil, nil
+}
+func (UnimplementedUserServiceServer) Logout(_ interface{}, _ *LogoutRequest) (*LogoutResponse, error) {
+	return nil, nil
+}
+func (UnimplementedUserServiceServer) RefreshToken(_ interface{}, _ *RefreshTokenRequest) (*LoginResponse, error) {
 	return nil, nil
 }
 func (UnimplementedUserServiceServer) GetProfile(_ interface{}, _ *GetProfileRequest) (*UserResponse, error) {
