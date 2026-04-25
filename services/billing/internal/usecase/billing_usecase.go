@@ -2,10 +2,13 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/parkir-pintar/billing/internal/adapter"
 	"github.com/parkir-pintar/billing/internal/model"
 	"github.com/parkir-pintar/billing/internal/repository"
 	"github.com/rs/zerolog/log"
@@ -19,16 +22,20 @@ type BillingUsecase interface {
 }
 
 type billingUsecase struct {
-	repo        repository.BillingRepository
-	mu          sync.RWMutex
-	ruleVersion int
-	engine      *PricingEngine
+	repo          repository.BillingRepository
+	paymentClient adapter.PaymentClient
+	publisher     adapter.EventPublisher
+	mu            sync.RWMutex
+	ruleVersion   int
+	engine        *PricingEngine
 }
 
-func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository) BillingUsecase {
+func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository, paymentClient adapter.PaymentClient, publisher adapter.EventPublisher) BillingUsecase {
 	uc := &billingUsecase{
-		repo:   repo,
-		engine: NewPricingEngine(nil), // start with Go fallback
+		repo:          repo,
+		paymentClient: paymentClient,
+		publisher:     publisher,
+		engine:        NewPricingEngine(nil), // start with Go fallback
 	}
 	go uc.hotReload(ctx)
 	return uc
@@ -88,28 +95,135 @@ func (u *billingUsecase) ApplyPenalty(ctx context.Context, reservationID, reason
 }
 
 func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotencyKey string) (*model.BillingRecord, error) {
-	b, err := u.repo.GetByReservationID(ctx, reservationID)
-	if err != nil {
-		return nil, err
+	// Step 1: Idempotency check — return cached record if key already exists.
+	if idempotencyKey != "" {
+		existing, err := u.repo.GetByIdempotencyKey(ctx, idempotencyKey)
+		if err != nil {
+			return nil, fmt.Errorf("idempotency check: %w", err)
+		}
+		if existing != nil {
+			log.Debug().
+				Str("idempotency_key", idempotencyKey).
+				Str("invoice_id", existing.ID).
+				Msg("returning cached checkout result")
+			return existing, nil
+		}
 	}
 
+	// Step 2: Get billing record by reservation_id.
+	b, err := u.repo.GetByReservationID(ctx, reservationID)
+	if err != nil {
+		return nil, fmt.Errorf("billing record not found for reservation %s: %w", reservationID, err)
+	}
+
+	// Step 3: Calculate session end time (now).
 	now := time.Now()
 	b.SessionEnd = &now
 
+	// Step 4: Evaluate pricing with all flags from the existing record.
 	u.mu.RLock()
 	engine := u.engine
 	u.mu.RUnlock()
 
+	var durationHours float64
+	if b.SessionStart != nil {
+		durationHours = now.Sub(*b.SessionStart).Hours()
+	}
+
+	var crossesMN bool
+	if b.SessionStart != nil {
+		crossesMN = crossesMidnight(*b.SessionStart, now)
+	}
+
 	input := model.PricingInput{
-		DurationHours:   now.Sub(*b.SessionStart).Hours(),
-		CrossesMidnight: crossesMidnight(*b.SessionStart, now),
+		DurationHours:   durationHours,
+		CrossesMidnight: crossesMN,
 		BookingFee:      b.BookingFee,
+		WrongSpot:       b.Penalty > 0,
+		IsNoshow:        b.NoshowFee > 0,
 	}
 	output := engine.Evaluate(input)
 
 	b.HourlyFee = output.HourlyFee
 	b.OvernightFee = output.OvernightFee
-	b.Total = b.BookingFee + b.HourlyFee + b.OvernightFee + b.Penalty + b.NoshowFee + b.CancelFee
+	b.NoshowFee = output.NoshowFee
+	b.CancelFee = output.CancellationFee
+	b.Total = output.BookingFee + output.HourlyFee + output.OvernightFee +
+		output.Penalty + output.NoshowFee + output.CancellationFee
+	b.IdempotencyKey = idempotencyKey
 
-	return b, u.repo.Update(ctx, b)
+	// Step 5: Call Payment.CreatePayment to get QR code and payment_id.
+	if u.paymentClient != nil {
+		paymentID, qrCode, payErr := u.paymentClient.CreatePayment(ctx, b.ID, b.Total, idempotencyKey)
+		if payErr != nil {
+			log.Error().Err(payErr).
+				Str("invoice_id", b.ID).
+				Msg("payment creation failed")
+
+			b.Status = model.BillingFailed
+
+			// Persist the failed billing record.
+			if updateErr := u.repo.Update(ctx, b); updateErr != nil {
+				log.Error().Err(updateErr).Msg("failed to update billing record after payment failure")
+			}
+
+			// Publish checkout.failed event.
+			u.publishEvent(ctx, "checkout.failed", b)
+
+			return nil, fmt.Errorf("create payment: %w", payErr)
+		}
+
+		b.PaymentID = paymentID
+		b.QRCode = qrCode
+	}
+
+	// Step 6: Update billing record with all fees, payment_id, qr_code.
+	if err := u.repo.Update(ctx, b); err != nil {
+		return nil, fmt.Errorf("update billing record: %w", err)
+	}
+
+	// Step 7: Store idempotency key for future dedup.
+	if idempotencyKey != "" {
+		if err := u.repo.SetIdempotencyKey(ctx, idempotencyKey, b.ID); err != nil {
+			log.Error().Err(err).
+				Str("idempotency_key", idempotencyKey).
+				Msg("failed to store idempotency key (non-fatal)")
+		}
+	}
+
+	// Step 8: Publish checkout.completed event.
+	u.publishEvent(ctx, "checkout.completed", b)
+
+	return b, nil
+}
+
+// publishEvent publishes a domain event to RabbitMQ. It is a best-effort
+// operation — failures are logged but do not fail the checkout.
+func (u *billingUsecase) publishEvent(ctx context.Context, eventType string, b *model.BillingRecord) {
+	if u.publisher == nil {
+		return
+	}
+
+	payload, err := json.Marshal(map[string]any{
+		"invoice_id":       b.ID,
+		"reservation_id":   b.ReservationID,
+		"booking_fee":      b.BookingFee,
+		"hourly_fee":       b.HourlyFee,
+		"overnight_fee":    b.OvernightFee,
+		"penalty":          b.Penalty,
+		"noshow_fee":       b.NoshowFee,
+		"cancellation_fee": b.CancelFee,
+		"total":            b.Total,
+		"status":           string(b.Status),
+		"payment_id":       b.PaymentID,
+		"qr_code":          b.QRCode,
+	})
+	if err != nil {
+		log.Error().Err(err).Str("event", eventType).Msg("failed to marshal event payload")
+		return
+	}
+
+	if pubErr := u.publisher.Publish(ctx, eventType, payload); pubErr != nil {
+		log.Error().Err(pubErr).Str("event", eventType).Msg("failed to publish event")
+	}
 }

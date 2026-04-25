@@ -61,5 +61,7 @@ func (h *BillingHandler) Checkout(ctx context.Context, req *pb.CheckoutRequest) 
 		CancellationFee: b.CancelFee,
 		Total:           b.Total,
 		Status:          string(b.Status),
+		QrCode:          b.QRCode,
+		PaymentId:       b.PaymentID,
 	}, nil
 }

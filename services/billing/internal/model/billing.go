@@ -11,18 +11,21 @@ const (
 )
 
 type BillingRecord struct {
-	ID            string        `db:"id"`
-	ReservationID string        `db:"reservation_id"`
-	BookingFee    int64         `db:"booking_fee"`
-	HourlyFee     int64         `db:"hourly_fee"`
-	OvernightFee  int64         `db:"overnight_fee"`
-	Penalty       int64         `db:"penalty"`
-	NoshowFee     int64         `db:"noshow_fee"`
-	CancelFee     int64         `db:"cancellation_fee"`
-	Total         int64         `db:"total"`
-	Status        BillingStatus `db:"status"`
-	SessionStart  *time.Time    `db:"session_start"`
-	SessionEnd    *time.Time    `db:"session_end"`
+	ID             string        `db:"id"`
+	ReservationID  string        `db:"reservation_id"`
+	BookingFee     int64         `db:"booking_fee"`
+	HourlyFee      int64         `db:"hourly_fee"`
+	OvernightFee   int64         `db:"overnight_fee"`
+	Penalty        int64         `db:"penalty"`
+	NoshowFee      int64         `db:"noshow_fee"`
+	CancelFee      int64         `db:"cancellation_fee"`
+	Total          int64         `db:"total"`
+	Status         BillingStatus `db:"status"`
+	SessionStart   *time.Time    `db:"session_start"`
+	SessionEnd     *time.Time    `db:"session_end"`
+	IdempotencyKey string        `db:"idempotency_key"`
+	PaymentID      string        `db:"payment_id"`
+	QRCode         string        `db:"qr_code"`
 }
 
 type PricingInput struct {
