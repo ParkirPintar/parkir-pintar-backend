@@ -36,58 +36,113 @@ func (UnimplementedReservationServiceServer) GetReservation(context.Context, *Ge
 }
 func (UnimplementedReservationServiceServer) mustEmbedUnimplementedReservationServiceServer() {}
 
-func RegisterReservationServiceServer(s *grpc.Server, srv ReservationServiceServer) {}
+func RegisterReservationServiceServer(s *grpc.Server, srv ReservationServiceServer) {
+	sd := grpc.ServiceDesc{
+		ServiceName: "reservation.ReservationService",
+		HandlerType: (*ReservationServiceServer)(nil),
+		Methods: []grpc.MethodDesc{
+			{MethodName: "CreateReservation", Handler: _ReservationService_CreateReservation_Handler},
+			{MethodName: "HoldSpot", Handler: _ReservationService_HoldSpot_Handler},
+			{MethodName: "CancelReservation", Handler: _ReservationService_CancelReservation_Handler},
+			{MethodName: "CheckIn", Handler: _ReservationService_CheckIn_Handler},
+			{MethodName: "GetReservation", Handler: _ReservationService_GetReservation_Handler},
+		},
+		Streams:  []grpc.StreamDesc{},
+		Metadata: "reservation.proto",
+	}
+	s.RegisterService(&sd, srv)
+}
+
+func _ReservationService_CreateReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateReservationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	return srv.(ReservationServiceServer).CreateReservation(ctx, in)
+}
+
+func _ReservationService_HoldSpot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HoldSpotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	return srv.(ReservationServiceServer).HoldSpot(ctx, in)
+}
+
+func _ReservationService_CancelReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelReservationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	return srv.(ReservationServiceServer).CancelReservation(ctx, in)
+}
+
+func _ReservationService_CheckIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckInRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	return srv.(ReservationServiceServer).CheckIn(ctx, in)
+}
+
+func _ReservationService_GetReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReservationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	return srv.(ReservationServiceServer).GetReservation(ctx, in)
+}
 
 type CreateReservationRequest struct {
-	Mode           string
-	VehicleType    string
-	SpotId         string
-	IdempotencyKey string
+	Mode           string `json:"mode"`
+	VehicleType    string `json:"vehicle_type"`
+	SpotId         string `json:"spot_id"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 type ReservationResponse struct {
-	ReservationId string
-	SpotId        string
-	Mode          string
-	Status        string
-	BookingFee    int64
-	ConfirmedAt   string
-	ExpiresAt     string
+	ReservationId string `json:"reservation_id"`
+	SpotId        string `json:"spot_id"`
+	Mode          string `json:"mode"`
+	Status        string `json:"status"`
+	BookingFee    int64  `json:"booking_fee"`
+	ConfirmedAt   string `json:"confirmed_at"`
+	ExpiresAt     string `json:"expires_at"`
 }
 
 type HoldSpotRequest struct {
-	SpotId   string
-	DriverId string
+	SpotId   string `json:"spot_id"`
+	DriverId string `json:"driver_id"`
 }
 
 type HoldSpotResponse struct {
-	SpotId    string
-	HeldUntil string
+	SpotId    string `json:"spot_id"`
+	HeldUntil string `json:"held_until"`
 }
 
 type CancelReservationRequest struct {
-	ReservationId string
+	ReservationId string `json:"reservation_id"`
 }
 
 type CancelReservationResponse struct {
-	ReservationId   string
-	Status          string
-	CancellationFee int64
+	ReservationId   string `json:"reservation_id"`
+	Status          string `json:"status"`
+	CancellationFee int64  `json:"cancellation_fee"`
 }
 
 type CheckInRequest struct {
-	ReservationId string
-	ActualSpotId  string
+	ReservationId string `json:"reservation_id"`
+	ActualSpotId  string `json:"actual_spot_id"`
 }
 
 type CheckInResponse struct {
-	ReservationId  string
-	Status         string
-	CheckinAt      string
-	WrongSpot      bool
-	PenaltyApplied int64
+	ReservationId  string `json:"reservation_id"`
+	Status         string `json:"status"`
+	CheckinAt      string `json:"checkin_at"`
+	WrongSpot      bool   `json:"wrong_spot"`
+	PenaltyApplied int64  `json:"penalty_applied"`
 }
 
 type GetReservationRequest struct {
-	ReservationId string
+	ReservationId string `json:"reservation_id"`
 }

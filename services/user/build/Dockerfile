@@ -9,9 +9,9 @@ COPY services/search/go.mod services/search/go.sum ./services/search/
 COPY services/presence/go.mod services/presence/go.sum ./services/presence/
 COPY services/notification/go.mod services/notification/go.sum ./services/notification/
 COPY services/analytics/go.mod services/analytics/go.sum ./services/analytics/
-RUN cd services/payment && go mod download
+RUN cd services/user && go mod download
 COPY services/ ./services/
-RUN cd services/payment && CGO_ENABLED=0 GOOS=linux go build -o /service ./cmd
+RUN cd services/user && CGO_ENABLED=0 GOOS=linux go build -o /service ./cmd
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /service /service
