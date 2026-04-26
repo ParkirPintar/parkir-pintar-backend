@@ -1,5 +1,7 @@
 # ParkirPintar — Smart Parking Marketplace
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ParkirPintar_parkir-pintar-backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ParkirPintar_parkir-pintar-backend)
+
 ## Project Structure
 
 Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per service.
