@@ -26,7 +26,7 @@ services:
       POSTGRES_USER: parkir
       POSTGRES_PASSWORD: parkir
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -64,8 +64,8 @@ services:
 
   user:
     build:
-      context: ../services/user
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/user/build/Dockerfile
     ports:
       - "50051:50051"
     environment:
@@ -78,8 +78,8 @@ services:
 
   reservation:
     build:
-      context: ../services/reservation
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/reservation/build/Dockerfile
     ports:
       - "50052:50052"
     environment:
@@ -95,8 +95,8 @@ services:
 
   billing:
     build:
-      context: ../services/billing
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/billing/build/Dockerfile
     ports:
       - "50053:50053"
     environment:
@@ -111,8 +111,8 @@ services:
 
   payment:
     build:
-      context: ../services/payment
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/payment/build/Dockerfile
     ports:
       - "50054:50054"
     environment:
@@ -125,8 +125,8 @@ services:
 
   search:
     build:
-      context: ../services/search
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/search/build/Dockerfile
     ports:
       - "50055:50055"
     environment:
@@ -139,8 +139,8 @@ services:
 
   presence:
     build:
-      context: ../services/presence
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/presence/build/Dockerfile
     ports:
       - "50056:50056"
     environment:
@@ -152,8 +152,8 @@ services:
 
   notification:
     build:
-      context: ../services/notification
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/notification/build/Dockerfile
     environment:
       <<: *common-env
       RABBITMQ_QUEUE: notification.queue
@@ -163,8 +163,8 @@ services:
 
   analytics:
     build:
-      context: ../services/analytics
-      dockerfile: build/Dockerfile
+      context: ..
+      dockerfile: services/analytics/build/Dockerfile
     environment:
       <<: *common-env
       DATABASE_URL: postgres://parkir:parkir@postgres:5432/analytics_db?sslmode=disable
@@ -182,6 +182,30 @@ services:
     volumes:
       - ./stubs:/home/wiremock/mappings:ro
     command: ["--verbose"]
+
+  # ─── Integration Test Runner ──────────────────────────────────────
+
+  integration-test:
+    build:
+      context: ..
+      dockerfile: sre/e2e/integration/Dockerfile
+    environment:
+      USER_ADDR: user:50051
+      RESERVATION_ADDR: reservation:50052
+      SEARCH_ADDR: search:50055
+      BILLING_ADDR: billing:50053
+      PAYMENT_ADDR: payment:50054
+      REDIS_ADDR: redis:6379
+      DATABASE_URL: postgres://parkir:parkir@postgres:5432/reservation_db?sslmode=disable
+      BILLING_DATABASE_URL: postgres://parkir:parkir@postgres:5432/billing_db?sslmode=disable
+    depends_on:
+      - user
+      - reservation
+      - search
+      - billing
+      - payment
+    profiles:
+      - test
 
 volumes:
   pgdata:
