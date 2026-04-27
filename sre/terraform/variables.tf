@@ -24,6 +24,7 @@ variable "istio_elb_name" {
   default     = ""
 }
 
+variable "github_owner" {
   type        = string
   description = "GitHub organization or username, e.g. my-org"
 }
