@@ -22,7 +22,7 @@ on:
 env:
   SERVICE: billing
   SERVICE_PATH: services/billing
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.25'
   IMAGE_NAME: parkir-pintar/billing-service
 
 jobs:
@@ -76,7 +76,7 @@ jobs:
         continue-on-error: true
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         with:
           args: >
             -Dsonar.projectKey=ParkirPintar_parkir-pintar-backend
@@ -123,6 +123,8 @@ jobs:
           cache-dependency-path: ${{ env.SERVICE_PATH }}/go.sum
 
       - name: Unit Tests
+        env:
+          GOWORK: ${{ github.workspace }}/go.work
         run: |
           cd ${{ env.SERVICE_PATH }}
           go mod download
