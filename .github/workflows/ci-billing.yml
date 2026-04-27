@@ -77,17 +77,6 @@ jobs:
           working-directory: ${{ env.SERVICE_PATH }}
         continue-on-error: true
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          args: >
-            -Dsonar.projectKey=ParkirPintar_parkir-pintar-backend
-            -Dsonar.organization=parkirpintar
-            -Dsonar.sources=${{ env.SERVICE_PATH }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -117,6 +106,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -137,6 +128,21 @@ jobs:
             echo "No coverage data generated (no test files found)"
             echo "mode: set" > coverage.out
           fi
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          args: >
+            -Dsonar.projectKey=ParkirPintar_parkir-pintar-backend
+            -Dsonar.organization=parkirpintar
+            -Dsonar.sources=${{ env.SERVICE_PATH }}
+            -Dsonar.tests=${{ env.SERVICE_PATH }}
+            -Dsonar.test.inclusions=**/*_test.go
+            -Dsonar.exclusions=**/vendor/**,**/*_test.go,**/proto/**/*.go,**/migrations/**
+            -Dsonar.go.coverage.reportPaths=${{ env.SERVICE_PATH }}/coverage.out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload Coverage
         uses: actions/upload-artifact@v4
