@@ -20,7 +20,7 @@ on:
 env:
   SERVICE: user
   SERVICE_PATH: services/user
-  GO_VERSION: '1.22'
+  GO_VERSION: '1.25'
   IMAGE_NAME: parkir-pintar/user-service
 
 jobs:
@@ -46,6 +46,8 @@ jobs:
           failure-threshold: error
 
       - name: Dependency Scan
+        env:
+          GOWORK: ${{ github.workspace }}/go.work
         run: |
           cd ${{ env.SERVICE_PATH }}
           go mod download
@@ -121,6 +123,8 @@ jobs:
           cache-dependency-path: ${{ env.SERVICE_PATH }}/go.sum
 
       - name: Unit Tests
+        env:
+          GOWORK: ${{ github.workspace }}/go.work
         run: |
           cd ${{ env.SERVICE_PATH }}
           go mod download

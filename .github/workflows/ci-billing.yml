@@ -48,6 +48,8 @@ jobs:
           failure-threshold: error
 
       - name: Dependency Scan
+        env:
+          GOWORK: ${{ github.workspace }}/go.work
         run: |
           cd ${{ env.SERVICE_PATH }}
           go mod download
