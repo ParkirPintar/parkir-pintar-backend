@@ -25,7 +25,7 @@ func RegisterPresenceServiceServer(s *grpc.Server, srv PresenceServiceServer) {
 		Streams: []grpc.StreamDesc{
 			{
 				StreamName:    "StreamLocation",
-				Handler:       _PresenceService_StreamLocation_Handler,
+				Handler:       presenceServiceStreamLocationHandler,
 				ServerStreams:  true,
 				ClientStreams:  true,
 			},
@@ -35,7 +35,7 @@ func RegisterPresenceServiceServer(s *grpc.Server, srv PresenceServiceServer) {
 	s.RegisterService(&sd, srv)
 }
 
-func _PresenceService_StreamLocation_Handler(srv interface{}, stream grpc.ServerStream) error {
+func presenceServiceStreamLocationHandler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(PresenceServiceServer).StreamLocation(&presenceStreamLocationServer{stream})
 }
 

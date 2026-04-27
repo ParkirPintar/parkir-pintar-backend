@@ -41,11 +41,11 @@ func RegisterReservationServiceServer(s *grpc.Server, srv ReservationServiceServ
 		ServiceName: "reservation.ReservationService",
 		HandlerType: (*ReservationServiceServer)(nil),
 		Methods: []grpc.MethodDesc{
-			{MethodName: "CreateReservation", Handler: _ReservationService_CreateReservation_Handler},
-			{MethodName: "HoldSpot", Handler: _ReservationService_HoldSpot_Handler},
-			{MethodName: "CancelReservation", Handler: _ReservationService_CancelReservation_Handler},
-			{MethodName: "CheckIn", Handler: _ReservationService_CheckIn_Handler},
-			{MethodName: "GetReservation", Handler: _ReservationService_GetReservation_Handler},
+			{MethodName: "CreateReservation", Handler: reservationServiceCreateReservationHandler},
+			{MethodName: "HoldSpot", Handler: reservationServiceHoldSpotHandler},
+			{MethodName: "CancelReservation", Handler: reservationServiceCancelReservationHandler},
+			{MethodName: "CheckIn", Handler: reservationServiceCheckInHandler},
+			{MethodName: "GetReservation", Handler: reservationServiceGetReservationHandler},
 		},
 		Streams:  []grpc.StreamDesc{},
 		Metadata: "reservation.proto",
@@ -53,7 +53,7 @@ func RegisterReservationServiceServer(s *grpc.Server, srv ReservationServiceServ
 	s.RegisterService(&sd, srv)
 }
 
-func _ReservationService_CreateReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func reservationServiceCreateReservationHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateReservationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func _ReservationService_CreateReservation_Handler(srv interface{}, ctx context.
 	return srv.(ReservationServiceServer).CreateReservation(ctx, in)
 }
 
-func _ReservationService_HoldSpot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func reservationServiceHoldSpotHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HoldSpotRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func _ReservationService_HoldSpot_Handler(srv interface{}, ctx context.Context, 
 	return srv.(ReservationServiceServer).HoldSpot(ctx, in)
 }
 
-func _ReservationService_CancelReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func reservationServiceCancelReservationHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelReservationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func _ReservationService_CancelReservation_Handler(srv interface{}, ctx context.
 	return srv.(ReservationServiceServer).CancelReservation(ctx, in)
 }
 
-func _ReservationService_CheckIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func reservationServiceCheckInHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckInRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func _ReservationService_CheckIn_Handler(srv interface{}, ctx context.Context, d
 	return srv.(ReservationServiceServer).CheckIn(ctx, in)
 }
 
-func _ReservationService_GetReservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func reservationServiceGetReservationHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetReservationRequest)
 	if err := dec(in); err != nil {
 		return nil, err

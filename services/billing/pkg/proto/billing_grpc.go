@@ -36,10 +36,10 @@ func RegisterBillingServiceServer(s *grpc.Server, srv BillingServiceServer) {
 		ServiceName: "billing.BillingService",
 		HandlerType: (*BillingServiceServer)(nil),
 		Methods: []grpc.MethodDesc{
-			{MethodName: "ChargeBookingFee", Handler: _BillingService_ChargeBookingFee_Handler},
-			{MethodName: "StartBillingSession", Handler: _BillingService_StartBillingSession_Handler},
-			{MethodName: "ApplyPenalty", Handler: _BillingService_ApplyPenalty_Handler},
-			{MethodName: "Checkout", Handler: _BillingService_Checkout_Handler},
+			{MethodName: "ChargeBookingFee", Handler: billingServiceChargeBookingFeeHandler},
+			{MethodName: "StartBillingSession", Handler: billingServiceStartBillingSessionHandler},
+			{MethodName: "ApplyPenalty", Handler: billingServiceApplyPenaltyHandler},
+			{MethodName: "Checkout", Handler: billingServiceCheckoutHandler},
 		},
 		Streams:  []grpc.StreamDesc{},
 		Metadata: "billing.proto",
@@ -47,7 +47,7 @@ func RegisterBillingServiceServer(s *grpc.Server, srv BillingServiceServer) {
 	s.RegisterService(&sd, srv)
 }
 
-func _BillingService_ChargeBookingFee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func billingServiceChargeBookingFeeHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ChargeBookingFeeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func _BillingService_ChargeBookingFee_Handler(srv interface{}, ctx context.Conte
 	return srv.(BillingServiceServer).ChargeBookingFee(ctx, in)
 }
 
-func _BillingService_StartBillingSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func billingServiceStartBillingSessionHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartBillingSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func _BillingService_StartBillingSession_Handler(srv interface{}, ctx context.Co
 	return srv.(BillingServiceServer).StartBillingSession(ctx, in)
 }
 
-func _BillingService_ApplyPenalty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func billingServiceApplyPenaltyHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ApplyPenaltyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func _BillingService_ApplyPenalty_Handler(srv interface{}, ctx context.Context, 
 	return srv.(BillingServiceServer).ApplyPenalty(ctx, in)
 }
 
-func _BillingService_Checkout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func billingServiceCheckoutHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CheckoutRequest)
 	if err := dec(in); err != nil {
 		return nil, err

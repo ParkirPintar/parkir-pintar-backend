@@ -32,9 +32,9 @@ func RegisterPaymentServiceServer(s *grpc.Server, srv PaymentServiceServer) {
 		ServiceName: "payment.PaymentService",
 		HandlerType: (*PaymentServiceServer)(nil),
 		Methods: []grpc.MethodDesc{
-			{MethodName: "CreatePayment", Handler: _PaymentService_CreatePayment_Handler},
-			{MethodName: "GetPaymentStatus", Handler: _PaymentService_GetPaymentStatus_Handler},
-			{MethodName: "RetryPayment", Handler: _PaymentService_RetryPayment_Handler},
+			{MethodName: "CreatePayment", Handler: paymentServiceCreatePaymentHandler},
+			{MethodName: "GetPaymentStatus", Handler: paymentServiceGetPaymentStatusHandler},
+			{MethodName: "RetryPayment", Handler: paymentServiceRetryPaymentHandler},
 		},
 		Streams:  []grpc.StreamDesc{},
 		Metadata: "payment.proto",
@@ -42,7 +42,7 @@ func RegisterPaymentServiceServer(s *grpc.Server, srv PaymentServiceServer) {
 	s.RegisterService(&sd, srv)
 }
 
-func _PaymentService_CreatePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func paymentServiceCreatePaymentHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreatePaymentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func _PaymentService_CreatePayment_Handler(srv interface{}, ctx context.Context,
 	return srv.(PaymentServiceServer).CreatePayment(ctx, in)
 }
 
-func _PaymentService_GetPaymentStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func paymentServiceGetPaymentStatusHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetPaymentStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func _PaymentService_GetPaymentStatus_Handler(srv interface{}, ctx context.Conte
 	return srv.(PaymentServiceServer).GetPaymentStatus(ctx, in)
 }
 
-func _PaymentService_RetryPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+func paymentServiceRetryPaymentHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RetryPaymentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
