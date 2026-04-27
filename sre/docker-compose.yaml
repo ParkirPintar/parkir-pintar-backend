@@ -13,7 +13,6 @@ version: "3.9"
 x-common-env: &common-env
   REDIS_ADDR: redis:6379
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
-  JWT_SECRET: dev-secret-do-not-use-in-prod
   OTEL_EXPORTER_OTLP_ENDPOINT: ""
   LOG_LEVEL: debug
 
@@ -61,20 +60,6 @@ services:
       retries: 10
 
   # ─── Services ─────────────────────────────────────────────────────
-
-  user:
-    build:
-      context: ..
-      dockerfile: services/user/build/Dockerfile
-    ports:
-      - "50051:50051"
-    environment:
-      <<: *common-env
-      GRPC_ADDR: ":50051"
-      DATABASE_URL: postgres://parkir:parkir@postgres:5432/user_db?sslmode=disable
-    depends_on:
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   reservation:
     build:
@@ -190,7 +175,7 @@ services:
       context: ..
       dockerfile: sre/e2e/integration/Dockerfile
     environment:
-      USER_ADDR: user:50051
+      USER_ADDR: ""
       RESERVATION_ADDR: reservation:50052
       SEARCH_ADDR: search:50055
       BILLING_ADDR: billing:50053
@@ -199,7 +184,6 @@ services:
       DATABASE_URL: postgres://parkir:parkir@postgres:5432/reservation_db?sslmode=disable
       BILLING_DATABASE_URL: postgres://parkir:parkir@postgres:5432/billing_db?sslmode=disable
     depends_on:
-      - user
       - reservation
       - search
       - billing

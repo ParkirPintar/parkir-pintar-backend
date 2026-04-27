@@ -14,7 +14,6 @@ import (
 	"github.com/parkir-pintar/reservation/internal/repository"
 	"github.com/parkir-pintar/reservation/internal/usecase"
 	pb "github.com/parkir-pintar/reservation/pkg/proto"
-	"github.com/parkir-pintar/user/pkg/interceptor"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
@@ -97,10 +96,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 
-	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
-	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
-	)
+	srv := grpc.NewServer()
 	pb.RegisterReservationServiceServer(srv, h)
 	reflection.Register(srv)
 

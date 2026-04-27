@@ -10,8 +10,6 @@ import (
 	"github.com/parkir-pintar/presence/internal/handler"
 	"github.com/parkir-pintar/presence/internal/usecase"
 	pb "github.com/parkir-pintar/presence/pkg/proto"
-	"github.com/parkir-pintar/user/pkg/interceptor"
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -22,12 +20,6 @@ import (
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
-	// Redis (for auth interceptor blacklist checks)
-	rdb := redis.NewClient(&redis.Options{
-		Addr: buildRedisAddr(),
-	})
-	defer rdb.Close()
 
 	// Reservation gRPC client
 	reservationConn, err := grpc.NewClient(
@@ -61,10 +53,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 
-	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
-	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
-	)
+	srv := grpc.NewServer()
 	pb.RegisterPresenceServiceServer(srv, h)
 	reflection.Register(srv)
 
@@ -88,15 +77,6 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
-}
-
-func buildRedisAddr() string {
-	if v := os.Getenv("REDIS_ADDR"); v != "" {
-		return v
-	}
-	host := envOr("REDIS_HOST", "localhost")
-	port := envOr("REDIS_PORT", "6379")
-	return host + ":" + port
 }
 
 func buildGRPCAddr(defaultAddr string) string {

@@ -8,5 +8,4 @@ use (
 	./services/presence
 	./services/reservation
 	./services/search
-	./services/user
 )

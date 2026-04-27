@@ -14,8 +14,6 @@ import (
 	"github.com/parkir-pintar/payment/internal/repository"
 	"github.com/parkir-pintar/payment/internal/usecase"
 	pb "github.com/parkir-pintar/payment/pkg/proto"
-	"github.com/parkir-pintar/user/pkg/interceptor"
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -37,15 +35,6 @@ func main() {
 	defer pool.Close()
 	log.Info().Msg("connected to PostgreSQL")
 
-	// --- Redis ---
-	redisAddr := buildRedisAddr()
-	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to Redis")
-	}
-	defer rdb.Close()
-	log.Info().Str("addr", redisAddr).Msg("connected to Redis")
-
 	// --- Settlement HTTP client ---
 	settlementURL := envOr("SETTLEMENT_URL", "http://localhost:8080")
 	settlement := adapter.NewSettlementClient(settlementURL)
@@ -56,11 +45,8 @@ func main() {
 	uc := usecase.NewPaymentUsecase(repo, settlement)
 	h := handler.NewPaymentHandler(uc)
 
-	// --- Auth interceptor ---
-	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
-	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
-	)
+	// --- gRPC server ---
+	srv := grpc.NewServer()
 
 	// --- Register gRPC service ---
 	pb.RegisterPaymentServiceServer(srv, h)
@@ -106,15 +92,6 @@ func buildDatabaseURL(envKey, defaultDB string) string {
 	name := envOr("DB_NAME", defaultDB)
 	sslmode := envOr("DB_SSLMODE", "disable")
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
-}
-
-func buildRedisAddr() string {
-	if v := os.Getenv("REDIS_ADDR"); v != "" {
-		return v
-	}
-	host := envOr("REDIS_HOST", "localhost")
-	port := envOr("REDIS_PORT", "6379")
-	return host + ":" + port
 }
 
 func buildGRPCAddr(defaultAddr string) string {

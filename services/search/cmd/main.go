@@ -13,7 +13,6 @@ import (
 	"github.com/parkir-pintar/search/internal/repository"
 	"github.com/parkir-pintar/search/internal/usecase"
 	pb "github.com/parkir-pintar/search/pkg/proto"
-	"github.com/parkir-pintar/user/pkg/interceptor"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -50,11 +49,8 @@ func main() {
 	uc := usecase.NewSearchUsecase(repo)
 	h := handler.NewSearchHandler(uc)
 
-	// --- Auth interceptor ---
-	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
-	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
-	)
+	// --- gRPC server ---
+	srv := grpc.NewServer()
 
 	// --- Register gRPC service ---
 	pb.RegisterSearchServiceServer(srv, h)

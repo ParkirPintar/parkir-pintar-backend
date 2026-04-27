@@ -11,10 +11,11 @@ service ReservationService {
 }
 
 message CreateReservationRequest {
-  string mode = 1;           // SYSTEM_ASSIGNED | USER_SELECTED
-  string vehicle_type = 2;
-  string spot_id = 3;        // required if USER_SELECTED
-  string idempotency_key = 4;
+  string driver_id = 1;
+  string mode = 2;           // SYSTEM_ASSIGNED | USER_SELECTED
+  string vehicle_type = 3;
+  string spot_id = 4;        // required if USER_SELECTED
+  string idempotency_key = 5;
 }
 
 message ReservationResponse {

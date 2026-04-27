@@ -9,17 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// driverIDKey matches the context key used by the auth interceptor.
-type contextKey string
-
-const driverIDKey contextKey = "driver_id"
-
-// driverIDFromContext extracts the driver_id injected by the auth interceptor.
-func driverIDFromContext(ctx context.Context) (string, bool) {
-	val, ok := ctx.Value(driverIDKey).(string)
-	return val, ok
-}
-
 type ReservationHandler struct {
 	pb.UnimplementedReservationServiceServer
 	uc usecase.ReservationUsecase
@@ -30,9 +19,9 @@ func NewReservationHandler(uc usecase.ReservationUsecase) *ReservationHandler {
 }
 
 func (h *ReservationHandler) CreateReservation(ctx context.Context, req *pb.CreateReservationRequest) (*pb.ReservationResponse, error) {
-	driverID, ok := driverIDFromContext(ctx)
-	if !ok || driverID == "" {
-		return nil, status.Error(codes.Unauthenticated, "driver_id not found in context")
+	driverID := req.DriverId
+	if driverID == "" {
+		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
 	}
 
 	res, err := h.uc.CreateReservation(ctx, driverID, req.Mode, req.VehicleType, req.SpotId, req.IdempotencyKey)
@@ -54,9 +43,9 @@ func (h *ReservationHandler) CreateReservation(ctx context.Context, req *pb.Crea
 }
 
 func (h *ReservationHandler) HoldSpot(ctx context.Context, req *pb.HoldSpotRequest) (*pb.HoldSpotResponse, error) {
-	driverID, ok := driverIDFromContext(ctx)
-	if !ok || driverID == "" {
-		return nil, status.Error(codes.Unauthenticated, "driver_id not found in context")
+	driverID := req.DriverId
+	if driverID == "" {
+		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
 	}
 
 	heldUntil, err := h.uc.HoldSpot(ctx, req.SpotId, driverID)

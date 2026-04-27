@@ -4,13 +4,12 @@ go 1.25.0
 
 require (
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/parkir-pintar/user v0.0.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/zerolog v1.35.1
 	google.golang.org/grpc v1.80.0
 )
 
-replace github.com/parkir-pintar/user => ../user
+replace ()
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

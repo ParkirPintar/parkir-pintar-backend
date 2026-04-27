@@ -6,7 +6,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/parkir-pintar/payment v0.0.0
-	github.com/parkir-pintar/user v0.0.0
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/zerolog v1.35.1
@@ -15,7 +14,6 @@ require (
 
 replace (
 	github.com/parkir-pintar/payment => ../payment
-	github.com/parkir-pintar/user => ../user
 )
 
 require (

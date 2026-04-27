@@ -14,7 +14,6 @@ import (
 	"github.com/parkir-pintar/billing/internal/repository"
 	"github.com/parkir-pintar/billing/internal/usecase"
 	pb "github.com/parkir-pintar/billing/pkg/proto"
-	"github.com/parkir-pintar/user/pkg/interceptor"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
@@ -78,11 +77,8 @@ func main() {
 	uc := usecase.NewBillingUsecase(ctx, repo, paymentClient, publisher)
 	h := handler.NewBillingHandler(uc)
 
-	// --- Auth interceptor ---
-	jwtSecret := envOr("JWT_SECRET", "parkir-pintar-secret")
-	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptor.UnaryAuthInterceptor(jwtSecret, rdb, nil)),
-	)
+	// --- gRPC server ---
+	srv := grpc.NewServer()
 
 	// --- Register gRPC service ---
 	pb.RegisterBillingServiceServer(srv, h)

@@ -75,9 +75,6 @@ data:
     _format_version: "3.0"
 
     plugins:
-      - name: jwt
-        config:
-          claims_to_verify: [exp]
       - name: rate-limiting
         config:
           minute: 60
@@ -95,8 +92,18 @@ data:
         url: grpc://reservation-service.parkir-pintar.svc.cluster.local:50051
         routes:
           - name: reservation-route
-            paths: ["/v1/reservations", "/v1/spots"]
+            paths: ["/v1/reservations"]
             methods: ["POST", "DELETE"]
+          - name: spot-hold-route
+            paths: ["/v1/spots"]
+            methods: ["POST"]
+
+      - name: checkin
+        url: grpc://reservation-service.parkir-pintar.svc.cluster.local:50051
+        routes:
+          - name: checkin-route
+            paths: ["/v1/checkin"]
+            methods: ["POST"]
 
       - name: billing
         url: grpc://billing-service.parkir-pintar.svc.cluster.local:50051
@@ -117,3 +124,15 @@ data:
         routes:
           - name: presence-route
             paths: ["/v1/presence"]
+
+      - name: grafana
+        url: http://grafana.monitoring.svc.cluster.local:3000
+        routes:
+          - name: monitor-route
+            paths: ["/monitor"]
+            strip_path: false
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              policy: local

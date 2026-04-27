@@ -8,7 +8,6 @@ require (
 	github.com/parkir-pintar/payment v0.0.0
 	github.com/parkir-pintar/reservation v0.0.0
 	github.com/parkir-pintar/search v0.0.0
-	github.com/parkir-pintar/user v0.0.0
 	github.com/redis/go-redis/v9 v9.18.0
 	google.golang.org/grpc v1.80.0
 )
@@ -31,5 +30,4 @@ replace (
 	github.com/parkir-pintar/payment => ../../../services/payment
 	github.com/parkir-pintar/reservation => ../../../services/reservation
 	github.com/parkir-pintar/search => ../../../services/search
-	github.com/parkir-pintar/user => ../../../services/user
 )
