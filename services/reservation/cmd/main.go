@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -31,7 +32,7 @@ func main() {
 	defer cancel()
 
 	// Database
-	dbPool, err := pgxpool.New(ctx, envOr("DATABASE_URL", "postgres://localhost:5432/reservation"))
+	dbPool, err := pgxpool.New(ctx, buildDatabaseURL("DATABASE_URL", "reservation"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
 	}
@@ -39,7 +40,7 @@ func main() {
 
 	// Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr: envOr("REDIS_ADDR", "localhost:6379"),
+		Addr: buildRedisAddr(),
 	})
 	defer rdb.Close()
 
@@ -90,7 +91,7 @@ func main() {
 	h := handler.NewReservationHandler(uc)
 
 	// gRPC server
-	addr := envOr("GRPC_ADDR", ":50052")
+	addr := buildGRPCAddr(":50052")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
@@ -140,4 +141,36 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func buildDatabaseURL(envKey, defaultDB string) string {
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+	host := envOr("DB_HOST", "localhost")
+	port := envOr("DB_PORT", "5432")
+	user := envOr("DB_USER", "postgres")
+	pass := envOr("DB_PASSWORD", "postgres")
+	name := envOr("DB_NAME", defaultDB)
+	sslmode := envOr("DB_SSLMODE", "disable")
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
+}
+
+func buildRedisAddr() string {
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		return v
+	}
+	host := envOr("REDIS_HOST", "localhost")
+	port := envOr("REDIS_PORT", "6379")
+	return host + ":" + port
+}
+
+func buildGRPCAddr(defaultAddr string) string {
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
+		return v
+	}
+	if p := os.Getenv("GRPC_PORT"); p != "" {
+		return ":" + p
+	}
+	return defaultAddr
 }

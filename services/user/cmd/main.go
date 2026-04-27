@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -27,7 +28,7 @@ func main() {
 	ctx := context.Background()
 
 	// --- Database (PostgreSQL) ---
-	dbURL := envOr("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/user?sslmode=disable")
+	dbURL := buildDatabaseURL("DATABASE_URL", "user")
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
@@ -36,7 +37,7 @@ func main() {
 	log.Info().Msg("connected to PostgreSQL")
 
 	// --- Redis ---
-	redisAddr := envOr("REDIS_ADDR", "localhost:6379")
+	redisAddr := buildRedisAddr()
 	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Redis")
@@ -65,7 +66,7 @@ func main() {
 	reflection.Register(srv)
 
 	// --- Start listener ---
-	addr := envOr("GRPC_ADDR", ":50051")
+	addr := buildGRPCAddr(":50051")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
@@ -91,4 +92,36 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func buildDatabaseURL(envKey, defaultDB string) string {
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+	host := envOr("DB_HOST", "localhost")
+	port := envOr("DB_PORT", "5432")
+	user := envOr("DB_USER", "postgres")
+	pass := envOr("DB_PASSWORD", "postgres")
+	name := envOr("DB_NAME", defaultDB)
+	sslmode := envOr("DB_SSLMODE", "disable")
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
+}
+
+func buildRedisAddr() string {
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		return v
+	}
+	host := envOr("REDIS_HOST", "localhost")
+	port := envOr("REDIS_PORT", "6379")
+	return host + ":" + port
+}
+
+func buildGRPCAddr(defaultAddr string) string {
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
+		return v
+	}
+	if p := os.Getenv("GRPC_PORT"); p != "" {
+		return ":" + p
+	}
+	return defaultAddr
 }

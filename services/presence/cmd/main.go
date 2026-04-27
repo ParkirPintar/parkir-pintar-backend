@@ -25,7 +25,7 @@ func main() {
 
 	// Redis (for auth interceptor blacklist checks)
 	rdb := redis.NewClient(&redis.Options{
-		Addr: envOr("REDIS_ADDR", "localhost:6379"),
+		Addr: buildRedisAddr(),
 	})
 	defer rdb.Close()
 
@@ -55,7 +55,7 @@ func main() {
 	h := handler.NewPresenceHandler(uc)
 
 	// gRPC server with auth interceptor
-	addr := envOr("GRPC_ADDR", ":50056")
+	addr := buildGRPCAddr(":50056")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
@@ -88,4 +88,23 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func buildRedisAddr() string {
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		return v
+	}
+	host := envOr("REDIS_HOST", "localhost")
+	port := envOr("REDIS_PORT", "6379")
+	return host + ":" + port
+}
+
+func buildGRPCAddr(defaultAddr string) string {
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
+		return v
+	}
+	if p := os.Getenv("GRPC_PORT"); p != "" {
+		return ":" + p
+	}
+	return defaultAddr
 }

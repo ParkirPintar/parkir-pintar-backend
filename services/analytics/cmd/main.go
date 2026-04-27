@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,6 +24,19 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+func buildDatabaseURL(envKey, defaultDB string) string {
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+	host := envOr("DB_HOST", "localhost")
+	port := envOr("DB_PORT", "5432")
+	user := envOr("DB_USER", "postgres")
+	pass := envOr("DB_PASSWORD", "postgres")
+	name := envOr("DB_NAME", defaultDB)
+	sslmode := envOr("DB_SSLMODE", "disable")
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
+}
+
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -30,7 +44,7 @@ func main() {
 	ctx := context.Background()
 
 	// PostgreSQL connection pool
-	databaseURL := envOr("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/analytics?sslmode=disable")
+	databaseURL := buildDatabaseURL("DATABASE_URL", "analytics")
 	db, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to PostgreSQL")

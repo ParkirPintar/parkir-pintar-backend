@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -30,7 +31,7 @@ func main() {
 	ctx := context.Background()
 
 	// --- Database (PostgreSQL) ---
-	dbURL := envOr("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/billing?sslmode=disable")
+	dbURL := buildDatabaseURL("DATABASE_URL", "billing")
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
@@ -39,7 +40,7 @@ func main() {
 	log.Info().Msg("connected to PostgreSQL")
 
 	// --- Redis ---
-	redisAddr := envOr("REDIS_ADDR", "localhost:6379")
+	redisAddr := buildRedisAddr()
 	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Redis")
@@ -88,7 +89,7 @@ func main() {
 	reflection.Register(srv)
 
 	// --- Start listener ---
-	addr := envOr("GRPC_ADDR", ":50053")
+	addr := buildGRPCAddr(":50053")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
@@ -114,4 +115,43 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// buildDatabaseURL composes a PostgreSQL connection string from individual
+// env vars (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME) provided by
+// K8s secrets. Falls back to DATABASE_URL or a local default.
+func buildDatabaseURL(envKey, defaultDB string) string {
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+	host := envOr("DB_HOST", "localhost")
+	port := envOr("DB_PORT", "5432")
+	user := envOr("DB_USER", "postgres")
+	pass := envOr("DB_PASSWORD", "postgres")
+	name := envOr("DB_NAME", defaultDB)
+	sslmode := envOr("DB_SSLMODE", "disable")
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
+}
+
+// buildRedisAddr composes a Redis address from REDIS_ADDR or
+// REDIS_HOST + REDIS_PORT provided by K8s secrets.
+func buildRedisAddr() string {
+	if v := os.Getenv("REDIS_ADDR"); v != "" {
+		return v
+	}
+	host := envOr("REDIS_HOST", "localhost")
+	port := envOr("REDIS_PORT", "6379")
+	return host + ":" + port
+}
+
+// buildGRPCAddr returns the gRPC listen address from GRPC_ADDR or
+// GRPC_PORT provided by K8s ConfigMap.
+func buildGRPCAddr(defaultAddr string) string {
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
+		return v
+	}
+	if p := os.Getenv("GRPC_PORT"); p != "" {
+		return ":" + p
+	}
+	return defaultAddr
 }
