@@ -1,0 +1,12 @@
+go 1.25.0
+
+use (
+	./services/analytics
+	./services/billing
+	./services/notification
+	./services/payment
+	./services/presence
+	./services/reservation
+	./services/search
+	./services/user
+)

@@ -16,7 +16,8 @@
 # vendor/
 
 # Go workspace file
-go.work
+# go.work is tracked because Dockerfiles and CI need it
+go.work.sum
 
 # Build output
 /bin/
