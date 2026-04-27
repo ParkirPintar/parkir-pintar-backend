@@ -35,6 +35,7 @@ require (
 
 replace (
 	github.com/parkir-pintar/billing => ../billing
+	github.com/parkir-pintar/payment => ../payment
 	github.com/parkir-pintar/search => ../search
 	github.com/parkir-pintar/user => ../user
 )
