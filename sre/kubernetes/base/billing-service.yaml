@@ -30,6 +30,8 @@ spec:
                 name: billing-db-secret
             - secretRef:
                 name: rabbitmq-secret
+            - secretRef:
+                name: redis-secret
           livenessProbe:
             grpc:
               port: 50051

@@ -26,6 +26,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: parkirpintar-config
+            - secretRef:
+                name: redis-secret
           livenessProbe:
             grpc:
               port: 50051

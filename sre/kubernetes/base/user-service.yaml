@@ -28,6 +28,8 @@ spec:
                 name: parkirpintar-config
             - secretRef:
                 name: user-db-secret
+            - secretRef:
+                name: redis-secret
           livenessProbe:
             grpc:
               port: 50051
