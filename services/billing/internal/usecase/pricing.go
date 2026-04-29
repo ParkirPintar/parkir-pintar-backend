@@ -1,47 +1,126 @@
 package usecase
 
 import (
+	"encoding/json"
 	"math"
 	"time"
 
+	zen "github.com/gorules/zen-go"
 	"github.com/parkir-pintar/billing/internal/model"
+	"github.com/rs/zerolog/log"
 )
 
-// PricingEngine evaluates pricing rules. It supports an optional gorules/JDM
-// rule set loaded from ruleContent. When ruleContent is nil or empty the engine
-// falls back to the pure-Go evaluatePricing implementation.
+// PricingEngine evaluates pricing rules using gorules/zen-go JDM engine.
+// When ruleContent is provided, it delegates to the JDM engine.
+// When ruleContent is nil or evaluation fails, it falls back to pure-Go logic.
 type PricingEngine struct {
-	// ruleContent holds the raw gorules/JDM rule bytes.
-	// When non-nil the engine delegates to the gorules evaluator.
-	ruleContent []byte
+	engine   zen.Engine
+	decision zen.Decision
 }
 
-// NewPricingEngine creates a PricingEngine. If ruleContent is nil or empty the
-// engine uses the built-in Go fallback for all evaluations.
+// NewPricingEngine creates a PricingEngine. If ruleContent is valid JDM JSON,
+// the engine uses gorules for evaluation. Otherwise falls back to Go.
 func NewPricingEngine(ruleContent []byte) *PricingEngine {
-	return &PricingEngine{ruleContent: ruleContent}
+	pe := &PricingEngine{}
+
+	if len(ruleContent) > 0 {
+		engine := zen.NewEngine(zen.EngineConfig{})
+		decision, err := engine.CreateDecision(ruleContent)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create JDM decision, using Go fallback")
+			engine.Dispose()
+			return pe
+		}
+		pe.engine = engine
+		pe.decision = decision
+		log.Info().Msg("JDM pricing engine initialized")
+	}
+
+	return pe
 }
 
-// Evaluate computes the PricingOutput for the given input. It delegates to the
-// gorules engine when available, otherwise falls back to evaluatePricing.
+// Dispose releases the gorules engine resources. Call on shutdown.
+func (e *PricingEngine) Dispose() {
+	if e.decision != nil {
+		e.decision.Dispose()
+	}
+	if e.engine != nil {
+		e.engine.Dispose()
+	}
+}
+
+// Evaluate computes the PricingOutput for the given input.
+// Delegates to JDM engine when available, falls back to pure-Go otherwise.
 func (e *PricingEngine) Evaluate(in model.PricingInput) model.PricingOutput {
-	if len(e.ruleContent) > 0 {
-		// TODO: integrate gorules/JDM engine evaluation here.
-		// For now, fall through to the Go fallback.
+	if e.decision != nil {
+		result, err := e.evaluateJDM(in)
+		if err != nil {
+			log.Error().Err(err).Msg("JDM evaluation failed, falling back to Go")
+			return evaluatePricing(in)
+		}
+		return result
 	}
 	return evaluatePricing(in)
 }
 
+// evaluateJDM runs the input through the gorules JDM decision graph.
+func (e *PricingEngine) evaluateJDM(in model.PricingInput) (model.PricingOutput, error) {
+	input := map[string]any{
+		"durationHours":        in.DurationHours,
+		"midnightCrossings":    in.MidnightCrossings,
+		"isNoshow":             in.IsNoshow,
+		"cancelElapsedMinutes": in.CancelElapsedMinutes,
+		"bookingFee":           in.BookingFee,
+	}
+
+	response, err := e.decision.Evaluate(input)
+	if err != nil {
+		return model.PricingOutput{}, err
+	}
+
+	// Parse the result JSON into a map
+	var result map[string]any
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		return model.PricingOutput{}, err
+	}
+
+	out := model.PricingOutput{
+		BookingFee:      toInt64(result["bookingFeeResult"]),
+		HourlyFee:       toInt64(result["hourlyFee"]),
+		OvernightFee:    toInt64(result["overnightFee"]),
+		NoshowFee:       toInt64(result["noshowFee"]),
+		CancellationFee: toInt64(result["cancellationFee"]),
+		Total:           toInt64(result["total"]),
+	}
+
+	return out, nil
+}
+
+// toInt64 safely converts a JSON number (float64) to int64.
+func toInt64(v any) int64 {
+	switch n := v.(type) {
+	case float64:
+		return int64(n)
+	case int64:
+		return n
+	case json.Number:
+		i, _ := n.Int64()
+		return i
+	default:
+		return 0
+	}
+}
+
 // evaluatePricing is the pure-Go fallback pricing engine.
+// Used when JDM rules are not loaded or evaluation fails.
 //
 // Business rules:
 //   - Booking fee: 5,000 IDR (passed through from input or default)
 //   - Hourly rate: 5,000 IDR per started hour (ceil)
-//   - Overnight fee: 20,000 IDR flat when session crosses midnight
-//   - Wrong-spot penalty: 200,000 IDR
-//   - No-show fee: 10,000 IDR (separate from penalty)
+//   - Overnight fee: 20,000 IDR per midnight crossing (cumulative)
+//   - No-show fee: 10,000 IDR
 //   - Cancellation > 2 min: 5,000 IDR; ≤ 2 min: 0 IDR
-//   - Total = booking_fee + hourly_fee + overnight_fee + penalty + noshow_fee + cancellation_fee
+//   - Total = booking_fee + hourly_fee + overnight_fee + noshow_fee + cancellation_fee
 func evaluatePricing(in model.PricingInput) model.PricingOutput {
 	out := model.PricingOutput{}
 
@@ -57,17 +136,12 @@ func evaluatePricing(in model.PricingInput) model.PricingOutput {
 		out.HourlyFee = int64(math.Ceil(in.DurationHours)) * 5000
 	}
 
-	// Overnight fee: flat 20,000 when crossing midnight.
-	if in.CrossesMidnight {
-		out.OvernightFee = 20000
+	// Overnight fee: 20,000 per midnight crossing (cumulative).
+	if in.MidnightCrossings > 0 {
+		out.OvernightFee = int64(in.MidnightCrossings) * 20000
 	}
 
-	// Wrong-spot penalty: 200,000.
-	if in.WrongSpot {
-		out.Penalty = 200000
-	}
-
-	// No-show fee: 10,000 (separate from penalty).
+	// No-show fee: 10,000.
 	if in.IsNoshow {
 		out.NoshowFee = 10000
 	}
@@ -79,14 +153,18 @@ func evaluatePricing(in model.PricingInput) model.PricingOutput {
 
 	// Total is the sum of all components.
 	out.Total = out.BookingFee + out.HourlyFee + out.OvernightFee +
-		out.Penalty + out.NoshowFee + out.CancellationFee
+		out.NoshowFee + out.CancellationFee
 
 	return out
 }
 
-// crossesMidnight returns true when start and end fall on different calendar days.
-func crossesMidnight(start, end time.Time) bool {
+// countMidnightCrossings returns the number of times a session crosses midnight.
+func countMidnightCrossings(start, end time.Time) int {
 	startDay := start.Truncate(24 * time.Hour)
 	endDay := end.Truncate(24 * time.Hour)
-	return endDay.After(startDay)
+	crossings := 0
+	for d := startDay.Add(24 * time.Hour); !d.After(endDay); d = d.Add(24 * time.Hour) {
+		crossings++
+	}
+	return crossings
 }

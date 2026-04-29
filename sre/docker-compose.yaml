@@ -132,6 +132,7 @@ services:
       <<: *common-env
       GRPC_ADDR: ":50056"
       RESERVATION_ADDR: reservation:50052
+      BILLING_ADDR: billing:50053
     depends_on:
       reservation: { condition: service_started }
 

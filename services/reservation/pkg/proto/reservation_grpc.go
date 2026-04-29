@@ -94,6 +94,7 @@ func reservationServiceGetReservationHandler(srv interface{}, ctx context.Contex
 }
 
 type CreateReservationRequest struct {
+	DriverId       string `json:"driver_id"`
 	Mode           string `json:"mode"`
 	VehicleType    string `json:"vehicle_type"`
 	SpotId         string `json:"spot_id"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -13,6 +14,13 @@ import (
 	"github.com/parkir-pintar/billing/internal/repository"
 	"github.com/rs/zerolog/log"
 )
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
 
 type BillingUsecase interface {
 	ChargeBookingFee(ctx context.Context, reservationID string) (*model.BillingRecord, error)
@@ -31,11 +39,26 @@ type billingUsecase struct {
 }
 
 func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository, paymentClient adapter.PaymentClient, publisher adapter.EventPublisher) BillingUsecase {
+	// Try to load JDM rules from file first, then from DB
+	var ruleContent []byte
+	if data, err := os.ReadFile(envOr("PRICING_RULES_PATH", "rules/pricing.json")); err == nil {
+		ruleContent = data
+		log.Info().Msg("loaded JDM pricing rules from file")
+	} else {
+		// Try loading from DB
+		if content, _, err := repo.GetActivePricingRule(ctx); err == nil && len(content) > 0 {
+			ruleContent = content
+			log.Info().Msg("loaded JDM pricing rules from database")
+		} else {
+			log.Warn().Msg("no JDM pricing rules found, using Go fallback")
+		}
+	}
+
 	uc := &billingUsecase{
 		repo:          repo,
 		paymentClient: paymentClient,
 		publisher:     publisher,
-		engine:        NewPricingEngine(nil), // start with Go fallback
+		engine:        NewPricingEngine(ruleContent),
 	}
 	go uc.hotReload(ctx)
 	return uc
@@ -58,8 +81,12 @@ func (u *billingUsecase) hotReload(ctx context.Context) {
 			u.mu.Lock()
 			if version != u.ruleVersion {
 				u.ruleVersion = version
+				oldEngine := u.engine
 				u.engine = NewPricingEngine(content)
-				log.Info().Int("version", version).Msg("pricing rules reloaded")
+				if oldEngine != nil {
+					oldEngine.Dispose()
+				}
+				log.Info().Int("version", version).Msg("pricing rules reloaded from DB")
 			}
 			u.mu.Unlock()
 		}
@@ -130,17 +157,16 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 		durationHours = now.Sub(*b.SessionStart).Hours()
 	}
 
-	var crossesMN bool
+	var midnightCrossings int
 	if b.SessionStart != nil {
-		crossesMN = crossesMidnight(*b.SessionStart, now)
+		midnightCrossings = countMidnightCrossings(*b.SessionStart, now)
 	}
 
 	input := model.PricingInput{
-		DurationHours:   durationHours,
-		CrossesMidnight: crossesMN,
-		BookingFee:      b.BookingFee,
-		WrongSpot:       b.Penalty > 0,
-		IsNoshow:        b.NoshowFee > 0,
+		DurationHours:     durationHours,
+		MidnightCrossings: midnightCrossings,
+		BookingFee:        b.BookingFee,
+		IsNoshow:          b.NoshowFee > 0,
 	}
 	output := engine.Evaluate(input)
 
@@ -149,7 +175,7 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 	b.NoshowFee = output.NoshowFee
 	b.CancelFee = output.CancellationFee
 	b.Total = output.BookingFee + output.HourlyFee + output.OvernightFee +
-		output.Penalty + output.NoshowFee + output.CancellationFee
+		output.NoshowFee + output.CancellationFee
 	b.IdempotencyKey = idempotencyKey
 
 	// Step 5: Call Payment.CreatePayment to get QR code and payment_id.

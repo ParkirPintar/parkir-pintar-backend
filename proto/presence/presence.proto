@@ -3,7 +3,19 @@ package presence;
 option go_package = "github.com/parkir-pintar/proto/presence";
 
 service PresenceService {
-  rpc StreamLocation(stream LocationUpdate) returns (stream PresenceEvent);
+  // UpdateLocation receives a single location update from the driver app.
+  // Called every ≤30 seconds while session is active.
+  // Returns a presence event with the driver's current position info.
+  rpc UpdateLocation(LocationUpdate) returns (PresenceEvent);
+
+  // CheckIn is called when the driver enters the parking gate.
+  // Presence validates the spot, calls Reservation.CheckIn to set status=ACTIVE,
+  // then calls Billing.StartBillingSession to start the billing timer.
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse);
+
+  // CheckOut is called when the driver wants to leave.
+  // Triggers the checkout/payment flow.
+  rpc CheckOut(CheckOutRequest) returns (CheckOutResponse);
 }
 
 message LocationUpdate {
@@ -15,7 +27,28 @@ message LocationUpdate {
 
 message PresenceEvent {
   string reservation_id = 1;
-  string event = 2;   // GEOFENCE_ENTERED | GEOFENCE_EXITED | CHECKIN_TRIGGERED | WRONG_SPOT_DETECTED
+  string event = 2;   // LOCATION_UPDATED | WRONG_SPOT_DETECTED | NONE
   string spot_id = 3;
   string timestamp = 4;
+}
+
+message CheckInRequest {
+  string reservation_id = 1;
+  string spot_id = 2;         // the spot where the driver actually is
+}
+
+message CheckInResponse {
+  string reservation_id = 1;
+  string status = 2;          // ACTIVE or BLOCKED
+  string checkin_at = 3;
+  bool wrong_spot = 4;
+}
+
+message CheckOutRequest {
+  string reservation_id = 1;
+}
+
+message CheckOutResponse {
+  string reservation_id = 1;
+  string status = 2;
 }

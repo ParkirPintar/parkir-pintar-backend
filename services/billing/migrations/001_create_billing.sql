@@ -58,18 +58,26 @@ CREATE INDEX idx_pricing_rules_active_version ON pricing_rules(is_active, versio
 
 -- =============================================================================
 -- Seed data: Default pricing rule (version 1)
--- ParkirPintar standard pricing parameters
+-- ParkirPintar standard pricing parameters as JDM (JSON Decision Model)
+-- The full JDM graph is stored in the content column and loaded by the
+-- billing service's hot-reload mechanism via gorules/zen-go engine.
+-- For the complete JDM file, see: services/billing/rules/pricing.json
 -- =============================================================================
 INSERT INTO pricing_rules (version, name, content)
 VALUES (
     1,
-    'ParkirPintar Default Pricing',
+    'ParkirPintar Default Pricing (JDM)',
     '{
-        "booking_fee": 5000,
-        "hourly_rate": 5000,
-        "overnight_fee": 20000,
-        "wrong_spot_penalty": 200000,
-        "noshow_fee": 10000,
-        "cancel_fee_after_2min": 5000
+        "description": "ParkirPintar pricing rules — JDM format for gorules/zen-go engine",
+        "parameters": {
+            "booking_fee": 5000,
+            "hourly_rate": 5000,
+            "overnight_fee_per_crossing": 20000,
+            "noshow_fee": 10000,
+            "cancel_fee_after_2min": 5000,
+            "wrong_spot": "BLOCKED"
+        },
+        "jdm_file": "pricing.json",
+        "engine": "gorules/zen-go"
     }'::jsonb
 );

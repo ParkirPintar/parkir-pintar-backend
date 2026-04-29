@@ -39,7 +39,7 @@ tags:
   - name: Payment
     description: QRIS payment processing and settlement
   - name: Presence
-    description: Location streaming / geofence check-in
+    description: Location tracking and check-in/check-out
 
 # ---------------------------------------------------------------------------
 # SECURITY
@@ -333,7 +333,7 @@ components:
           format: uuid
         event:
           type: string
-          enum: [GEOFENCE_ENTERED, GEOFENCE_EXITED, CHECKIN_TRIGGERED, WRONG_SPOT_DETECTED]
+          enum: [LOCATION_UPDATED, WRONG_SPOT_DETECTED, NONE]
         spot_id:
           type: string
           example: 1-CAR-01
@@ -700,9 +700,9 @@ paths:
     post:
       operationId: checkIn
       tags: [Check-in]
-      summary: Driver check-in — correct spot or wrong spot penalty
+      summary: Driver check-in — correct spot or blocked if wrong spot
       description: |
-        Triggered by geofence auto-detection or manual tap.
+        Triggered by explicit API call from driver app.
 
         - If `actual_spot_id` matches reserved spot: billing session starts, status → ACTIVE.
         - If `actual_spot_id` differs: **200.000 IDR penalty** applied, billing still starts.
@@ -1013,10 +1013,10 @@ paths:
     post:
       operationId: presenceCheckin
       tags: [Presence]
-      summary: Submit location update for geofence-based check-in
+      summary: Submit location update for tracking
       description: |
-        Software agent / mobile app submits location. Presence Service evaluates
-        geofence and triggers check-in if driver is at the reserved spot.
+        Mobile app submits location. Presence Service records the update
+        for tracking purposes. Check-in is triggered separately via POST /v1/checkin.
 
         Location updates should be sent every ≤ 30 seconds while driver is approaching.
 
@@ -1040,10 +1040,10 @@ paths:
                 $ref: '#/components/schemas/PresenceEventResponse'
               examples:
                 entered:
-                  summary: Driver entered geofence
+                  summary: Location update received
                   value:
                     reservation_id: 550e8400-e29b-41d4-a716-446655440001
-                    event: GEOFENCE_ENTERED
+                    event: LOCATION_UPDATED
                     spot_id: 1-CAR-01
                     timestamp: "2024-01-15T08:04:50Z"
                 checkin_triggered:

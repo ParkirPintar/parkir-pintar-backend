@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/parkir-pintar/billing v0.0.0
 	github.com/parkir-pintar/reservation v0.0.0
 	github.com/rs/zerolog v1.35.1
 	google.golang.org/grpc v1.80.0

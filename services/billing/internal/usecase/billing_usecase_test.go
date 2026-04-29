@@ -389,7 +389,7 @@ func TestCheckout_IncludesPenalty(t *testing.T) {
 		ID:            "inv-1",
 		ReservationID: "res-1",
 		BookingFee:    5000,
-		Penalty:       200000, // Pre-existing wrong-spot penalty
+		Penalty:       0, // Wrong-spot is now BLOCKED, not penalized
 		Status:        model.BillingPending,
 		SessionStart:  &start,
 	}
@@ -399,9 +399,13 @@ func TestCheckout_IncludesPenalty(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Penalty should be reflected in total via pricing engine (wrong_spot flag).
-	if b.Total < 200000 {
-		t.Errorf("total %d should include penalty of 200000", b.Total)
+	// Penalty should be 0 since wrong-spot is blocked, not penalized
+	if b.Penalty != 0 {
+		t.Errorf("penalty = %d, want 0 (wrong-spot is BLOCKED)", b.Penalty)
+	}
+	// Total should be booking_fee + hourly_fee
+	if b.Total < b.BookingFee+b.HourlyFee {
+		t.Errorf("total %d should be at least booking_fee + hourly_fee", b.Total)
 	}
 }
 
@@ -465,13 +469,13 @@ func TestApplyPenalty(t *testing.T) {
 		Status:        model.BillingPending,
 	}
 
-	err := uc.ApplyPenalty(context.Background(), "res-1", "wrong_spot", 200000)
+	err := uc.ApplyPenalty(context.Background(), "res-1", "cancellation", 5000)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	updated := repo.records["res-1"]
-	if updated.Penalty != 200000 {
-		t.Errorf("penalty = %d, want 200000", updated.Penalty)
+	if updated.Penalty != 5000 {
+		t.Errorf("penalty = %d, want 5000", updated.Penalty)
 	}
 }

@@ -99,10 +99,13 @@ data:
             methods: ["POST"]
 
       - name: checkin
-        url: grpc://reservation-service.parkir-pintar.svc.cluster.local:50051
+        url: grpc://presence-service.parkir-pintar.svc.cluster.local:50051
         routes:
           - name: checkin-route
             paths: ["/v1/checkin"]
+            methods: ["POST"]
+          - name: checkout-gate-route
+            paths: ["/v1/checkout/gate"]
             methods: ["POST"]
 
       - name: billing
@@ -123,7 +126,8 @@ data:
         url: grpc://presence-service.parkir-pintar.svc.cluster.local:50051
         routes:
           - name: presence-route
-            paths: ["/v1/presence"]
+            paths: ["/v1/presence/location"]
+            methods: ["POST"]
 
       - name: grafana
         url: http://grafana.monitoring.svc.cluster.local:3000

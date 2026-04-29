@@ -46,10 +46,7 @@ CREATE TABLE spots (
     floor             INT NOT NULL CHECK (floor BETWEEN 1 AND 5),
     vehicle_type      VARCHAR(20) NOT NULL CHECK (vehicle_type IN ('CAR', 'MOTORCYCLE')),
     status            VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE'
-                      CHECK (status IN ('AVAILABLE', 'LOCKED', 'RESERVED', 'OCCUPIED')),
-    latitude          DOUBLE PRECISION,
-    longitude         DOUBLE PRECISION,
-    geofence_radius_m DOUBLE PRECISION DEFAULT 5.0
+                      CHECK (status IN ('AVAILABLE', 'LOCKED', 'RESERVED', 'OCCUPIED'))
 );
 
 -- Composite index for availability queries (floor + vehicle_type + status)

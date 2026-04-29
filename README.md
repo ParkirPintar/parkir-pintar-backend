@@ -18,7 +18,7 @@
 - [Circuit Breaker Strategy](#circuit-breaker-strategy)
 - [Pricing Engine: gorules (JDM)](#pricing-engine-gorules-jdm)
 - [API Gateway: Kong](#api-gateway-kong)
-- [Presence Service](#presence-service-sensor-to-service-streaming)
+- [Presence Service](#presence-service-location-api--check-incheck-out)
 - [API Documentation](#api-documentation-swagger)
 - [E2E Testing](#e2e-testing-newman)
 - [Third-Party Libraries & Justification](#third-party-libraries--justification)
@@ -40,7 +40,7 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 - **Real-time billing**: Billing dimulai saat check-in, dihitung berdasarkan durasi aktual parkir
 - **Payment before exit**: Driver harus bayar dulu (via QRIS/Pondo Ngopi) sebelum bisa keluar area parkir
 - **Overnight fee**: Biaya tambahan flat 20.000 IDR setiap kali sesi melewati tengah malam (kumulatif per crossing)
-- **Location streaming**: App mengirim location update setiap ≤30 detik selama sesi aktif
+- **Location tracking**: App mengirim location update setiap ≤30 detik via unary API call
 - **Booking fee**: 5.000 IDR per reservasi sukses, dicharge saat konfirmasi (terpisah dari hitungan jam parkir)
 
 ---
@@ -49,17 +49,17 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 
 1. **Single parking area**: 5 lantai × 30 mobil + 50 motor = **150 mobil, 250 motor**
 2. **Spot ID format**: `{FLOOR}-{TYPE}-{NUMBER}` contoh: `1-CAR-01`, `3-MOTO-25`
-3. **Check-in** di-trigger oleh API call ke Presence Service (geofence auto-detection atau manual). Check-in dan check-out **bukan** dari Billing Service
+3. **Check-in** di-trigger oleh API call ke Presence Service. Presence Service yang memanggil Reservation.CheckIn dan **Billing.StartBillingSession**
 4. **Check-out**: Driver harus bayar dulu baru bisa keluar (payment before exit)
 5. **Wrong-spot**: Driver **diblokir** dari parkir di spot yang salah — bukan dikenakan penalty. Sistem tidak mengizinkan parkir di spot selain yang di-assign
 6. **Overnight fee**: Biaya tambahan 20.000 IDR flat **setiap kali** sesi melewati tengah malam (00:00). Jika parkir 2 malam = 2 × 20.000 IDR. Setelah midnight crossing, hitungan jam normal berlanjut
-7. **Booking fee** 5.000 IDR dicharge saat reservasi dikonfirmasi — ini **di luar** hitungan jam parkir saat check-in
+7. **Booking fee** 5.000 IDR — driver **harus bayar via QRIS** setelah reservasi. Reservasi baru confirmed setelah payment success. Ini **di luar** hitungan jam parkir
 8. **Konfirmasi reservasi** berasal dari sistem. Setelah masuk gerbang parkir, kendaraan harus berada di parking lot yang ditentukan dalam waktu 1 jam
 9. **Parking lot ID** dikirim sebagai response API (bukan AR navigation)
 10. **Pricing** dihitung dari durasi aktual sesi parkir, bukan fixed price di awal seperti kompetitor
 11. **Overstay**: Tidak ada penalty overstay — waktu tambahan dihitung dengan tarif jam standar yang sama
 12. **Notification service** adalah stub (tidak ada integrasi push/SMS nyata)
-13. **Presence streaming** menggunakan gRPC bidirectional stream, interval location update ≤ 30 detik
+13. **Presence** menggunakan unary gRPC API (bukan stream), app hit API setiap ≤30 detik
 14. **Driver identity**: Diidentifikasi menggunakan **driver_id** yang di-pass via request field
 15. **mTLS** untuk service-to-service auth via Istio PeerAuthentication (STRICT mode)
 16. **No JWT/auth service**: Sistem ini tidak memiliki User Service atau JWT authentication — autentikasi di-handle oleh super app yang mengintegrasikan ParkirPintar sebagai mini app
@@ -185,20 +185,23 @@ flowchart TD
     F -->|Not available| G([Show unavailable])
     F -->|Available| H[Lock inventory\nRedis SETNX + TTL]
     H --> I[Confirm reservation\nCharge booking fee 5.000 IDR]
-    I --> J([Spot held max 1 hour\nDriver gets parking lot ID via API])
+    I --> I2[Driver pays booking fee via QRIS\n5.000 IDR]
+    I2 -->|Payment success| J([Reservation confirmed\nSpot held max 1 hour\nDriver gets parking lot ID via API])
+    I2 -->|Payment failed| I3([Reservation cancelled\nSpot released])
 ```
 
 ### 2. Check-in Flow
 
-Check-in dan check-out di-trigger oleh API call ke **Presence Service** (bukan dari Billing). Presence Service menerima location update dari app dan mendeteksi geofence entry.
+Check-in di-trigger oleh **unary API call** ke Presence Service. Presence Service yang memanggil Reservation.CheckIn dan **Billing.StartBillingSession** untuk mulai menghitung waktu parkir.
 
 ```mermaid
 flowchart TD
-    A([Driver arrives at parking gate]) --> B{Auto-detect\ngeofence via\nPresence Service API}
+    A([Driver arrives at parking gate]) --> B{Check-in via\nPresence Service API\nPOST /v1/checkin}
     B --> C[Validate spot assignment]
     C -->|Wrong spot| D[BLOCKED\nDriver tidak bisa parkir\ndi spot yang salah]
-    C -->|Correct spot| E[Check-in confirmed\nBilling starts counting]
-    E --> F([Reservation status: ACTIVE\nDriver has 1 hour to reach assigned spot])
+    C -->|Correct spot| E[Presence calls Reservation.CheckIn\nstatus = ACTIVE]
+    E --> F[Presence calls Billing.StartBillingSession\nBilling starts counting]
+    F --> G([Driver has 1 hour to reach assigned spot])
 ```
 
 ### 3. Billing & Checkout Flow
@@ -241,7 +244,7 @@ Tarif **tidak** ditentukan di awal seperti kompetitor yang lock fixed price untu
 
 | Condition | Fee | Notes |
 |---|---|---|
-| Booking fee (on confirm) | 5.000 IDR | Dicharge saat reservasi dikonfirmasi, **di luar** hitungan jam parkir |
+| Booking fee (on confirm) | 5.000 IDR | **Harus dibayar** via QRIS setelah reservasi. Reservasi baru confirmed setelah payment success |
 | First hour | 5.000 IDR | Dihitung saat check-in |
 | Each subsequent started hour | 5.000 IDR | Ceil — setiap jam yang dimulai dihitung penuh |
 | Overnight (crosses midnight) | 20.000 IDR flat per crossing | Biaya tambahan per hari jika lewat tengah malam. 2 malam = 2 × 20.000 IDR |
@@ -273,7 +276,7 @@ graph TD
         SVC_RESERVATION["Reservation Service\n(lock, confirm, cancel, expiry)"]
         SVC_BILLING["Billing Service\n(pricing engine, invoice)"]
         SVC_PAYMENT["Payment Service\n(QRIS, Pondo Ngopi)"]
-        SVC_PRESENCE["Presence Service\n(gRPC stream, check-in/out API)"]
+        SVC_PRESENCE["Presence Service\n(unary API, check-in/out)"]
         SVC_NOTIF["Notification Service\n(internal, event consumer)"]
         SVC_ANALYTICS["Analytics Service\n(transaction monitoring)"]
     end
@@ -304,11 +307,12 @@ graph TD
     IGW -->|gRPC + mTLS| SVC_RESERVATION
     IGW -->|gRPC + mTLS| SVC_BILLING
     IGW -->|gRPC + mTLS| SVC_PAYMENT
-    IGW -->|gRPC stream + mTLS| SVC_PRESENCE
+    IGW -->|gRPC + mTLS| SVC_PRESENCE
 
     SVC_RESERVATION -->|gRPC| SVC_BILLING
     SVC_BILLING -->|gRPC| SVC_PAYMENT
-    SVC_PRESENCE -->|gRPC check-in/out API| SVC_RESERVATION
+    SVC_PRESENCE -->|gRPC check-in/out| SVC_RESERVATION
+    SVC_PRESENCE -->|gRPC StartBillingSession| SVC_BILLING
 
     SVC_RESERVATION --> REDIS
     SVC_RESERVATION --> PG_RESERVATION
@@ -339,7 +343,7 @@ graph TD
 | **Reservation** | 50052 | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker |
 | **Billing** | 50053 | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
 | **Payment** | 50054 | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
-| **Presence** | 50056 | gRPC bidirectional stream untuk location update, geofence detection, **check-in/check-out API trigger** |
+| **Presence** | 50056 | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
 | **Notification** | 50057 | Internal event consumer (RabbitMQ), forwards to external Notification Provider stub via HTTP |
 | **Analytics** | 50058 | Consume events from RabbitMQ, store transaction metrics for business monitoring |
 
@@ -372,9 +376,9 @@ Assignment Modes:
 | Driver auth | Driver identity via `driver_id` field in request — auth handled by super app |
 | Service-to-service auth | mTLS via Istio PeerAuthentication (STRICT mode) |
 | API Gateway | Kong (rate limiting, REST-to-gRPC routing) |
-| Check-in/check-out trigger | API call ke **Presence Service** (bukan dari Billing) |
+| Check-in/check-out trigger | API call ke **Presence Service** — Presence calls Reservation.CheckIn + Billing.StartBillingSession |
 | Payment flow | Pay before exit — Driver harus bayar via QRIS sebelum bisa keluar |
-| Presence streaming | gRPC bidirectional stream (software agent / mobile app) |
+| Presence | Unary gRPC API (bukan stream) — app hit API setiap ≤30s |
 | Circuit breaker | Istio `outlierDetection` + `sony/gobreaker` on Payment & Notification (non-core) |
 | Retry & timeout | Istio VirtualService retry policy + per-service gRPC deadline |
 | gRPC load balancing | Istio sidecar L7 LB with `LEAST_CONN` |
@@ -662,7 +666,7 @@ graph TD
     GW -->|gRPC + mTLS\nLEAST_CONN| RS
     GW -->|gRPC + mTLS\nLEAST_CONN| BS
     GW -->|gRPC + mTLS\nLEAST_CONN| PS
-    GW -->|gRPC stream + mTLS| PR
+    GW -->|gRPC + mTLS| PR
     RS -->|gRPC + mTLS| BS
     BS -->|gRPC + mTLS| PS
 ```
@@ -871,45 +875,47 @@ Kong is deployed as a pod inside the cluster — it also gets Istio sidecar inje
 
 ---
 
-## Presence Service: Sensor to Service Streaming
+## Presence Service: Location API & Check-in/Check-out
 
-Presence Service mendeteksi apakah kendaraan berada di spot yang benar. Check-in dan check-out di-trigger melalui **API call ke Presence Service**, bukan dari Billing Service.
+Presence Service mengelola location tracking dan check-in/check-out. Check-in dan check-out di-trigger melalui **unary API call**. Presence Service yang kemudian memanggil Billing.StartBillingSession untuk mulai menghitung waktu parkir.
 
-### gRPC Bidirectional Streaming (Software Agent / Mobile)
+### Unary API
 
-Implementasi utama menggunakan gRPC bidirectional stream untuk mobile app presence detection (geofence). App mengirim location update setiap ≤30 detik.
+Location update dikirim sebagai **regular API call** (unary RPC). App hit API setiap ≤30 detik untuk tracking.
 
 ```mermaid
 flowchart LR
     A["Mobile App\n(Driver)"]
     KONG["Kong Gateway"]
-    P["Presence Service\n(gRPC stream server)"]
+    P["Presence Service\n(unary API)"]
     R["Reservation Service\n(gRPC)"]
+    B["Billing Service\n(gRPC)"]
 
-    A -->|"HTTPS/REST\nor gRPC stream"| KONG
-    KONG -->|"gRPC stream\n+ mTLS"| P
-    P -->|"location event\nevery ≤30s"| P
-    P -->|"check-in/check-out API\ngRPC"| R
-    R -->|"validate spot\nBLOCK if wrong spot"| R
+    A -->|"POST /v1/presence/location\nevery ≤30s"| KONG
+    KONG -->|"gRPC\nUpdateLocation"| P
+    P -->|"check-in API\ngRPC"| R
+    P -->|"StartBillingSession\ngRPC"| B
 ```
 
-### Check-in/Check-out API Flow
+### Check-in/Check-out Flow
 
 ```
-1. Mobile app streams location to Presence Service
-2. Presence Service evaluates geofence — is driver at parking area?
-3. If geofence entered → Presence Service calls Reservation.CheckIn API
-4. Reservation Service validates spot assignment:
-   - Correct spot → check-in confirmed, billing starts
+1. Driver app hits POST /v1/presence/location every ≤30s for tracking
+2. Driver hits POST /v1/checkin with reservation_id + spot_id
+3. Presence Service validates spot assignment:
+   - Correct spot → calls Reservation.CheckIn (status=ACTIVE)
+   - Correct spot → calls Billing.StartBillingSession (billing timer starts)
    - Wrong spot → BLOCKED, driver cannot park
-5. On exit → Presence Service calls check-out API
-6. Driver must pay before gate opens (payment before exit)
+4. On exit → Driver hits POST /v1/checkout/gate
+5. Driver must pay before gate opens (payment before exit)
 ```
 
 | | Detail |
 |---|---|
-| **Pros** | No extra broker needed; consistent with existing gRPC stack; built-in flow control and backpressure |
-| **Cons** | Requires HTTP/2 support on the client side |
+| **Protocol** | Unary gRPC — simple request/response per location update |
+| **Frequency** | App hit API setiap ≤30 detik selama sesi aktif |
+| **Check-in trigger** | Presence Service owns check-in — calls Reservation + Billing |
+| **Billing trigger** | Presence calls `Billing.StartBillingSession` saat check-in confirmed |
 
 ---
 
@@ -965,12 +971,18 @@ sequenceDiagram
                 Worker->>Billing: gRPC ChargeBookingFee(reservation_id, 5000)
                 Billing->>DB: INSERT billing_record (booking_fee=5000)
                 Billing-->>Worker: OK
+                Worker->>Payment: gRPC CreatePayment(invoice_id, 5000, QRIS)
+                Payment->>Payment: Generate QR code for booking fee
+                Payment-->>Worker: PaymentResponse (qr_code, payment_id)
                 Worker->>Redis: SET idempotency:{key} = reservation_id TTL 24h
+                Worker->>Notif: publish reservation.pending_payment
+                Worker-->>Reservation: ReservationResponse (qr_code for booking fee)
+                Reservation-->>Kong: ReservationResponse (spot_id + qr_code)
+                Kong-->>Driver: 201 reservation created — pay 5.000 IDR booking fee
+                note over Driver: Driver scans QR and pays 5.000 IDR
+                note over Payment: Payment confirmed → reservation status = RESERVED
                 Worker->>Notif: publish reservation.confirmed
                 Notif-->>Driver: push notification — parking lot ID sent (stub)
-                Worker-->>Reservation: ReservationConfirmed
-                Reservation-->>Kong: ReservationResponse (spot_id = parking lot ID)
-                Kong-->>Driver: 201 reservation confirmed + parking lot ID
             else Lock failed — spot just taken by another request
                 Worker->>Search: gRPC GetFirstAvailable(vehicle_type) retry
                 note right of Worker: retry with next available spot
@@ -1047,12 +1059,16 @@ sequenceDiagram
                 Worker->>Billing: gRPC ChargeBookingFee(reservation_id, 5000)
                 Billing->>DB: INSERT billing_record (booking_fee=5000)
                 Billing-->>Worker: OK
+                Worker->>Payment: gRPC CreatePayment(invoice_id, 5000, QRIS)
+                Payment->>Payment: Generate QR code for booking fee
+                Payment-->>Worker: PaymentResponse (qr_code, payment_id)
                 Worker->>Redis: SET idempotency:{key} = reservation_id TTL 24h
-                Worker->>Notif: publish reservation.confirmed
-                Notif-->>Driver: push notification — parking lot ID sent (stub)
-                Worker-->>Reservation: ReservationConfirmed
-                Reservation-->>Kong: ReservationResponse (parking lot ID)
-                Kong-->>Driver: 201 reservation confirmed + parking lot ID
+                Worker->>Notif: publish reservation.pending_payment
+                Worker-->>Reservation: ReservationResponse (qr_code for booking fee)
+                Reservation-->>Kong: ReservationResponse (parking lot ID + qr_code)
+                Kong-->>Driver: 201 reservation created — pay 5.000 IDR booking fee
+                note over Driver: Driver scans QR and pays 5.000 IDR
+                note over Payment: Payment confirmed → reservation status = RESERVED
             else Lock failed
                 Worker-->>Reservation: SPOT_TAKEN
                 Reservation-->>Kong: UNAVAILABLE error
@@ -1071,7 +1087,7 @@ sequenceDiagram
 
 ### 2. Check-in Flow — via Presence Service API
 
-Check-in di-trigger oleh API call ke Presence Service (geofence auto-detection atau manual). Presence Service kemudian memanggil Reservation Service. Wrong-spot **diblokir** — driver tidak bisa parkir di spot yang salah.
+Check-in di-trigger oleh API call ke Presence Service. Presence Service yang memvalidasi spot, memanggil Reservation.CheckIn, dan **memanggil Billing.StartBillingSession** untuk mulai menghitung waktu parkir. Wrong-spot **diblokir**.
 
 ```mermaid
 sequenceDiagram
@@ -1084,31 +1100,33 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Notif as Notification Service
 
-    note over Driver,Presence: App streams location every ≤30s via gRPC stream
-    note over Driver,Presence: Geofence detection triggers check-in API
+    note over Driver,Presence: App hits POST /v1/presence/location every ≤30s for tracking
 
-    Driver->>Presence: stream LocationUpdate(lat, lng, reservation_id)
-    Presence->>Presence: Evaluate geofence — is driver at parking area?
+    Driver->>Kong: POST /v1/checkin (reservation_id, spot_id)
+    Kong->>Presence: gRPC CheckIn(reservation_id, spot_id)
+
+    Presence->>Reservation: gRPC GetReservation(reservation_id)
+    Reservation-->>Presence: reservation (reserved spot_id)
 
     alt Driver at correct assigned spot
         Presence->>Reservation: gRPC CheckIn(reservation_id, actual_spot_id)
-        Reservation->>DB: SELECT reservation WHERE id=? AND status=RESERVED
-        DB-->>Reservation: reservation record
-        Reservation->>Reservation: Validate actual_spot_id == reserved spot_id
         Reservation->>DB: UPDATE reservation SET status=ACTIVE, checkin_at=now()
         Reservation->>Redis: DEL lock:{spot_id} (release hold lock)
-        Reservation->>Billing: gRPC StartBillingSession(reservation_id, checkin_at)
+        Reservation-->>Presence: OK
+
+        Presence->>Billing: gRPC StartBillingSession(reservation_id, checkin_at)
+        note right of Presence: Presence triggers billing — not Reservation
         Billing->>DB: UPDATE billing SET session_start=now()
-        Billing-->>Reservation: OK
-        Reservation->>Notif: publish checkin.confirmed
+        Billing-->>Presence: OK
+
+        Presence->>Notif: publish checkin.confirmed
         Notif-->>Driver: push notification (stub)
-        Reservation-->>Presence: CheckInResponse OK
+        Presence-->>Kong: CheckInResponse (status=ACTIVE)
+        Kong-->>Driver: 200 check-in confirmed, billing started
     else Driver at wrong spot
-        Presence->>Reservation: gRPC CheckIn(reservation_id, actual_spot_id)
-        Reservation->>Reservation: Validate actual_spot_id != reserved spot_id
-        Reservation-->>Presence: BLOCKED — wrong spot, cannot park here
-        Presence-->>Driver: Error: You must park at your assigned spot
-        note right of Reservation: Driver CANNOT park at wrong spot — access blocked
+        Presence-->>Kong: BLOCKED — wrong spot, cannot park here
+        Kong-->>Driver: 409 BLOCKED: must park at assigned spot
+        note right of Presence: Driver CANNOT park at wrong spot — access blocked
     end
 ```
 
@@ -1282,7 +1300,9 @@ PaymentService
   rpc RetryPayment(RetryPaymentRequest) returns (PaymentResponse)
 
 PresenceService
-  rpc StreamLocation(stream LocationUpdate) returns (stream PresenceEvent)
+  rpc UpdateLocation(LocationUpdate) returns (PresenceEvent)
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse)
+  rpc CheckOut(CheckOutRequest) returns (CheckOutResponse)
 ```
 
 ### 7. Redis Key Schema
@@ -1311,7 +1331,7 @@ graph TD
         RESERVATION["Reservation Service"]
         BILLING["Billing Service\n+ Pricing Engine"]
         PAYMENT["Payment Service\n+ gobreaker"]
-        PRESENCE["Presence Service\n(gRPC stream + check-in/out API)"]
+        PRESENCE["Presence Service\n(unary API + check-in/out)"]
     end
 
     subgraph Non-Core
@@ -1346,13 +1366,14 @@ graph TD
     KONG -->|gRPC| SEARCH
     KONG -->|gRPC| RESERVATION
     KONG -->|gRPC| BILLING
-    KONG -->|gRPC stream| PRESENCE
+    KONG -->|gRPC| PRESENCE
 
     RESERVATION --> RMQ
     RMQ --> RESERVATION
     RESERVATION -->|gRPC| BILLING
     BILLING -->|gRPC| PAYMENT
     PRESENCE -->|gRPC check-in/out| RESERVATION
+    PRESENCE -->|gRPC StartBillingSession| BILLING
 
     RESERVATION --> REDIS
     RESERVATION --> PG_RES
@@ -1387,9 +1408,6 @@ erDiagram
         int floor "1-5"
         varchar vehicle_type "CAR / MOTORCYCLE"
         varchar status "AVAILABLE / LOCKED / RESERVED / OCCUPIED"
-        float latitude "nullable"
-        float longitude "nullable"
-        float geofence_radius_m "default 5.0"
     }
 
     reservations {
@@ -1575,7 +1593,7 @@ Berdasarkan evaluasi antara Golang Native, Beego, dan GoFr:
 **Keputusan: Golang Native** — karena sistem ini heavily gRPC (bukan REST CRUD biasa), dan performa serta binary size paling optimal. Framework seperti GoFr/Beego justru menambah overhead tanpa benefit signifikan untuk usecase ini.
 
 - Semua service-to-service: **gRPC native** via `google.golang.org/grpc`
-- Presence Service: **gRPC bidirectional stream** untuk location streaming
+- Presence Service: **unary gRPC API** untuk location tracking dan check-in/check-out
 
 ---
 
@@ -1614,7 +1632,7 @@ Berdasarkan evaluasi antara Golang Native, Beego, dan GoFr:
 |---|---|---|
 | Pricing Engine | `services/billing/internal/usecase/pricing.go` | Pure Go pricing engine dengan gorules/JDM support. Hot-reload dari DB setiap 30s |
 | Redis-based Lock | `services/reservation/internal/repository/` | `SETNX` + TTL untuk inventory lock per spot. Dipakai untuk double-booking prevention |
-| Streaming Presence | `services/presence/` | gRPC bidirectional stream untuk location update setiap ≤30s. Trigger check-in/check-out API |
+| Streaming Presence | `services/presence/` | Unary gRPC API untuk location update setiap ≤30s. Owns check-in trigger — calls Reservation.CheckIn + Billing.StartBillingSession |
 | Config Loader | Per-service `cmd/main.go` | `buildDatabaseURL()`, `buildRedisAddr()`, `buildGRPCAddr()` — compose connection strings dari K8s env vars |
 | Structured Logging | All services | zerolog dengan JSON format, ConsoleWriter untuk dev, integrated dengan OpenTelemetry |
 | Event Publisher | `services/*/internal/adapter/publisher.go` | RabbitMQ event publisher untuk domain events (reservation.confirmed, checkout.completed, etc.) |

@@ -2,25 +2,26 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
-	"os"
-	"sync"
+	"time"
 
 	"github.com/parkir-pintar/presence/internal/model"
 	"github.com/rs/zerolog/log"
 )
 
-// PresenceUsecase processes real-time location updates and emits geofence events.
+// PresenceUsecase processes location updates and manages check-in/check-out.
 type PresenceUsecase interface {
-	// ProcessLocation evaluates a location update against geofences and returns
-	// a presence event if a geofence boundary was crossed, or nil otherwise.
-	// streamID is used to track per-stream state for GEOFENCE_EXITED detection.
-	ProcessLocation(ctx context.Context, streamID string, update model.LocationUpdate) (*model.PresenceEvent, error)
+	// ProcessLocation receives a single location update from the driver app.
+	// Returns a presence event with the driver's current position info.
+	ProcessLocation(ctx context.Context, update model.LocationUpdate) (*model.PresenceEvent, error)
 
-	// RemoveStream cleans up per-stream state when a stream ends.
-	RemoveStream(streamID string)
+	// CheckIn processes a driver check-in at the parking gate.
+	// Validates spot assignment, calls Reservation.CheckIn, then calls
+	// Billing.StartBillingSession to start the billing timer.
+	CheckIn(ctx context.Context, reservationID, actualSpotID string) (*model.CheckInResult, error)
+
+	// CheckOut initiates the checkout flow for a driver leaving the parking area.
+	CheckOut(ctx context.Context, reservationID string) error
 }
 
 // ReservationClient calls Reservation Service via gRPC.
@@ -29,179 +30,86 @@ type ReservationClient interface {
 	GetReservation(ctx context.Context, reservationID string) (spotID string, err error)
 }
 
-// streamState tracks the last known spot for a given stream to detect exits.
-type streamState struct {
-	lastSpotID string
+// BillingClient calls Billing Service via gRPC.
+type BillingClient interface {
+	StartBillingSession(ctx context.Context, reservationID string, checkinAt time.Time) error
 }
 
 type presenceUsecase struct {
 	reservation ReservationClient
-	geofences   map[string]model.SpotGeofence // spotID -> geofence
-
-	mu      sync.RWMutex
-	streams map[string]*streamState // streamID -> state
+	billing     BillingClient
 }
 
-// NewPresenceUsecase creates a PresenceUsecase with the given reservation client
-// and geofence data loaded from the provided config path.
-func NewPresenceUsecase(reservation ReservationClient, geofences map[string]model.SpotGeofence) PresenceUsecase {
+// NewPresenceUsecase creates a PresenceUsecase with the given dependencies.
+func NewPresenceUsecase(reservation ReservationClient, billing BillingClient) PresenceUsecase {
 	return &presenceUsecase{
 		reservation: reservation,
-		geofences:   geofences,
-		streams:     make(map[string]*streamState),
+		billing:     billing,
 	}
 }
 
-// LoadGeofences reads geofence configuration from a JSON file and returns
-// a map of spotID -> SpotGeofence.
-func LoadGeofences(path string) (map[string]model.SpotGeofence, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read geofences file: %w", err)
-	}
-
-	var entries []geofenceEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		return nil, fmt.Errorf("parse geofences JSON: %w", err)
-	}
-
-	geofences := make(map[string]model.SpotGeofence, len(entries))
-	for _, e := range entries {
-		geofences[e.SpotID] = model.SpotGeofence{
-			SpotID:    e.SpotID,
-			Latitude:  e.Latitude,
-			Longitude: e.Longitude,
-			RadiusM:   e.RadiusM,
-		}
-	}
-
-	log.Info().Int("count", len(geofences)).Msg("loaded geofence configurations")
-	return geofences, nil
-}
-
-// geofenceEntry matches the JSON structure in configs/geofences.json.
-type geofenceEntry struct {
-	SpotID    string  `json:"spot_id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	RadiusM   float64 `json:"radius_m"`
-}
-
-func (u *presenceUsecase) ProcessLocation(ctx context.Context, streamID string, update model.LocationUpdate) (*model.PresenceEvent, error) {
-	matchedSpot := u.findSpot(update.Latitude, update.Longitude)
-
-	u.mu.Lock()
-	state, exists := u.streams[streamID]
-	if !exists {
-		state = &streamState{}
-		u.streams[streamID] = state
-	}
-	previousSpot := state.lastSpotID
-	u.mu.Unlock()
-
-	// Case 1: Driver was in a geofence and has now left it.
-	if previousSpot != "" && matchedSpot != previousSpot {
-		u.mu.Lock()
-		state.lastSpotID = matchedSpot
-		u.mu.Unlock()
-
-		// If they moved to a different spot, we first emit GEOFENCE_EXITED for the old spot.
-		// The next call will handle the new spot entry.
-		if matchedSpot != "" {
-			// Emit exit from old spot; the caller will get the entry event on the next update
-			// or we can handle both. For simplicity, emit exit first.
-			return &model.PresenceEvent{
-				ReservationID: update.ReservationID,
-				SpotID:        previousSpot,
-				Event:         "GEOFENCE_EXITED",
-			}, nil
-		}
-
-		// Driver left all geofences entirely.
-		return &model.PresenceEvent{
-			ReservationID: update.ReservationID,
-			SpotID:        previousSpot,
-			Event:         "GEOFENCE_EXITED",
-		}, nil
-	}
-
-	// Case 2: Driver is not in any geofence (and wasn't before either).
-	if matchedSpot == "" {
-		return nil, nil
-	}
-
-	// Case 3: Driver is still in the same geofence — no event.
-	if matchedSpot == previousSpot {
-		return nil, nil
-	}
-
-	// Case 4: Driver just entered a geofence (previousSpot was "").
-	u.mu.Lock()
-	state.lastSpotID = matchedSpot
-	u.mu.Unlock()
-
-	// Look up the reserved spot for this reservation.
-	reservedSpotID, err := u.reservation.GetReservation(ctx, update.ReservationID)
-	if err != nil {
-		log.Warn().Err(err).Str("reservation_id", update.ReservationID).Msg("failed to get reservation, emitting GEOFENCE_ENTERED only")
-		return &model.PresenceEvent{
-			ReservationID: update.ReservationID,
-			SpotID:        matchedSpot,
-			Event:         "GEOFENCE_ENTERED",
-		}, nil
-	}
-
-	// Driver entered the correct reserved spot → trigger check-in.
-	if matchedSpot == reservedSpotID {
-		if err := u.reservation.CheckIn(ctx, update.ReservationID, matchedSpot); err != nil {
-			log.Error().Err(err).Str("reservation_id", update.ReservationID).Msg("check-in failed")
-			return &model.PresenceEvent{
-				ReservationID: update.ReservationID,
-				SpotID:        matchedSpot,
-				Event:         "GEOFENCE_ENTERED",
-			}, nil
-		}
-
-		return &model.PresenceEvent{
-			ReservationID: update.ReservationID,
-			SpotID:        matchedSpot,
-			Event:         "CHECKIN_TRIGGERED",
-		}, nil
-	}
-
-	// Driver entered a different spot than reserved → wrong spot.
+func (u *presenceUsecase) ProcessLocation(ctx context.Context, update model.LocationUpdate) (*model.PresenceEvent, error) {
+	// Simple location tracking — no geofence evaluation.
+	// The app sends location updates every ≤30s for tracking purposes.
+	// Check-in is triggered explicitly via the CheckIn RPC, not by geofence.
 	return &model.PresenceEvent{
 		ReservationID: update.ReservationID,
-		SpotID:        matchedSpot,
-		Event:         "WRONG_SPOT_DETECTED",
+		Event:         "LOCATION_UPDATED",
 	}, nil
 }
 
-// RemoveStream cleans up per-stream state when a stream ends.
-func (u *presenceUsecase) RemoveStream(streamID string) {
-	u.mu.Lock()
-	delete(u.streams, streamID)
-	u.mu.Unlock()
-}
-
-// findSpot returns the spotID whose geofence contains the given coordinates, or "".
-func (u *presenceUsecase) findSpot(lat, lng float64) string {
-	for spotID, gf := range u.geofences {
-		if haversineM(lat, lng, gf.Latitude, gf.Longitude) <= gf.RadiusM {
-			return spotID
-		}
+// CheckIn processes a driver check-in. It validates the spot assignment via
+// Reservation Service, then triggers Billing.StartBillingSession to start
+// the billing timer. Presence owns the check-in trigger.
+func (u *presenceUsecase) CheckIn(ctx context.Context, reservationID, actualSpotID string) (*model.CheckInResult, error) {
+	// Get the reserved spot to validate
+	reservedSpotID, err := u.reservation.GetReservation(ctx, reservationID)
+	if err != nil {
+		return nil, fmt.Errorf("get reservation: %w", err)
 	}
-	return ""
+
+	// Wrong spot → BLOCKED
+	if actualSpotID != reservedSpotID {
+		log.Warn().
+			Str("reservation_id", reservationID).
+			Str("expected", reservedSpotID).
+			Str("actual", actualSpotID).
+			Msg("wrong spot — blocked")
+		return &model.CheckInResult{
+			ReservationID: reservationID,
+			Status:        "BLOCKED",
+			WrongSpot:     true,
+		}, fmt.Errorf("BLOCKED: driver at spot %s, expected %s", actualSpotID, reservedSpotID)
+	}
+
+	// Correct spot → call Reservation.CheckIn to set status=ACTIVE
+	if err := u.reservation.CheckIn(ctx, reservationID, actualSpotID); err != nil {
+		return nil, fmt.Errorf("reservation check-in: %w", err)
+	}
+
+	// Presence triggers billing — call Billing.StartBillingSession
+	now := time.Now()
+	if err := u.billing.StartBillingSession(ctx, reservationID, now); err != nil {
+		log.Error().Err(err).Str("reservation_id", reservationID).Msg("failed to start billing session (non-fatal)")
+		// Non-fatal: check-in succeeded, billing can be retried
+	}
+
+	log.Info().
+		Str("reservation_id", reservationID).
+		Str("spot_id", actualSpotID).
+		Msg("check-in confirmed, billing started")
+
+	return &model.CheckInResult{
+		ReservationID: reservationID,
+		Status:        "ACTIVE",
+		CheckinAt:     now.Format(time.RFC3339),
+		WrongSpot:     false,
+	}, nil
 }
 
-// haversineM calculates the distance in meters between two lat/lng points
-// using the Haversine formula.
-func haversineM(lat1, lon1, lat2, lon2 float64) float64 {
-	const R = 6371000 // Earth radius in meters
-	dLat := (lat2 - lat1) * math.Pi / 180
-	dLon := (lon2 - lon1) * math.Pi / 180
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*
-			math.Sin(dLon/2)*math.Sin(dLon/2)
-	return R * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+// CheckOut initiates the checkout flow. For now it logs the event;
+// the actual billing/payment is handled by the driver calling /v1/checkout.
+func (u *presenceUsecase) CheckOut(ctx context.Context, reservationID string) error {
+	log.Info().Str("reservation_id", reservationID).Msg("check-out initiated via presence")
+	return nil
 }

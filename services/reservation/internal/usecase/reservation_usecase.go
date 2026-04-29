@@ -228,8 +228,8 @@ func (u *reservationUsecase) CancelReservation(ctx context.Context, reservationI
 }
 
 // CheckIn processes a driver check-in. It verifies the reservation status,
-// sets checkin_at, releases the Redis lock, starts a billing session, and
-// handles wrong-spot penalty detection.
+// sets checkin_at, and releases the Redis lock. Wrong-spot is BLOCKED by
+// Presence Service before this method is called.
 func (u *reservationUsecase) CheckIn(ctx context.Context, reservationID, actualSpotID string) (*model.Reservation, bool, int64, error) {
 	res, err := u.repo.GetByID(ctx, reservationID)
 	if err != nil {
@@ -254,37 +254,26 @@ func (u *reservationUsecase) CheckIn(ctx context.Context, reservationID, actualS
 		log.Error().Err(err).Str("spot_id", res.SpotID).Msg("failed to release lock on checkin")
 	}
 
-	// Detect wrong spot (Requirement 8.3)
+	// Detect wrong spot — BLOCKED, not penalized
 	wrongSpot := res.SpotID != actualSpotID
-	var penalty int64
 
 	if wrongSpot {
-		// Apply wrong-spot penalty of 200,000 IDR (Requirement 8.3)
-		penalty = 200000
-		if err := u.billing.ApplyPenalty(ctx, reservationID, "wrong_spot", penalty); err != nil {
-			log.Error().Err(err).Str("reservation_id", reservationID).Msg("failed to apply wrong-spot penalty")
-		}
+		// Wrong-spot is BLOCKED — do not allow check-in, do not start billing
+		return res, true, 0, fmt.Errorf("FAILED_PRECONDITION: BLOCKED — must park at assigned spot %s, not %s", res.SpotID, actualSpotID)
 	}
 
-	// Start billing session (Requirement 8.2)
-	if err := u.billing.StartBillingSession(ctx, reservationID, now); err != nil {
-		log.Error().Err(err).Str("reservation_id", reservationID).Msg("failed to start billing session")
-	}
+	// Note: Billing session is started by Presence Service, not here.
 
 	// Publish event (Requirement 8.5)
 	eventType := "checkin.confirmed"
-	if wrongSpot {
-		eventType = "penalty.applied"
-	}
 	event := map[string]interface{}{
-		"event_type":      eventType,
-		"reservation_id":  reservationID,
-		"driver_id":       res.DriverID,
-		"spot_id":         res.SpotID,
-		"actual_spot_id":  actualSpotID,
-		"wrong_spot":      wrongSpot,
-		"penalty_applied": penalty,
-		"checkin_at":      now.Format(time.RFC3339),
+		"event_type":     eventType,
+		"reservation_id": reservationID,
+		"driver_id":      res.DriverID,
+		"spot_id":        res.SpotID,
+		"actual_spot_id": actualSpotID,
+		"wrong_spot":     false,
+		"checkin_at":     now.Format(time.RFC3339),
 	}
 	eventPayload, _ := json.Marshal(event)
 	if err := u.publisher.PublishEvent(ctx, eventType, eventPayload); err != nil {
@@ -293,11 +282,9 @@ func (u *reservationUsecase) CheckIn(ctx context.Context, reservationID, actualS
 
 	log.Info().
 		Str("reservation_id", reservationID).
-		Bool("wrong_spot", wrongSpot).
-		Int64("penalty", penalty).
 		Msg("check-in processed")
 
-	return res, wrongSpot, penalty, nil
+	return res, false, 0, nil
 }
 
 // GetReservation retrieves a reservation by ID.

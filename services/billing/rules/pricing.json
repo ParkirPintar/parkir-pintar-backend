@@ -1,0 +1,280 @@
+{
+    "nodes": [
+        {
+            "id": "input",
+            "type": "inputNode",
+            "name": "Pricing Input",
+            "position": {
+                "x": 0,
+                "y": 200
+            },
+            "content": {
+                "schema": ""
+            }
+        },
+        {
+            "id": "booking-fee-table",
+            "type": "decisionTableNode",
+            "name": "Booking Fee",
+            "position": {
+                "x": 250,
+                "y": 50
+            },
+            "content": {
+                "hitPolicy": "first",
+                "inputs": [
+                    {
+                        "id": "bf_i1",
+                        "name": "Has Booking Fee",
+                        "field": "bookingFee"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "bf_o1",
+                        "name": "Booking Fee",
+                        "field": "bookingFeeResult"
+                    }
+                ],
+                "rules": [
+                    {
+                        "_id": "bf_r1",
+                        "bf_i1": "> 0",
+                        "bf_o1": "bookingFee"
+                    },
+                    {
+                        "_id": "bf_r2",
+                        "bf_i1": "",
+                        "bf_o1": "5000"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "hourly-fee-expr",
+            "type": "expressionNode",
+            "name": "Hourly Fee Calculation",
+            "position": {
+                "x": 500,
+                "y": 50
+            },
+            "content": {
+                "expressions": [
+                    {
+                        "id": "hf_e1",
+                        "key": "hourlyFee",
+                        "value": "durationHours > 0 ? ceil(durationHours) * 5000 : 0"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "overnight-fee-expr",
+            "type": "expressionNode",
+            "name": "Overnight Fee Calculation",
+            "position": {
+                "x": 750,
+                "y": 50
+            },
+            "content": {
+                "expressions": [
+                    {
+                        "id": "on_e1",
+                        "key": "overnightFee",
+                        "value": "midnightCrossings > 0 ? midnightCrossings * 20000 : 0"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "noshow-fee-table",
+            "type": "decisionTableNode",
+            "name": "No-Show Fee",
+            "position": {
+                "x": 1000,
+                "y": 50
+            },
+            "content": {
+                "hitPolicy": "first",
+                "inputs": [
+                    {
+                        "id": "ns_i1",
+                        "name": "Is No-Show",
+                        "field": "isNoshow"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "ns_o1",
+                        "name": "No-Show Fee",
+                        "field": "noshowFee"
+                    }
+                ],
+                "rules": [
+                    {
+                        "_id": "ns_r1",
+                        "ns_i1": "== true",
+                        "ns_o1": "10000"
+                    },
+                    {
+                        "_id": "ns_r2",
+                        "ns_i1": "",
+                        "ns_o1": "0"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "cancel-fee-table",
+            "type": "decisionTableNode",
+            "name": "Cancellation Fee",
+            "position": {
+                "x": 1250,
+                "y": 50
+            },
+            "content": {
+                "hitPolicy": "first",
+                "inputs": [
+                    {
+                        "id": "cf_i1",
+                        "name": "Cancel Elapsed Minutes",
+                        "field": "cancelElapsedMinutes"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "cf_o1",
+                        "name": "Cancellation Fee",
+                        "field": "cancellationFee"
+                    }
+                ],
+                "rules": [
+                    {
+                        "_id": "cf_r1",
+                        "cf_i1": "> 2",
+                        "cf_o1": "5000"
+                    },
+                    {
+                        "_id": "cf_r2",
+                        "cf_i1": "",
+                        "cf_o1": "0"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "total-expr",
+            "type": "expressionNode",
+            "name": "Total Calculation",
+            "position": {
+                "x": 1500,
+                "y": 200
+            },
+            "content": {
+                "expressions": [
+                    {
+                        "id": "t_e1",
+                        "key": "total",
+                        "value": "bookingFeeResult + hourlyFee + overnightFee + noshowFee + cancellationFee"
+                    }
+                ],
+                "passThrough": true,
+                "inputField": null,
+                "outputPath": null,
+                "executionMode": "single"
+            }
+        },
+        {
+            "id": "output",
+            "type": "outputNode",
+            "name": "Pricing Output",
+            "position": {
+                "x": 1750,
+                "y": 200
+            },
+            "content": {
+                "schema": ""
+            }
+        }
+    ],
+    "edges": [
+        {
+            "id": "e1",
+            "sourceId": "input",
+            "targetId": "booking-fee-table",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e2",
+            "sourceId": "booking-fee-table",
+            "targetId": "hourly-fee-expr",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e3",
+            "sourceId": "hourly-fee-expr",
+            "targetId": "overnight-fee-expr",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e4",
+            "sourceId": "overnight-fee-expr",
+            "targetId": "noshow-fee-table",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e5",
+            "sourceId": "noshow-fee-table",
+            "targetId": "cancel-fee-table",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e6",
+            "sourceId": "cancel-fee-table",
+            "targetId": "total-expr",
+            "sourceHandle": null,
+            "type": "edge"
+        },
+        {
+            "id": "e7",
+            "sourceId": "total-expr",
+            "targetId": "output",
+            "sourceHandle": null,
+            "type": "edge"
+        }
+    ],
+    "metadata": {
+        "version": "1.0.0",
+        "description": "ParkirPintar pricing rules — booking fee, hourly rate, overnight fee, no-show fee, cancellation fee",
+        "tags": [
+            "pricing",
+            "parking",
+            "parkirpintar"
+        ]
+    }
+}

@@ -30,23 +30,26 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to connect to Reservation Service")
 	}
 	defer reservationConn.Close()
-
 	reservationClient := adapter.NewReservationClient(reservationConn)
 
-	// Load geofence configuration
-	geofencePath := envOr("GEOFENCE_CONFIG", "configs/geofences.json")
-	geofences, err := usecase.LoadGeofences(geofencePath)
+	// Billing gRPC client
+	billingConn, err := grpc.NewClient(
+		envOr("BILLING_ADDR", "localhost:50053"),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
-		log.Fatal().Err(err).Str("path", geofencePath).Msg("failed to load geofence config")
+		log.Fatal().Err(err).Msg("failed to connect to Billing Service")
 	}
+	defer billingConn.Close()
+	billingClient := adapter.NewBillingClient(billingConn)
 
-	// Usecase
-	uc := usecase.NewPresenceUsecase(reservationClient, geofences)
+	// Usecase — Presence owns check-in trigger and billing start
+	uc := usecase.NewPresenceUsecase(reservationClient, billingClient)
 
 	// Handler
 	h := handler.NewPresenceHandler(uc)
 
-	// gRPC server with auth interceptor
+	// gRPC server
 	addr := buildGRPCAddr(":50056")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
