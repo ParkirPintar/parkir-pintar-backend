@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -27,7 +29,13 @@ func main() {
 
 	// RabbitMQ connection
 	rabbitmqURL := envOr("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	conn, err := amqp.Dial(rabbitmqURL)
+	var conn *amqp.Connection
+	var err error
+	if strings.HasPrefix(rabbitmqURL, "amqps://") {
+		conn, err = amqp.DialTLS(rabbitmqURL, &tls.Config{})
+	} else {
+		conn, err = amqp.Dial(rabbitmqURL)
+	}
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to RabbitMQ")
 	}

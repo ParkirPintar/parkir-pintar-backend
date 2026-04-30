@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -54,7 +56,12 @@ func main() {
 
 	// RabbitMQ connection
 	rabbitmqURL := envOr("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	conn, err := amqp.Dial(rabbitmqURL)
+	var conn *amqp.Connection
+	if strings.HasPrefix(rabbitmqURL, "amqps://") {
+		conn, err = amqp.DialTLS(rabbitmqURL, &tls.Config{})
+	} else {
+		conn, err = amqp.Dial(rabbitmqURL)
+	}
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to RabbitMQ")
 	}

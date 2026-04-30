@@ -16,6 +16,13 @@ resource "aws_security_group" "parkirpintar" {
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }
+  # RabbitMQ AMQPS (TLS — Amazon MQ)
+  ingress {
+    from_port   = 5671
+    to_port     = 5671
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
   # RabbitMQ Management
   ingress {
     from_port   = 15672
