@@ -36,6 +36,14 @@ spec:
   http:
     - match:
         - uri:
+            prefix: /monitor
+      route:
+        - destination:
+            host: grafana.monitoring.svc.cluster.local
+            port:
+              number: 3000
+    - match:
+        - uri:
             prefix: /
       route:
         - destination:

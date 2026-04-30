@@ -1,4 +1,5 @@
 FROM golang:1.25-alpine AS builder
+RUN apk add --no-cache gcc musl-dev
 WORKDIR /app
 COPY go.work ./
 COPY services/reservation/go.mod services/reservation/go.sum ./services/reservation/
@@ -10,8 +11,9 @@ COPY services/notification/go.mod services/notification/go.sum ./services/notifi
 COPY services/analytics/go.mod services/analytics/go.sum ./services/analytics/
 RUN cd services/billing && go mod download
 COPY services/ ./services/
-RUN cd services/billing && CGO_ENABLED=0 GOOS=linux go build -o /service ./cmd
+RUN cd services/billing && CGO_ENABLED=1 GOOS=linux go build -o /service ./cmd
 
-FROM gcr.io/distroless/static-debian12
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /service /service
 ENTRYPOINT ["/service"]
