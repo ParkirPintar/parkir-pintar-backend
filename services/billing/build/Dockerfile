@@ -13,7 +13,7 @@ RUN cd services/billing && go mod download
 COPY services/ ./services/
 RUN cd services/billing && CGO_ENABLED=1 GOOS=linux go build -o /service ./cmd
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /service /service
 ENTRYPOINT ["/service"]
