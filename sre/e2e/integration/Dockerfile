@@ -1,7 +1,6 @@
 FROM golang:1.25-alpine
 WORKDIR /app
 COPY go.work ./
-COPY services/user/go.mod services/user/go.sum ./services/user/
 COPY services/reservation/go.mod services/reservation/go.sum ./services/reservation/
 COPY services/billing/go.mod services/billing/go.sum ./services/billing/
 COPY services/payment/go.mod services/payment/go.sum ./services/payment/
