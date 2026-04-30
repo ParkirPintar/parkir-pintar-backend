@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -64,6 +65,19 @@ func main() {
 	healthpb.RegisterHealthServer(srv, healthSrv)
 	healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 	reflection.Register(srv)
+
+	// HTTP health endpoint for K8s probes (port 8081)
+	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		})
+		log.Info().Msg("health endpoint listening on :8081")
+		if err := http.ListenAndServe(":8081", mux); err != nil {
+			log.Error().Err(err).Msg("health endpoint failed")
+		}
+	}()
 
 	// Graceful shutdown
 	go func() {
