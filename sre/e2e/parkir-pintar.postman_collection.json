@@ -1,0 +1,630 @@
+{
+    "info": {
+        "name": "ParkirPintar E2E",
+        "description": "End-to-end REST API tests for ParkirPintar Smart Parking.\n\nFull flow: Search → Hold → Reserve → Check-in → Checkout → Payment\n\nRun requests sequentially — variables are chained between steps.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://parkir-pintar.pondongopi.biz.id"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Search",
+            "item": [
+                {
+                    "name": "1a. Get Availability (Floor 1, CAR)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has spots', () => pm.expect(body.spots).to.be.an('array'));",
+                                    "pm.test('Has total_available', () => pm.expect(body.total_available).to.be.a('number'));",
+                                    "if (body.spots && body.spots.length > 0) {",
+                                    "  pm.environment.set('spot_id', body.spots[0].spot_id);",
+                                    "  console.log('First spot: ' + body.spots[0].spot_id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/availability?floor=1&vehicle_type=CAR",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "availability"
+                            ],
+                            "query": [
+                                {
+                                    "key": "floor",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "vehicle_type",
+                                    "value": "CAR"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1b. Get First Available (CAR)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has spot_id', () => pm.expect(body.spot_id).to.be.a('string'));",
+                                    "pm.environment.set('spot_id', body.spot_id);",
+                                    "console.log('First available: ' + body.spot_id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/availability/first?vehicle_type=CAR",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "availability",
+                                "first"
+                            ],
+                            "query": [
+                                {
+                                    "key": "vehicle_type",
+                                    "value": "CAR"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Hold Spot",
+            "item": [
+                {
+                    "name": "2a. Hold Spot (60s TTL)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has spot_id', () => pm.expect(body.spot_id).to.be.a('string'));",
+                                    "pm.test('Has held_until', () => pm.expect(body.held_until).to.be.a('string'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"driver_id\": \"driver-e2e-1\" }"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/spots/{{spot_id}}/hold",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "spots",
+                                "{{spot_id}}",
+                                "hold"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2b. Hold Same Spot (expect 409)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{ \"driver_id\": \"driver-e2e-2\" }"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/spots/{{spot_id}}/hold",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "spots",
+                                "{{spot_id}}",
+                                "hold"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Reservation",
+            "item": [
+                {
+                    "name": "3a. Create (SYSTEM_ASSIGNED)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "pm.environment.set('idem_key', pm.variables.replaceIn('{{$guid}}'));"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has reservation_id', () => pm.expect(body.reservation_id).to.be.a('string'));",
+                                    "pm.test('Status RESERVED', () => pm.expect(body.status).to.eql('RESERVED'));",
+                                    "pm.test('Booking fee 5000', () => pm.expect(body.booking_fee).to.eql(5000));",
+                                    "pm.environment.set('reservation_id', body.reservation_id);",
+                                    "pm.environment.set('spot_id', body.spot_id);",
+                                    "console.log('Reserved: ' + body.reservation_id + ' spot: ' + body.spot_id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{idem_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"driver_id\": \"driver-e2e-1\",\n  \"mode\": \"SYSTEM_ASSIGNED\",\n  \"vehicle_type\": \"CAR\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/reservations",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "reservations"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "3b. Idempotency (same key → same result)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const code = pm.response.code;",
+                                    "pm.test('Status 200 or 201', () => pm.expect(code).to.be.oneOf([200, 201]));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Same reservation_id', () => pm.expect(body.reservation_id).to.eql(pm.environment.get('reservation_id')));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{idem_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"driver_id\": \"driver-e2e-1\",\n  \"mode\": \"SYSTEM_ASSIGNED\",\n  \"vehicle_type\": \"CAR\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/reservations",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "reservations"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "3c. Get Reservation",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Correct ID', () => pm.expect(body.reservation_id).to.eql(pm.environment.get('reservation_id')));",
+                                    "pm.test('Status RESERVED', () => pm.expect(body.status).to.eql('RESERVED'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/reservations/{{reservation_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "reservations",
+                                "{{reservation_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Check-in",
+            "item": [
+                {
+                    "name": "4a. Check-in (correct spot)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Status ACTIVE', () => pm.expect(body.status).to.eql('ACTIVE'));",
+                                    "pm.test('No wrong spot', () => pm.expect(body.wrong_spot).to.eql(false));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\",\n  \"spot_id\": \"{{spot_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/checkin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "checkin"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Location Update",
+            "item": [
+                {
+                    "name": "5a. Update Location",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has event', () => pm.expect(body.event).to.be.a('string'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\",\n  \"latitude\": -6.200000,\n  \"longitude\": 106.816666\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/presence/location",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "presence",
+                                "location"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Checkout",
+            "item": [
+                {
+                    "name": "6a. Checkout (invoice + QRIS)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "pm.environment.set('idem_key', pm.variables.replaceIn('{{$guid}}'));"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has invoice_id', () => pm.expect(body.invoice_id).to.be.a('string'));",
+                                    "pm.test('Has payment_id', () => pm.expect(body.payment_id).to.be.a('string'));",
+                                    "pm.test('Booking fee 5000', () => pm.expect(body.booking_fee).to.eql(5000));",
+                                    "pm.test('Total > 0', () => pm.expect(body.total).to.be.above(0));",
+                                    "pm.test('Status PENDING', () => pm.expect(body.status).to.eql('PENDING'));",
+                                    "pm.environment.set('invoice_id', body.invoice_id);",
+                                    "pm.environment.set('payment_id', body.payment_id);",
+                                    "console.log('Total: ' + body.total + ' IDR');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{idem_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/checkout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "checkout"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Payment",
+            "item": [
+                {
+                    "name": "7a. Get Payment Status",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Valid status', () => pm.expect(body.status).to.be.oneOf(['PENDING', 'PAID', 'FAILED']));",
+                                    "console.log('Payment: ' + body.status);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/payments/{{payment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "payments",
+                                "{{payment_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "7b. Retry Payment (if FAILED)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "pm.environment.set('idem_key', pm.variables.replaceIn('{{$guid}}'));"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 or 409', () => pm.expect(pm.response.code).to.be.oneOf([200, 409]));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{idem_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/payments/{{payment_id}}/retry",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "payments",
+                                "{{payment_id}}",
+                                "retry"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "8. Cancel",
+            "item": [
+                {
+                    "name": "8a. Cancel Reservation",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Status CANCELLED', () => pm.expect(body.status).to.eql('CANCELLED'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/v1/reservations/{{reservation_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "reservations",
+                                "{{reservation_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "9. Exit Gate",
+            "item": [
+                {
+                    "name": "9a. CheckOut (open gate)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const body = pm.response.json();",
+                                    "pm.test('Has status', () => pm.expect(body.status).to.be.a('string'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"reservation_id\": \"{{reservation_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/v1/checkout/gate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "checkout",
+                                "gate"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -4,27 +4,6 @@ resource "aws_db_subnet_group" "parkirpintar" {
   subnet_ids  = [aws_subnet.private_ap_southeast_1a.id, aws_subnet.private_ap_southeast_1b.id]
 }
 
-# --- User DB ---
-resource "aws_db_instance" "user" {
-  identifier             = "parkirpintar-user"
-  allocated_storage      = 20
-  storage_type           = "gp3"
-  engine                 = "postgres"
-  engine_version         = "16.6"
-  instance_class         = "db.t3.micro"
-  db_name                = "userdb"
-  username               = var.db_username
-  password               = var.db_password
-  parameter_group_name   = "default.postgres16"
-  publicly_accessible    = false
-  skip_final_snapshot    = true
-  backup_retention_period = 7
-  vpc_security_group_ids = [aws_security_group.parkirpintar.id]
-  db_subnet_group_name   = aws_db_subnet_group.parkirpintar.name
-
-  tags = { Name = "parkirpintar-user" }
-}
-
 # --- Reservation DB ---
 resource "aws_db_instance" "reservation" {
   identifier             = "parkirpintar-reservation"

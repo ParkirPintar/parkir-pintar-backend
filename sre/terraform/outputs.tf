@@ -6,10 +6,6 @@ output "eks_cluster_endpoint" {
   value = aws_eks_cluster.parkirpintar.endpoint
 }
 
-output "rds_user_endpoint" {
-  value = aws_db_instance.user.endpoint
-}
-
 output "rds_reservation_endpoint" {
   value = aws_db_instance.reservation.endpoint
 }

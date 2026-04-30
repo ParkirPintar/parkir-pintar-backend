@@ -4,7 +4,7 @@ info:
   description: |
     Smart Parking Marketplace — REST API exposed via Kong Gateway.
 
-    **Auth**: All endpoints (except `/v1/auth/token`) require `Authorization: Bearer <jwt>`.
+    **Auth**: No authentication required (JWT disabled for E2E testing).
 
     **Idempotency**: POST endpoints that mutate state accept an `Idempotency-Key` header (UUID).
     Duplicate requests with the same key return the original response.
@@ -26,8 +26,6 @@ servers:
     description: Production
 
 tags:
-  - name: Auth
-    description: Driver authentication — license plate + vehicle type → JWT
   - name: Search
     description: Spot availability queries
   - name: Reservation
@@ -42,48 +40,13 @@ tags:
     description: Location tracking and check-in/check-out
 
 # ---------------------------------------------------------------------------
-# SECURITY
+# COMPONENTS
 # ---------------------------------------------------------------------------
 components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
   # -------------------------------------------------------------------------
   # SCHEMAS
   # -------------------------------------------------------------------------
   schemas:
-
-    # --- Auth ---
-    AuthRequest:
-      type: object
-      required: [license_plate, vehicle_type]
-      properties:
-        license_plate:
-          type: string
-          example: B1234XYZ
-        vehicle_type:
-          type: string
-          enum: [CAR, MOTORCYCLE]
-          example: CAR
-        phone_number:
-          type: string
-          example: "+628123456789"
-
-    AuthResponse:
-      type: object
-      properties:
-        token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        expires_at:
-          type: string
-          format: date-time
-        driver_id:
-          type: string
-          format: uuid
 
     # --- Search ---
     SpotStatus:
@@ -353,62 +316,9 @@ components:
           example: The requested spot is no longer available
 
 # ---------------------------------------------------------------------------
-# GLOBAL SECURITY
-# ---------------------------------------------------------------------------
-security:
-  - BearerAuth: []
-
-# ---------------------------------------------------------------------------
 # PATHS
 # ---------------------------------------------------------------------------
 paths:
-
-  # ==========================================================================
-  # AUTH
-  # ==========================================================================
-  /v1/auth/token:
-    post:
-      operationId: authToken
-      tags: [Auth]
-      summary: Authenticate driver and issue JWT
-      description: |
-        Driver authenticates with license plate + vehicle type.
-        Phone number is optional. Returns a JWT used for all subsequent calls.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthRequest'
-            examples:
-              car_driver:
-                summary: CAR driver
-                value:
-                  license_plate: B1234XYZ
-                  vehicle_type: CAR
-              moto_driver:
-                summary: MOTORCYCLE driver
-                value:
-                  license_plate: B9999ABC
-                  vehicle_type: MOTORCYCLE
-                  phone_number: "+628123456789"
-      responses:
-        '200':
-          description: JWT issued
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                code: INVALID_CREDENTIALS
-                message: License plate or vehicle type not found
 
   # ==========================================================================
   # SEARCH

@@ -496,6 +496,8 @@ graph TD
 
 ## Kubernetes Deployment
 
+> **Full operational guide**: Lihat [`sre/README.md`](./sre/README.md) untuk step-by-step setup dari Terraform sampai service running, termasuk troubleshooting, monitoring, CI/CD setup, dan teardown.
+
 ### Istio Setup
 
 ```bash

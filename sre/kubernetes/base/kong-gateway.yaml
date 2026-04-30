@@ -81,54 +81,16 @@ data:
           policy: local
 
     services:
-      - name: search
-        url: grpc://search-service.parkir-pintar.svc.cluster.local:50051
+      # REST API Gateway — translates HTTP/JSON to gRPC
+      - name: api
+        url: http://gateway-service.parkir-pintar.svc.cluster.local:8080
         routes:
-          - name: search-route
-            paths: ["/v1/availability"]
-            methods: ["GET"]
+          - name: api-route
+            paths: ["/v1"]
+            strip_path: false
+            protocols: [http, https]
 
-      - name: reservation
-        url: grpc://reservation-service.parkir-pintar.svc.cluster.local:50051
-        routes:
-          - name: reservation-route
-            paths: ["/v1/reservations"]
-            methods: ["POST", "DELETE"]
-          - name: spot-hold-route
-            paths: ["/v1/spots"]
-            methods: ["POST"]
-
-      - name: checkin
-        url: grpc://presence-service.parkir-pintar.svc.cluster.local:50051
-        routes:
-          - name: checkin-route
-            paths: ["/v1/checkin"]
-            methods: ["POST"]
-          - name: checkout-gate-route
-            paths: ["/v1/checkout/gate"]
-            methods: ["POST"]
-
-      - name: billing
-        url: grpc://billing-service.parkir-pintar.svc.cluster.local:50051
-        routes:
-          - name: checkout-route
-            paths: ["/v1/checkout"]
-            methods: ["POST"]
-
-      - name: payment
-        url: grpc://payment-service.parkir-pintar.svc.cluster.local:50051
-        routes:
-          - name: payment-route
-            paths: ["/v1/payments"]
-            methods: ["POST"]
-
-      - name: presence
-        url: grpc://presence-service.parkir-pintar.svc.cluster.local:50051
-        routes:
-          - name: presence-route
-            paths: ["/v1/presence/location"]
-            methods: ["POST"]
-
+      # Grafana (monitoring dashboard)
       - name: grafana
         url: http://grafana.monitoring.svc.cluster.local:3000
         routes:

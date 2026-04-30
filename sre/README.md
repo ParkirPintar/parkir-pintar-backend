@@ -33,7 +33,6 @@ docker compose down -v
 | Redis | 6379 | `localhost:6379` |
 | RabbitMQ | 5672 / 15672 | AMQP: `localhost:5672`, Management UI: `http://localhost:15672` (guest/guest) |
 | Settlement Stub (WireMock) | 8080 | `http://localhost:8080` |
-| User Service | 50051 | `localhost:50051` (gRPC) |
 | Reservation Service | 50052 | `localhost:50052` (gRPC) |
 | Billing Service | 50053 | `localhost:50053` (gRPC) |
 | Payment Service | 50054 | `localhost:50054` (gRPC) |
@@ -46,7 +45,6 @@ Satu PostgreSQL instance, 5 databases (dibuat otomatis via `init-db.sql`):
 
 | Database | Service |
 |---|---|
-| `user_db` | User Service |
 | `reservation_db` | Reservation Service + Search Service (read) |
 | `billing_db` | Billing Service |
 | `payment_db` | Payment Service |
@@ -144,7 +142,7 @@ cd e2e/k6 && ./run-k6.sh https://api.parkir-pintar.id
 | S3 | Double-book prevention — second request gets 409 | `load-test.js` | 0→100 | ramp |
 | S4 | Spot contention / hold queue — 409 SPOT_HELD | `war-booking.js` | 0→100 | ramp |
 | S5 | Reservation expiry no-show — GET → status EXPIRED | `load-test.js` | 5 | 2m |
-| S6 | Wrong spot penalty — penalty_applied=200000 | `load-test.js` | 5 | 2m |
+| S6 | Wrong spot blocking — BLOCKED, cannot park | `load-test.js` | 5 | 2m |
 | S7 | Cancellation ≤ 2 min — cancellation_fee=0 | `load-test.js` | 5 | 2m |
 | S8 | Cancellation > 2 min — cancellation_fee=5000 | `load-test.js` | 5 | 2m |
 | S9 | Extended stay — no overstay penalty, standard hourly | `load-test.js` | 5 | 2m |
@@ -373,7 +371,6 @@ kubectl get svc -n parkir-pintar
 
 RDS endpoints:
 ```bash
-terraform output rds_user_endpoint
 terraform output rds_reservation_endpoint
 terraform output rds_billing_endpoint
 terraform output rds_payment_endpoint
@@ -482,6 +479,41 @@ terraform output github_actions_role_arn
 2. My Account → Security → Generate Tokens
 3. Beri nama token (misal `parkir-pintar-ci`), klik Generate
 4. Copy token → paste ke GitHub Secret `SONAR_TOKEN`
+
+---
+
+## Troubleshooting
+
+### Pod CrashLoopBackOff — Common Causes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `failed to connect to RabbitMQ` | Amazon MQ pakai `amqps://` (TLS, port 5671), security group cuma allow 5672 | Tambah port 5671 di security group (`security-group.tf`) |
+| `connection reset by peer` on RabbitMQ | Go code pakai `amqp.Dial()` tapi URL `amqps://` | Pakai `amqp.DialTLS()` untuk URL `amqps://` — sudah di-handle di code |
+| Liveness probe HTTP 500 | Istio sidecar rewrite gRPC probe ke HTTP, custom JSON codec break gRPC health check | Pakai HTTP health endpoint (`/healthz` on port 8081) instead of gRPC probe |
+| `GLIBC_2.39 not found` | Billing service pakai `gorules/zen-go` (CGO/Rust), builder glibc > runtime glibc | Billing Dockerfile pakai `debian:trixie-slim` sebagai runtime |
+| `relation "reservations" does not exist` | DB migration belum dijalankan | Jalankan migration SQL di setiap database |
+| `no queue 'booking.queue.0'` | RabbitMQ queue/exchange belum di-declare | Service auto-declare on startup, atau declare manual via RabbitMQ Management UI |
+| Rollout timeout (120s) | Pod butuh beberapa restart untuk stabilize | Naikkan `--timeout` di workflow, atau tunggu pod stabilize sendiri |
+
+### Health Check Architecture
+
+Semua gRPC service expose 2 port:
+- **Port 50051** — gRPC service (business logic)
+- **Port 8081** — HTTP health endpoint (`GET /healthz` → 200 OK)
+
+K8s liveness/readiness probe pakai HTTP port 8081, bukan gRPC port 50051. Ini karena custom JSON codec di gRPC server break standard gRPC health check protocol yang dipakai Istio sidecar.
+
+### Billing Service — Special Dockerfile
+
+Billing service pakai `gorules/zen-go` (Rust FFI via CGO), sehingga:
+- Builder: `golang:1.25` (Debian, bukan Alpine — musl ga kompatibel dengan Rust static lib)
+- Runtime: `debian:trixie-slim` (glibc 2.40, match builder)
+- Build: `CGO_ENABLED=1` (bukan 0)
+
+Semua service lain pakai Alpine + `CGO_ENABLED=0` + distroless.
+
+---
 
 ## Custom Domain (Cloudflare)
 
