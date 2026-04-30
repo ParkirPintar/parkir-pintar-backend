@@ -293,12 +293,27 @@ kubectl get svc -n istio-system istio-ingressgateway \
 ```bash
 # Namespace harus di-apply duluan (kubectl apply -f dir/ diproses alfabetikal)
 kubectl apply -f kubernetes/base/namespace.yaml
+
+# Verify Istio sidecar injection enabled di namespace
+kubectl get namespace parkir-pintar --show-labels | grep istio-injection
+# Harus ada: istio-injection=enabled
+# Kalau belum, jalankan:
+#   kubectl label namespace parkir-pintar istio-injection=enabled --overwrite
+
+# Deploy services dan Istio config
 kubectl apply -f kubernetes/base/
 kubectl apply -f kubernetes/istio/
 
-# Verify
+# Verify — semua pod harus READY 2/2 (app container + istio-proxy sidecar)
 kubectl get pods -n parkir-pintar
 ```
+
+> **Penting:** Kalau pod READY `1/1` (bukan `2/2`), berarti Istio sidecar tidak ter-inject.
+> Pastikan label `istio-injection: enabled` ada di namespace, lalu restart deployment:
+> ```bash
+> kubectl rollout restart deployment -n parkir-pintar
+> ```
+> Tanpa sidecar, Istio metrics (`istio_requests_total`, dll) tidak akan muncul di Grafana.
 
 ### 5. Deploy Observability Stack
 
