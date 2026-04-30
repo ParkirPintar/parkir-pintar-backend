@@ -1,5 +1,5 @@
-FROM golang:1.25-alpine AS builder
-RUN apk add --no-cache gcc musl-dev
+FROM golang:1.25 AS builder
+RUN apt-get update && apt-get install -y gcc libc6-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY go.work ./
 COPY services/reservation/go.mod services/reservation/go.sum ./services/reservation/
@@ -13,7 +13,7 @@ RUN cd services/billing && go mod download
 COPY services/ ./services/
 RUN cd services/billing && CGO_ENABLED=1 GOOS=linux go build -o /service ./cmd
 
-FROM alpine:3.20
-RUN apk add --no-cache ca-certificates
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /service /service
 ENTRYPOINT ["/service"]
