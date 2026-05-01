@@ -8,6 +8,7 @@ locals {
     "notification-service",
     "analytics-service",
     "gateway-service",
+    "user-service",
   ]
 }
 
