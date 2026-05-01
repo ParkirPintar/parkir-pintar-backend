@@ -22,10 +22,12 @@ type amqpPublisher struct {
 // NewEventPublisher creates an EventPublisher backed by the given AMQP channel.
 // It declares the events exchange on startup.
 func NewEventPublisher(ch *amqp.Channel) EventPublisher {
-	if err := ch.ExchangeDeclare(eventsExchange, "topic", true, false, false, false, nil); err != nil {
-		log.Error().Err(err).Msg("failed to declare events exchange")
+	if ch != nil {
+		if err := ch.ExchangeDeclare(eventsExchange, "topic", true, false, false, false, nil); err != nil {
+			log.Error().Err(err).Msg("failed to declare events exchange")
+		}
+		log.Info().Str("exchange", eventsExchange).Msg("exchange declared")
 	}
-	log.Info().Str("exchange", eventsExchange).Msg("exchange declared")
 
 	return &amqpPublisher{ch: ch}
 }

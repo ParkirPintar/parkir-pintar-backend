@@ -31,18 +31,20 @@ type amqpPublisher struct {
 // NewEventPublisher creates an EventPublisher backed by the given AMQP channel.
 // It declares the required exchanges on startup.
 func NewEventPublisher(ch *amqp.Channel) EventPublisher {
-	// Declare booking exchange — try x-consistent-hash first, fallback to direct
-	if err := ch.ExchangeDeclare(bookingExchange, "x-consistent-hash", true, false, false, false, nil); err != nil {
-		log.Warn().Err(err).Msg("x-consistent-hash not available, falling back to direct")
-		_ = ch.ExchangeDeclare(bookingExchange, "direct", true, false, false, false, nil)
-	}
-	log.Info().Str("exchange", bookingExchange).Msg("exchange declared")
+	if ch != nil {
+		// Declare booking exchange — try x-consistent-hash first, fallback to direct
+		if err := ch.ExchangeDeclare(bookingExchange, "x-consistent-hash", true, false, false, false, nil); err != nil {
+			log.Warn().Err(err).Msg("x-consistent-hash not available, falling back to direct")
+			_ = ch.ExchangeDeclare(bookingExchange, "direct", true, false, false, false, nil)
+		}
+		log.Info().Str("exchange", bookingExchange).Msg("exchange declared")
 
-	// Declare events topic exchange
-	if err := ch.ExchangeDeclare(eventsExchange, "topic", true, false, false, false, nil); err != nil {
-		log.Error().Err(err).Msg("failed to declare events exchange")
+		// Declare events topic exchange
+		if err := ch.ExchangeDeclare(eventsExchange, "topic", true, false, false, false, nil); err != nil {
+			log.Error().Err(err).Msg("failed to declare events exchange")
+		}
+		log.Info().Str("exchange", eventsExchange).Msg("exchange declared")
 	}
-	log.Info().Str("exchange", eventsExchange).Msg("exchange declared")
 
 	return &amqpPublisher{ch: ch}
 }
