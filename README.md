@@ -83,6 +83,8 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │       ├── ci-presence.yml       # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-analytics.yml      # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-gateway.yml        # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       ├── ci-db-migrate.yml     # DB migration via golang-migrate (auto on push to sre/migrations/)
 │       └── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │
 ├── proto/                        # Shared protobuf definitions (gRPC contracts)
@@ -113,7 +115,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │   ├── presence/                 # Same structure as reservation
 │   ├── notification/             # Same structure as reservation
 │   ├── analytics/                # Same structure as reservation
-│   └── notification/             # Same structure as reservation
+│   └── gateway/                 # REST API Gateway (HTTP/JSON → gRPC translation)
 │
 ├── sre/
 │   ├── e2e/
@@ -121,7 +123,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │   │   ├── integration/                           # Go integration tests
 │   │   ├── k6/                                    # Load testing scripts
 │   │   ├── parkir-pintar.postman_environment.json # Postman environment variables
-│   │   └── run-e2e.sh                             # Newman runner script
+│   │   └── parkir-pintar.postman_collection.json  # Newman/Postman E2E test collection
 │   ├── kubernetes/
 │   │   ├── base/                 # Deployments, Services, ConfigMaps, HPA
 │   │   ├── istio/                # VirtualService, DestinationRule, PeerAuthentication
@@ -338,7 +340,8 @@ graph TD
 
 | Service | Port | Responsibility |
 |---|---|---|
-| **Kong Gateway** | 80/443 | Rate limiting, REST-to-gRPC routing, plugin ecosystem |
+| **Kong Gateway** | 80/443 | Rate limiting, REST routing to Gateway Service |
+| **Gateway** | 8080 | REST-to-gRPC translation (HTTP/JSON ↔ gRPC JSON codec) |
 | **Search** | 50055 | Query spot availability per floor & vehicle type, Redis cache + PostgreSQL read replica |
 | **Reservation** | 50052 | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker |
 | **Billing** | 50053 | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
@@ -1527,37 +1530,109 @@ docker run -p 8080:8080 -e SWAGGER_JSON=/spec/swagger.yaml \
 
 ## E2E Testing (Newman)
 
+### Prerequisites
+
 ```bash
-# Install Newman
-npm install -g newman newman-reporter-htmlextra
-
-# Run all E2E scenarios
-cd sre/e2e && ./run-e2e.sh
-
-# Run against specific environment
-newman run parkir-pintar.postman_collection.json \
-  -e parkir-pintar.postman_environment.json \
-  --env-var base_url=https://api.parkir-pintar.id
+npm install -g newman
 ```
+
+### Quick Run
+
+```bash
+# Run full E2E suite against production
+newman run sre/e2e/parkir-pintar.postman_collection.json \
+  -e sre/e2e/parkir-pintar.postman_environment.json
+
+# Run against custom environment
+newman run sre/e2e/parkir-pintar.postman_collection.json \
+  -e sre/e2e/parkir-pintar.postman_environment.json \
+  --env-var base_url=http://localhost:8080
+
+# Run with HTML report
+npm install -g newman-reporter-htmlextra
+newman run sre/e2e/parkir-pintar.postman_collection.json \
+  -e sre/e2e/parkir-pintar.postman_environment.json \
+  --reporters cli,htmlextra \
+  --reporter-htmlextra-export sre/e2e/report.html
+
+# Run specific folder only
+newman run sre/e2e/parkir-pintar.postman_collection.json \
+  -e sre/e2e/parkir-pintar.postman_environment.json \
+  --folder "1. Search"
+```
+
+### Architecture
+
+```
+Client (Newman/Postman)
+  → Cloudflare (HTTPS)
+    → Kong Gateway (rate limiting, routing /v1/*)
+      → Gateway Service (REST → gRPC translation)
+        → Backend gRPC Services (Search, Reservation, Billing, Payment, Presence)
+```
+
+The Gateway Service (`services/gateway/`) translates REST/JSON requests to gRPC calls using the same JSON codec as the backend services. This allows standard HTTP testing tools (Postman, Newman, curl) to interact with the gRPC microservices.
+
+### REST API Endpoints
+
+| Method | Endpoint | Service | gRPC Method |
+|--------|----------|---------|-------------|
+| GET | `/v1/availability?floor=&vehicle_type=` | Search | GetAvailability |
+| GET | `/v1/availability/first?vehicle_type=` | Search | GetFirstAvailable |
+| POST | `/v1/spots/{spot_id}/hold` | Reservation | HoldSpot |
+| POST | `/v1/reservations` | Reservation | CreateReservation |
+| GET | `/v1/reservations/{id}` | Reservation | GetReservation |
+| DELETE | `/v1/reservations/{id}` | Reservation | CancelReservation |
+| POST | `/v1/checkin` | Presence | CheckIn |
+| POST | `/v1/presence/location` | Presence | UpdateLocation |
+| POST | `/v1/checkout` | Billing | Checkout |
+| POST | `/v1/checkout/gate` | Presence | CheckOut |
+| GET | `/v1/payments/{id}` | Payment | GetPaymentStatus |
+| POST | `/v1/payments/{id}/retry` | Payment | RetryPayment |
 
 ### E2E Test Scenarios
 
-| # | Scenario | Endpoints | Business Rule |
-|---|---|---|---|
-| 1 | Happy path reservation (system-assigned) | Availability → Reserve → Check-in → Checkout → Payment | Booking fee 5K + hourly + QRIS payment before exit |
-| 2 | Happy path reservation (user-selected) | Availability → Hold → Reserve → Check-in → Checkout → Payment | Hold 60s → confirm → parking lot ID sent |
-| 3 | Double-book prevention | Two concurrent reservations on same spot → second gets 409 | Redis SETNX + RabbitMQ serialization |
-| 4 | Spot contention / hold queue | Driver A holds spot → Driver B tries same spot → 409 SPOT_HELD | FIFO hold via Redis |
-| 5 | Reservation expiry (no-show) | Reserve → wait TTL → GET reservation → status=EXPIRED, spot released | 1 hour expiry, 10K no-show fee |
-| 6 | Wrong-spot blocking | Check-in at different spot → BLOCKED, cannot park | Driver diblokir, bukan di-penalty |
-| 7 | Cancellation ≤ 2 min (free) | Reserve → cancel immediately → fee=0 | |
-| 8 | Cancellation > 2 min (5.000 IDR) | Reserve → wait → cancel → fee=5000 | |
-| 9 | Extended stay billing (no overstay penalty) | Long session → checkout → only standard hourly rate, no extra penalty | Overstay = tarif jam standar |
-| 10 | Overnight fee | Session crosses midnight → overnight_fee=20000 per crossing in invoice | Kumulatif per midnight crossing |
-| 11 | Payment success (QRIS) | Checkout → poll payment → status=PAID → reservation=COMPLETED → gate opens | Pay before exit via Pondo Ngopi |
-| 12 | Payment failure + retry | Checkout → poll payment → status=FAILED → retry → new QR code | Gate stays closed until paid |
-| 13 | Idempotency — duplicate reservation | Same Idempotency-Key twice → same reservation_id returned | |
-| 14 | Idempotency — duplicate checkout | Same Idempotency-Key twice → same invoice_id returned | |
+The Postman collection runs sequentially — variables are chained between steps.
+
+| # | Folder | Scenario | Assertions |
+|---|--------|----------|------------|
+| 1 | Search | Get availability per floor + first available spot | Status 200, spots array, total_available > 0 |
+| 2 | Hold Spot | Hold a spot (60s TTL) + double-hold conflict (409) | Status 200 + 409 |
+| 3 | Reservation | Create SYSTEM_ASSIGNED + idempotency check | Status 201, booking_fee=5000, same key → same result |
+| 4 | Check-in | Check-in at correct spot via Presence | Status 200, status=ACTIVE, wrong_spot=false |
+| 5 | Location | Update driver location | Status 200, event field present |
+| 6 | Checkout | Generate invoice + QRIS QR code | invoice_id, payment_id, total > 0, status=PENDING |
+| 7 | Payment | Get payment status + retry if failed | status ∈ {PENDING, PAID, FAILED} |
+| 8 | Cancel | Create + cancel reservation | status=CANCELLED |
+| 9 | Exit Gate | CheckOut (open gate) | status field present |
+
+### Postman Import
+
+To run tests interactively in Postman:
+
+1. Open Postman → Import
+2. Import `sre/e2e/parkir-pintar.postman_collection.json`
+3. Import `sre/e2e/parkir-pintar.postman_environment.json`
+4. Select "ParkirPintar E2E" environment
+5. Run collection sequentially (Runner → select collection → Run)
+
+### curl Examples
+
+```bash
+# Search availability
+curl -s https://parkir-pintar.pondongopi.biz.id/v1/availability?floor=1\&vehicle_type=CAR | jq
+
+# Hold a spot
+curl -s -X POST https://parkir-pintar.pondongopi.biz.id/v1/spots/1-CAR-05/hold \
+  -H "Content-Type: application/json" \
+  -d '{"driver_id": "550e8400-e29b-41d4-a716-446655440000"}'
+
+# Create reservation
+curl -s -X POST https://parkir-pintar.pondongopi.biz.id/v1/reservations \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"driver_id":"550e8400-e29b-41d4-a716-446655440000","mode":"SYSTEM_ASSIGNED","vehicle_type":"CAR"}'
+```
 
 ### Unit Test Coverage
 

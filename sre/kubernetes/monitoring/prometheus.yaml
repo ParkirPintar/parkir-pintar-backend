@@ -56,16 +56,15 @@ data:
           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
             action: keep
             regex: "true"
-          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
-            action: replace
-            target_label: __address__
-            regex: (.+)
-            replacement: ${1}
           - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
             action: replace
             target_label: __address__
             regex: (.+);(.+)
             replacement: ${1}:${2}
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
           - source_labels: [__meta_kubernetes_namespace]
             action: replace
             target_label: namespace
@@ -74,6 +73,30 @@ data:
             target_label: pod
           - source_labels: [__meta_kubernetes_pod_label_app]
             action: replace
+            target_label: app
+
+      - job_name: "istio-envoy"
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: ["parkir-pintar"]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: keep
+            regex: istio-proxy
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            regex: (.+)
+            replacement: ${1}:15090
+            target_label: __address__
+          - action: replace
+            target_label: __metrics_path__
+            replacement: /stats/prometheus
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
 
       - job_name: "kubernetes-services"
