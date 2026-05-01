@@ -1,0 +1,64 @@
+name: CI - DB Migration (golang-migrate)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sre/migrations/**'
+  workflow_dispatch:
+
+env:
+  CLUSTER_NAME: parkirpintar
+  AWS_REGION: ap-southeast-1
+  NAMESPACE: parkir-pintar
+
+jobs:
+  migrate:
+    name: Run Migrations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Create migration ConfigMaps
+        run: |
+          kubectl create configmap migrate-reservation \
+            --from-file=sre/migrations/reservation/ \
+            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create configmap migrate-billing \
+            --from-file=sre/migrations/billing/ \
+            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create configmap migrate-payment \
+            --from-file=sre/migrations/payment/ \
+            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create configmap migrate-analytics \
+            --from-file=sre/migrations/analytics/ \
+            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Delete previous migration job
+        run: kubectl delete job db-migrate -n ${{ env.NAMESPACE }} --ignore-not-found
+
+      - name: Run migration job
+        run: kubectl apply -f sre/kubernetes/base/db-migrate-job.yaml
+
+      - name: Wait for completion
+        run: kubectl wait --for=condition=complete job/db-migrate -n ${{ env.NAMESPACE }} --timeout=300s
+
+      - name: Show migration logs
+        if: always()
+        run: kubectl logs job/db-migrate -n ${{ env.NAMESPACE }}

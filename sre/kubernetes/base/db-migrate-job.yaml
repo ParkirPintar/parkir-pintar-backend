@@ -1,0 +1,91 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: parkir-pintar
+  labels:
+    app: db-migrate
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: migrate/migrate:v4.18.3
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+
+              echo "=== Migrating reservation DB ==="
+              migrate -path=/migrations/reservation \
+                -database "postgres://${DB_USER}:${DB_PASSWORD}@${RESERVATION_DB_HOST}:5432/reservation?sslmode=require" up
+
+              echo "=== Migrating billing DB ==="
+              migrate -path=/migrations/billing \
+                -database "postgres://${DB_USER}:${DB_PASSWORD}@${BILLING_DB_HOST}:5432/billing?sslmode=require" up
+
+              echo "=== Migrating payment DB ==="
+              migrate -path=/migrations/payment \
+                -database "postgres://${DB_USER}:${DB_PASSWORD}@${PAYMENT_DB_HOST}:5432/payment?sslmode=require" up
+
+              echo "=== Migrating analytics DB ==="
+              migrate -path=/migrations/analytics \
+                -database "postgres://${DB_USER}:${DB_PASSWORD}@${ANALYTICS_DB_HOST}:5432/analytics?sslmode=require" up
+
+              echo "=== All migrations complete ==="
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_PASSWORD
+            - name: RESERVATION_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_HOST
+            - name: BILLING_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: billing-db-secret
+                  key: DB_HOST
+            - name: PAYMENT_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-secret
+                  key: DB_HOST
+            - name: ANALYTICS_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: analytics-db-secret
+                  key: DB_HOST
+          volumeMounts:
+            - name: migration-reservation
+              mountPath: /migrations/reservation
+            - name: migration-billing
+              mountPath: /migrations/billing
+            - name: migration-payment
+              mountPath: /migrations/payment
+            - name: migration-analytics
+              mountPath: /migrations/analytics
+      volumes:
+        - name: migration-reservation
+          configMap:
+            name: migrate-reservation
+        - name: migration-billing
+          configMap:
+            name: migrate-billing
+        - name: migration-payment
+          configMap:
+            name: migrate-payment
+        - name: migration-analytics
+          configMap:
+            name: migrate-analytics
