@@ -20,53 +20,39 @@ spec:
               set -e
 
               echo "=== Migrating reservation DB ==="
-              migrate -path=/migrations/reservation \
-                -database "postgres://${DB_USER}:${DB_PASSWORD}@${RESERVATION_DB_HOST}:5432/reservation?sslmode=require" up
+              migrate -path=/migrations/reservation -database "${RESERVATION_DB_URL}" up
 
               echo "=== Migrating billing DB ==="
-              migrate -path=/migrations/billing \
-                -database "postgres://${DB_USER}:${DB_PASSWORD}@${BILLING_DB_HOST}:5432/billing?sslmode=require" up
+              migrate -path=/migrations/billing -database "${BILLING_DB_URL}" up
 
               echo "=== Migrating payment DB ==="
-              migrate -path=/migrations/payment \
-                -database "postgres://${DB_USER}:${DB_PASSWORD}@${PAYMENT_DB_HOST}:5432/payment?sslmode=require" up
+              migrate -path=/migrations/payment -database "${PAYMENT_DB_URL}" up
 
               echo "=== Migrating analytics DB ==="
-              migrate -path=/migrations/analytics \
-                -database "postgres://${DB_USER}:${DB_PASSWORD}@${ANALYTICS_DB_HOST}:5432/analytics?sslmode=require" up
+              migrate -path=/migrations/analytics -database "${ANALYTICS_DB_URL}" up
 
               echo "=== All migrations complete ==="
           env:
-            - name: DB_USER
+            - name: RESERVATION_DB_URL
               valueFrom:
                 secretKeyRef:
                   name: reservation-db-secret
-                  key: DB_USER
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: reservation-db-secret
-                  key: DB_PASSWORD
-            - name: RESERVATION_DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: reservation-db-secret
-                  key: DB_HOST
-            - name: BILLING_DB_HOST
+                  key: DATABASE_URL
+            - name: BILLING_DB_URL
               valueFrom:
                 secretKeyRef:
                   name: billing-db-secret
-                  key: DB_HOST
-            - name: PAYMENT_DB_HOST
+                  key: DATABASE_URL
+            - name: PAYMENT_DB_URL
               valueFrom:
                 secretKeyRef:
                   name: payment-db-secret
-                  key: DB_HOST
-            - name: ANALYTICS_DB_HOST
+                  key: DATABASE_URL
+            - name: ANALYTICS_DB_URL
               valueFrom:
                 secretKeyRef:
                   name: analytics-db-secret
-                  key: DB_HOST
+                  key: DATABASE_URL
           volumeMounts:
             - name: migration-reservation
               mountPath: /migrations/reservation
