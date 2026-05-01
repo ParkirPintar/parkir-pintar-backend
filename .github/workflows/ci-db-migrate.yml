@@ -34,21 +34,11 @@ jobs:
 
       - name: Create migration ConfigMaps
         run: |
-          kubectl create configmap migrate-reservation \
-            --from-file=sre/migrations/reservation/ \
-            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
-          kubectl create configmap migrate-billing \
-            --from-file=sre/migrations/billing/ \
-            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
-          kubectl create configmap migrate-payment \
-            --from-file=sre/migrations/payment/ \
-            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
-          kubectl create configmap migrate-analytics \
-            --from-file=sre/migrations/analytics/ \
-            -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          for svc in reservation billing payment analytics; do
+            kubectl create configmap migrate-${svc} \
+              --from-file=sre/migrations/${svc}/ \
+              -n ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          done
 
       - name: Delete previous migration job
         run: kubectl delete job db-migrate -n ${{ env.NAMESPACE }} --ignore-not-found
