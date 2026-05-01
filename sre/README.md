@@ -211,13 +211,23 @@ kubectl delete namespace istio-system --wait=true
 # 4. Verify semua namespace sudah terminated
 kubectl get namespaces
 # Pastikan parkir-pintar, monitoring, istio-system sudah hilang
+# Kalau ada namespace stuck di "Terminating", force delete pods:
+#   kubectl delete pods -n <namespace> --all --force --grace-period=0
 
-# 5. Hapus aws-auth configmap custom entries (optional, EKS akan di-destroy)
-# kubectl edit configmap aws-auth -n kube-system  # revert manual changes
-
-# 6. Baru destroy Terraform
+# 5. Remove kubernetes resources dari Terraform state
+#    (karena sudah dihapus manual di step 1-3, Terraform tidak perlu manage lagi)
 cd terraform
-terraform destroy -var github_org=<your-org> -var github_repo=<your-repo> ...
+terraform state rm kubernetes_namespace.monitoring
+terraform state rm kubernetes_config_map.grafana_env
+
+# 6. Destroy semua AWS infra
+terraform destroy \
+  -var="db_username=parkirpintar" \
+  -var="db_password=<DB_PASSWORD>" \
+  -var="mq_username=parkirpintar" \
+  -var="mq_password=<MQ_PASSWORD>" \
+  -var="github_owner=<GITHUB_ORG>" \
+  -var="github_repo=<GITHUB_REPO>"
 ```
 
 **Kenapa harus urutan ini?**
@@ -227,20 +237,27 @@ terraform destroy -var github_org=<your-org> -var github_repo=<your-repo> ...
 | Delete namespace dulu | Pod yang running hold ENI di subnet. Kalau subnet di-destroy duluan → ENI orphan → Terraform stuck |
 | Uninstall Istio | Istio Ingress Gateway buat AWS ELB. Kalau ELB masih ada → SG dependency → VPC destroy gagal |
 | Wait for termination | Kubernetes finalizer butuh waktu cleanup. `--wait=true` memastikan semua resource benar-benar hilang |
-| Terraform destroy terakhir | Setelah semua K8s resources clean, Terraform bisa hapus EKS, RDS, ElastiCache, MQ, VPC tanpa conflict |
+| State rm kubernetes | Kubernetes resources sudah dihapus via kubectl. Kalau masih di state, Terraform coba refresh ke cluster yang mau di-destroy → error Unauthorized |
+| Terraform destroy terakhir | Setelah semua K8s resources clean + state bersih, Terraform bisa hapus EKS, RDS, ElastiCache, MQ, VPC tanpa conflict |
+
+**Catatan:**
+- ECR repositories sudah dikonfigurasi dengan `force_delete = true`, jadi akan otomatis terhapus meskipun masih ada images.
+- Kubernetes resources di Terraform pakai `lifecycle { ignore_changes = all }` supaya tidak conflict dengan kubectl operations.
 
 **Kalau Terraform destroy stuck:**
 
 ```bash
 # Cek resource yang masih nempel
-aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=<vpc-id>" --query 'NetworkInterfaces[*].{ID:NetworkInterfaceId,Status:Status,Description:Description}'
+aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=<vpc-id>" \
+  --query 'NetworkInterfaces[*].{ID:NetworkInterfaceId,Status:Status,Description:Description}' \
+  --profile terraform --region ap-southeast-1
 
 # Force detach ENI yang orphan
-aws ec2 detach-network-interface --attachment-id <attachment-id> --force
-aws ec2 delete-network-interface --network-interface-id <eni-id>
+aws ec2 detach-network-interface --attachment-id <attachment-id> --force --profile terraform --region ap-southeast-1
+aws ec2 delete-network-interface --network-interface-id <eni-id> --profile terraform --region ap-southeast-1
 
 # Retry destroy
-terraform destroy -var github_org=<your-org> -var github_repo=<your-repo> ...
+terraform destroy -var="db_username=..." -var="db_password=..." ...
 ```
 
 ## Post-Terraform Setup
