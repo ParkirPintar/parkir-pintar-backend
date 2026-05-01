@@ -23,6 +23,13 @@ func (c *AMQPConsumer) Start(queue string) error {
 		return err
 	}
 
+	// Declare queue and bind to events exchange
+	if _, err := ch.QueueDeclare(queue, true, false, false, false, nil); err != nil {
+		return err
+	}
+	_ = ch.QueueBind(queue, "#", "events.exchange", false, nil)
+	log.Info().Str("queue", queue).Msg("queue declared and bound to events.exchange")
+
 	msgs, err := ch.Consume(queue, "", false, false, false, false, nil)
 	if err != nil {
 		return err

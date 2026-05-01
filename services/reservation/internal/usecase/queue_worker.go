@@ -56,6 +56,15 @@ func NewQueueWorker(
 // Start begins consuming messages from the booking queue. It blocks until
 // the context is cancelled or the channel is closed.
 func (w *QueueWorker) Start(ctx context.Context) error {
+	// Declare queue and bind to booking exchange
+	if _, err := w.ch.QueueDeclare(w.queueName, true, false, false, false, nil); err != nil {
+		return fmt.Errorf("queue worker declare %s: %w", w.queueName, err)
+	}
+	if err := w.ch.QueueBind(w.queueName, "10", "booking.exchange", false, nil); err != nil {
+		log.Warn().Err(err).Msg("queue bind failed (exchange may not exist yet)")
+	}
+	log.Info().Str("queue", w.queueName).Msg("queue declared and bound")
+
 	msgs, err := w.ch.Consume(
 		w.queueName, // queue
 		"",          // consumer tag (auto-generated)

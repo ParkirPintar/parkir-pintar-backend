@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'sre/migrations/**'
+      - 'sre/kubernetes/base/db-migrate-job.yaml'
   workflow_dispatch:
 
 env:
