@@ -54,6 +54,8 @@ func (h *ReservationHandler) CreateReservation(ctx context.Context, req *pb.Crea
 		BookingFee:    res.BookingFee,
 		ConfirmedAt:   res.ConfirmedAt.String(),
 		ExpiresAt:     res.ExpiresAt.String(),
+		PaymentId:     res.PaymentID,
+		QrCode:        res.QRCode,
 	}, nil
 }
 

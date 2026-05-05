@@ -26,6 +26,8 @@ message ReservationResponse {
   int64 booking_fee = 5;
   string confirmed_at = 6;
   string expires_at = 7;
+  string payment_id = 8;
+  string qr_code = 9;
 }
 
 message HoldSpotRequest {

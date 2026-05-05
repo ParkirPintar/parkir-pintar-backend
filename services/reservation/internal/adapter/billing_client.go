@@ -11,7 +11,7 @@ import (
 
 // BillingClient abstracts calls to the Billing Service gRPC API.
 type BillingClient interface {
-	ChargeBookingFee(ctx context.Context, reservationID string) error
+	ChargeBookingFee(ctx context.Context, reservationID string) (paymentID, qrCode string, err error)
 	ApplyPenalty(ctx context.Context, reservationID, reason string, amount int64) error
 	StartBillingSession(ctx context.Context, reservationID string, checkinAt time.Time) error
 }
@@ -25,7 +25,7 @@ func NewBillingClient(conn grpc.ClientConnInterface) BillingClient {
 	return &billingClient{conn: conn}
 }
 
-func (c *billingClient) ChargeBookingFee(ctx context.Context, reservationID string) error {
+func (c *billingClient) ChargeBookingFee(ctx context.Context, reservationID string) (string, string, error) {
 	req := &billingpb.ChargeBookingFeeRequest{
 		ReservationId: reservationID,
 		Amount:        5000,
@@ -34,10 +34,10 @@ func (c *billingClient) ChargeBookingFee(ctx context.Context, reservationID stri
 	resp := &billingpb.BillingResponse{}
 	err := c.conn.Invoke(ctx, "/billing.BillingService/ChargeBookingFee", req, resp)
 	if err != nil {
-		return fmt.Errorf("billing ChargeBookingFee: %w", err)
+		return "", "", fmt.Errorf("billing ChargeBookingFee: %w", err)
 	}
 
-	return nil
+	return resp.PaymentId, resp.QrCode, nil
 }
 
 func (c *billingClient) ApplyPenalty(ctx context.Context, reservationID, reason string, amount int64) error {

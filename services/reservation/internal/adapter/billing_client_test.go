@@ -36,16 +36,24 @@ func TestChargeBookingFee_Success(t *testing.T) {
 		resp: &billingpb.BillingResponse{
 			BillingId: "bill-123",
 			Status:    "PENDING",
+			PaymentId: "pay-123",
+			QrCode:    "QR-CODE-123",
 		},
 	}
 	client := NewBillingClient(conn)
 
-	err := client.ChargeBookingFee(context.Background(), "res-1")
+	paymentID, qrCode, err := client.ChargeBookingFee(context.Background(), "res-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if conn.method != "/billing.BillingService/ChargeBookingFee" {
 		t.Errorf("method = %q, want %q", conn.method, "/billing.BillingService/ChargeBookingFee")
+	}
+	if paymentID != "pay-123" {
+		t.Errorf("paymentID = %q, want %q", paymentID, "pay-123")
+	}
+	if qrCode != "QR-CODE-123" {
+		t.Errorf("qrCode = %q, want %q", qrCode, "QR-CODE-123")
 	}
 }
 
@@ -55,7 +63,7 @@ func TestChargeBookingFee_Error(t *testing.T) {
 	}
 	client := NewBillingClient(conn)
 
-	err := client.ChargeBookingFee(context.Background(), "res-1")
+	_, _, err := client.ChargeBookingFee(context.Background(), "res-1")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

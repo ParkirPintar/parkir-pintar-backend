@@ -98,9 +98,30 @@ func (u *billingUsecase) ChargeBookingFee(ctx context.Context, reservationID str
 		ID:            uuid.NewString(),
 		ReservationID: reservationID,
 		BookingFee:    5000,
+		Total:         5000,
 		Status:        model.BillingPending,
 	}
-	return b, u.repo.Create(ctx, b)
+	if err := u.repo.Create(ctx, b); err != nil {
+		return nil, err
+	}
+
+	// Call Payment Service to generate QRIS QR code for booking fee
+	if u.paymentClient != nil {
+		paymentID, qrCode, err := u.paymentClient.CreatePayment(ctx, b.ID, b.BookingFee, fmt.Sprintf("booking-%s", reservationID))
+		if err != nil {
+			log.Error().Err(err).
+				Str("reservation_id", reservationID).
+				Msg("booking fee payment creation failed")
+			b.Status = model.BillingFailed
+			_ = u.repo.Update(ctx, b)
+			return b, fmt.Errorf("create booking fee payment: %w", err)
+		}
+		b.PaymentID = paymentID
+		b.QRCode = qrCode
+		_ = u.repo.Update(ctx, b)
+	}
+
+	return b, nil
 }
 
 func (u *billingUsecase) StartSession(ctx context.Context, reservationID string, checkinAt time.Time) error {
@@ -174,7 +195,8 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 	b.OvernightFee = output.OvernightFee
 	b.NoshowFee = output.NoshowFee
 	b.CancelFee = output.CancellationFee
-	b.Total = output.BookingFee + output.HourlyFee + output.OvernightFee +
+	// Booking fee is already paid separately during reservation — exclude from checkout total
+	b.Total = output.HourlyFee + output.OvernightFee +
 		output.NoshowFee + output.CancellationFee
 	b.IdempotencyKey = idempotencyKey
 

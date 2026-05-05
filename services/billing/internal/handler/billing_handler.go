@@ -27,7 +27,7 @@ func (h *BillingHandler) ChargeBookingFee(ctx context.Context, req *pb.ChargeBoo
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "charge booking fee: %v", err)
 	}
-	return &pb.BillingResponse{BillingId: b.ID, Status: string(b.Status)}, nil
+	return &pb.BillingResponse{BillingId: b.ID, Status: string(b.Status), PaymentId: b.PaymentID, QrCode: b.QRCode}, nil
 }
 
 func (h *BillingHandler) StartBillingSession(ctx context.Context, req *pb.StartBillingSessionRequest) (*pb.BillingResponse, error) {

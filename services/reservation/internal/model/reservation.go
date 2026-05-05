@@ -27,4 +27,6 @@ type Reservation struct {
 	ExpiresAt      time.Time         `db:"expires_at"`
 	CheckinAt      *time.Time        `db:"checkin_at"`
 	IdempotencyKey string            `db:"idempotency_key"`
+	PaymentID      string            `db:"-"` // from billing, not persisted in reservation DB
+	QRCode         string            `db:"-"` // from billing, not persisted in reservation DB
 }

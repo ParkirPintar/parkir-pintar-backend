@@ -154,9 +154,11 @@ func (w *QueueWorker) processMessage(ctx context.Context, msg amqp.Delivery) {
 		return
 	}
 
-	// Charge booking fee via Billing Service
-	if err := w.billing.ChargeBookingFee(ctx, res.ID); err != nil {
-		logger.Error().Err(err).Msg("failed to charge booking fee")
+	// Charge booking fee via Billing Service — generates QRIS QR code
+	var paymentID, qrCode string
+	paymentID, qrCode, billingErr := w.billing.ChargeBookingFee(ctx, res.ID)
+	if billingErr != nil {
+		logger.Error().Err(billingErr).Msg("failed to charge booking fee")
 		// Reservation is created but billing failed — still ack to avoid
 		// duplicate reservations. The fee can be reconciled later.
 	}
@@ -171,6 +173,10 @@ func (w *QueueWorker) processMessage(ctx context.Context, msg amqp.Delivery) {
 		_ = w.repo.ReleaseHold(ctx, bm.SpotID)
 	}
 
+	// Store payment info on reservation for response
+	res.PaymentID = paymentID
+	res.QRCode = qrCode
+
 	// Publish reservation.confirmed event
 	event := map[string]interface{}{
 		"event_type":     "reservation.confirmed",
@@ -180,6 +186,8 @@ func (w *QueueWorker) processMessage(ctx context.Context, msg amqp.Delivery) {
 		"vehicle_type":   bm.VehicleType,
 		"mode":           bm.Mode,
 		"booking_fee":    res.BookingFee,
+		"payment_id":     paymentID,
+		"qr_code":        qrCode,
 		"confirmed_at":   res.ConfirmedAt.Format(time.RFC3339),
 		"expires_at":     res.ExpiresAt.Format(time.RFC3339),
 	}

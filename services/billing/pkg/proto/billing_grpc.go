@@ -98,6 +98,8 @@ type ApplyPenaltyRequest struct {
 type BillingResponse struct {
 	BillingId string `json:"billing_id"`
 	Status    string `json:"status"`
+	PaymentId string `json:"payment_id"`
+	QrCode    string `json:"qr_code"`
 }
 
 type CheckoutRequest struct {

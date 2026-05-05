@@ -109,6 +109,8 @@ type ReservationResponse struct {
 	BookingFee    int64  `json:"booking_fee"`
 	ConfirmedAt   string `json:"confirmed_at"`
 	ExpiresAt     string `json:"expires_at"`
+	PaymentId     string `json:"payment_id"`
+	QrCode        string `json:"qr_code"`
 }
 
 type HoldSpotRequest struct {

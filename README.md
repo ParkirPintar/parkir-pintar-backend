@@ -128,7 +128,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │   │   ├── base/                 # Deployments, Services, ConfigMaps, HPA
 │   │   ├── istio/                # VirtualService, DestinationRule, PeerAuthentication
 │   │   └── monitoring/           # Monitoring stack configs
-│   ├── observability/            # Prometheus, Grafana, Loki, Tempo, OTel Collector
+│   ├── observability/            # Prometheus, Grafana, Loki, Tempo, OTel Collector, Kiali
 │   ├── stubs/                    # Settlement QRIS mock responses
 │   ├── terraform/                # AWS infra (EKS, RDS, ElastiCache, MQ, VPC)
 │   ├── docker-compose.yaml       # Local development stack
@@ -388,7 +388,7 @@ Assignment Modes:
 | War booking serialization | RabbitMQ Consistent Hash Exchange partitioned by `spot_id` |
 | Pricing engine | gorules (JDM rules engine), rules stored in PostgreSQL, hot-reload via polling |
 | Overnight fee | Flat 20.000 IDR per midnight crossing (kumulatif), lalu hitungan jam normal lanjut |
-| Observability | Structured logging (zerolog), tracing (OpenTelemetry), metrics (Prometheus) |
+| Observability | Structured logging (zerolog), tracing (OpenTelemetry), metrics (Prometheus), mesh topology (Kiali) |
 | Analytics | Analytics Service consumes RabbitMQ events — for business/transaction monitoring |
 
 ---

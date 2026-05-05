@@ -28,6 +28,8 @@ message ApplyPenaltyRequest {
 message BillingResponse {
   string billing_id = 1;
   string status = 2;
+  string payment_id = 3;
+  string qr_code = 4;
 }
 
 message CheckoutRequest {

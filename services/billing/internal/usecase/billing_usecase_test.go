@@ -372,8 +372,8 @@ func TestCheckout_IncludesNoshowFee(t *testing.T) {
 	if b.NoshowFee != 10000 {
 		t.Errorf("noshow_fee = %d, want 10000", b.NoshowFee)
 	}
-	if b.Total <= b.BookingFee+b.HourlyFee {
-		t.Errorf("total %d should include noshow_fee", b.Total)
+	if b.Total <= b.HourlyFee {
+		t.Errorf("total %d should include noshow_fee beyond hourly", b.Total)
 	}
 }
 
@@ -403,9 +403,9 @@ func TestCheckout_IncludesPenalty(t *testing.T) {
 	if b.Penalty != 0 {
 		t.Errorf("penalty = %d, want 0 (wrong-spot is BLOCKED)", b.Penalty)
 	}
-	// Total should be booking_fee + hourly_fee
-	if b.Total < b.BookingFee+b.HourlyFee {
-		t.Errorf("total %d should be at least booking_fee + hourly_fee", b.Total)
+	// Total should be hourly_fee (booking_fee is paid separately during reservation)
+	if b.Total < b.HourlyFee {
+		t.Errorf("total %d should be at least hourly_fee", b.Total)
 	}
 }
 
