@@ -9,19 +9,40 @@ data:
     datasources:
       - name: Prometheus
         type: prometheus
+        uid: prometheus
+        access: proxy
         url: http://prometheus:9090
         isDefault: true
       - name: Loki
         type: loki
+        uid: loki
+        access: proxy
         url: http://loki:3100
       - name: Tempo
         type: tempo
+        uid: tempo
+        access: proxy
         url: http://tempo:3200
         jsonData:
           tracesToLogsV2:
             datasourceUid: loki
           lokiSearch:
             datasourceUid: loki
+      - name: Analytics DB
+        type: postgres
+        uid: analytics-db
+        access: proxy
+        url: $__env{ANALYTICS_DB_HOST}:$__env{ANALYTICS_DB_PORT}
+        user: $__env{ANALYTICS_DB_USER}
+        editable: false
+        jsonData:
+          database: $__env{ANALYTICS_DB_NAME}
+          sslmode: require
+          maxOpenConns: 5
+          maxIdleConns: 2
+          connMaxLifetime: 14400
+        secureJsonData:
+          password: $__env{ANALYTICS_DB_PASSWORD}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,6 +73,31 @@ spec:
                 secretKeyRef:
                   name: grafana-secret
                   key: admin-password
+            - name: ANALYTICS_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: host
+            - name: ANALYTICS_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: port
+            - name: ANALYTICS_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: database
+            - name: ANALYTICS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: username
+            - name: ANALYTICS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: password
           envFrom:
             - configMapRef:
                 name: grafana-env
