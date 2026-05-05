@@ -443,7 +443,7 @@ Default credentials ada di `secrets.yaml` (`grafana-secret` → `admin-password`
 | Prometheus | 9090 | Scrape metrics dari OTel Collector (`:8889`) + pod annotations |
 | Loki | 3100 | Aggregasi logs dari Promtail |
 | Tempo | 3200, 4317, 4318 | Penyimpanan traces dari OTel Collector |
-| Grafana | 3000 | Dashboard — datasource: Prometheus, Loki, Tempo |
+| Grafana | 3000 | Dashboard — datasource: Prometheus, Loki, Tempo, Analytics DB (PostgreSQL) |
 | Promtail | DaemonSet | Collect logs dari semua pod, kirim ke Loki |
 | Beyla | DaemonSet | eBPF-based auto-instrumentation (zero-code tracing) |
 | Kiali | 20001 | Service mesh topology, traffic visualization, Istio config validation (deployed in `istio-system`) |
