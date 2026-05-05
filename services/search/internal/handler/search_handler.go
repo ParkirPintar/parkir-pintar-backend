@@ -19,6 +19,15 @@ func NewSearchHandler(uc usecase.SearchUsecase) *SearchHandler {
 }
 
 func (h *SearchHandler) GetAvailability(ctx context.Context, req *pb.GetAvailabilityRequest) (*pb.GetAvailabilityResponse, error) {
+	if req.VehicleType == "" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type is required")
+	}
+	if req.VehicleType != "CAR" && req.VehicleType != "MOTORCYCLE" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type must be CAR or MOTORCYCLE")
+	}
+	if req.Floor < 1 || req.Floor > 5 {
+		return nil, status.Error(codes.InvalidArgument, "floor must be between 1 and 5")
+	}
 	spots, err := h.uc.GetAvailability(ctx, int(req.Floor), req.VehicleType)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get availability: %v", err)
@@ -40,6 +49,12 @@ func (h *SearchHandler) GetAvailability(ctx context.Context, req *pb.GetAvailabi
 }
 
 func (h *SearchHandler) GetFirstAvailable(ctx context.Context, req *pb.GetFirstAvailableRequest) (*pb.GetFirstAvailableResponse, error) {
+	if req.VehicleType == "" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type is required")
+	}
+	if req.VehicleType != "CAR" && req.VehicleType != "MOTORCYCLE" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type must be CAR or MOTORCYCLE")
+	}
 	spot, err := h.uc.GetFirstAvailable(ctx, req.VehicleType)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "no available spot: %v", err)

@@ -19,6 +19,12 @@ func NewPaymentHandler(uc usecase.PaymentUsecase) *PaymentHandler {
 }
 
 func (h *PaymentHandler) CreatePayment(ctx context.Context, req *pb.CreatePaymentRequest) (*pb.PaymentResponse, error) {
+	if req.InvoiceId == "" {
+		return nil, status.Error(codes.InvalidArgument, "invoice_id is required")
+	}
+	if req.Amount <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "amount must be greater than 0")
+	}
 	p, err := h.uc.CreatePayment(ctx, req.InvoiceId, req.Amount, req.IdempotencyKey)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create payment: %v", err)
@@ -34,6 +40,9 @@ func (h *PaymentHandler) CreatePayment(ctx context.Context, req *pb.CreatePaymen
 }
 
 func (h *PaymentHandler) GetPaymentStatus(ctx context.Context, req *pb.GetPaymentStatusRequest) (*pb.PaymentResponse, error) {
+	if req.PaymentId == "" {
+		return nil, status.Error(codes.InvalidArgument, "payment_id is required")
+	}
 	p, err := h.uc.GetPaymentStatus(ctx, req.PaymentId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "payment not found: %v", err)
@@ -49,6 +58,9 @@ func (h *PaymentHandler) GetPaymentStatus(ctx context.Context, req *pb.GetPaymen
 }
 
 func (h *PaymentHandler) RetryPayment(ctx context.Context, req *pb.RetryPaymentRequest) (*pb.PaymentResponse, error) {
+	if req.PaymentId == "" {
+		return nil, status.Error(codes.InvalidArgument, "payment_id is required")
+	}
 	p, err := h.uc.RetryPayment(ctx, req.PaymentId, req.IdempotencyKey)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "retry payment: %v", err)

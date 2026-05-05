@@ -23,6 +23,21 @@ func (h *ReservationHandler) CreateReservation(ctx context.Context, req *pb.Crea
 	if driverID == "" {
 		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
 	}
+	if req.Mode == "" {
+		return nil, status.Error(codes.InvalidArgument, "mode is required (SYSTEM_ASSIGNED or USER_SELECTED)")
+	}
+	if req.Mode != "SYSTEM_ASSIGNED" && req.Mode != "USER_SELECTED" {
+		return nil, status.Error(codes.InvalidArgument, "mode must be SYSTEM_ASSIGNED or USER_SELECTED")
+	}
+	if req.VehicleType == "" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type is required")
+	}
+	if req.VehicleType != "CAR" && req.VehicleType != "MOTORCYCLE" {
+		return nil, status.Error(codes.InvalidArgument, "vehicle_type must be CAR or MOTORCYCLE")
+	}
+	if req.Mode == "USER_SELECTED" && req.SpotId == "" {
+		return nil, status.Error(codes.InvalidArgument, "spot_id is required for USER_SELECTED mode")
+	}
 
 	res, err := h.uc.CreateReservation(ctx, driverID, req.Mode, req.VehicleType, req.SpotId, req.IdempotencyKey)
 	if err != nil {
@@ -43,6 +58,9 @@ func (h *ReservationHandler) CreateReservation(ctx context.Context, req *pb.Crea
 }
 
 func (h *ReservationHandler) HoldSpot(ctx context.Context, req *pb.HoldSpotRequest) (*pb.HoldSpotResponse, error) {
+	if req.SpotId == "" {
+		return nil, status.Error(codes.InvalidArgument, "spot_id is required")
+	}
 	driverID := req.DriverId
 	if driverID == "" {
 		return nil, status.Error(codes.InvalidArgument, "driver_id is required")
@@ -56,6 +74,9 @@ func (h *ReservationHandler) HoldSpot(ctx context.Context, req *pb.HoldSpotReque
 }
 
 func (h *ReservationHandler) CancelReservation(ctx context.Context, req *pb.CancelReservationRequest) (*pb.CancelReservationResponse, error) {
+	if req.ReservationId == "" {
+		return nil, status.Error(codes.InvalidArgument, "reservation_id is required")
+	}
 	fee, err := h.uc.CancelReservation(ctx, req.ReservationId)
 	if err != nil {
 		if isFailedPrecondition(err) {
@@ -71,6 +92,12 @@ func (h *ReservationHandler) CancelReservation(ctx context.Context, req *pb.Canc
 }
 
 func (h *ReservationHandler) CheckIn(ctx context.Context, req *pb.CheckInRequest) (*pb.CheckInResponse, error) {
+	if req.ReservationId == "" {
+		return nil, status.Error(codes.InvalidArgument, "reservation_id is required")
+	}
+	if req.ActualSpotId == "" {
+		return nil, status.Error(codes.InvalidArgument, "actual_spot_id is required")
+	}
 	res, wrongSpot, penalty, err := h.uc.CheckIn(ctx, req.ReservationId, req.ActualSpotId)
 	if err != nil {
 		if isFailedPrecondition(err) {
@@ -92,6 +119,9 @@ func (h *ReservationHandler) CheckIn(ctx context.Context, req *pb.CheckInRequest
 }
 
 func (h *ReservationHandler) GetReservation(ctx context.Context, req *pb.GetReservationRequest) (*pb.ReservationResponse, error) {
+	if req.ReservationId == "" {
+		return nil, status.Error(codes.InvalidArgument, "reservation_id is required")
+	}
 	res, err := h.uc.GetReservation(ctx, req.ReservationId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "not found: %v", err)
