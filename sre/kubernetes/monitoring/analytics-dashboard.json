@@ -13,12 +13,29 @@
     "to": "now"
   },
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "event_type",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "analytics-db"
+        },
+        "query": "SELECT DISTINCT event_type FROM transaction_events ORDER BY event_type",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
   },
   "panels": [
     {
       "id": 1,
-      "title": "Total Requests Today",
+      "title": "Total Events Today",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -27,13 +44,13 @@
         "y": 0
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "sum(increase(istio_requests_total{destination_workload_namespace=\"parkir-pintar\"}[24h]))",
-          "legendFormat": "Requests",
+          "rawSql": "SELECT COUNT(*) AS \"Total Events\" FROM transaction_events WHERE recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
       ],
@@ -45,7 +62,7 @@
     },
     {
       "id": 2,
-      "title": "Reservations (logs)",
+      "title": "Reservations Today",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -54,20 +71,29 @@
         "y": 0
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"reservation-service\"} |= `confirmed` [24h])",
-          "legendFormat": "Reservations",
+          "rawSql": "SELECT COUNT(*) AS \"Reservations\" FROM transaction_events WHERE event_type = 'reservation.confirmed' AND recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        }
+      }
     },
     {
       "id": 3,
-      "title": "Check-ins (logs)",
+      "title": "Check-ins Today",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -76,20 +102,29 @@
         "y": 0
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"presence-service\"} |= `checkin` [24h])",
-          "legendFormat": "Check-ins",
+          "rawSql": "SELECT COUNT(*) AS \"Check-ins\" FROM transaction_events WHERE event_type = 'checkin.confirmed' AND recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        }
+      }
     },
     {
       "id": 4,
-      "title": "Checkouts (logs)",
+      "title": "Checkouts Today",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -98,20 +133,29 @@
         "y": 0
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"billing-service\"} |= `checkout` [24h])",
-          "legendFormat": "Checkouts",
+          "rawSql": "SELECT COUNT(*) AS \"Checkouts\" FROM transaction_events WHERE event_type = 'checkout.completed' AND recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        }
+      }
     },
     {
       "id": 5,
-      "title": "Payments (logs)",
+      "title": "Revenue Today (IDR)",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -120,20 +164,25 @@
         "y": 0
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"payment-service\"} |= `completed` [24h])",
-          "legendFormat": "Payments",
+          "rawSql": "SELECT COALESCE(SUM(amount), 0) AS \"Revenue\" FROM transaction_events WHERE event_type IN ('checkout.completed', 'reservation.confirmed') AND recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyIDR"
+        }
+      }
     },
     {
       "id": 6,
-      "title": "Errors (logs)",
+      "title": "Cancellations / Errors",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -142,18 +191,19 @@
         "y": 0
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\"} |= `ERR` [24h])",
-          "legendFormat": "Errors",
+          "rawSql": "SELECT COUNT(*) AS \"Issues\" FROM transaction_events WHERE event_type IN ('reservation.cancelled', 'reservation.expired', 'checkout.failed', 'penalty.applied') AND recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
+          "unit": "short",
           "color": {
             "mode": "fixed",
             "fixedColor": "red"
@@ -163,7 +213,7 @@
     },
     {
       "id": 7,
-      "title": "Transaction Flow - Request Rate per Service",
+      "title": "Events Over Time",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -172,22 +222,22 @@
         "y": 4
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=~\"reservation-service|presence-service|billing-service|payment-service|search-service\", reporter=\"destination\"}[5m])) by (destination_service_name)",
-          "legendFormat": "{{destination_service_name}}",
+          "rawSql": "SELECT $__timeGroup(recorded_at, '5m') AS time, event_type, COUNT(*) AS count FROM transaction_events WHERE $__timeFilter(recorded_at) AND event_type IN ($event_type) GROUP BY time, event_type ORDER BY time",
+          "format": "time_series",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 15,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
             "stacking": {
               "mode": "normal"
             }
@@ -197,7 +247,7 @@
     },
     {
       "id": 8,
-      "title": "Reservation Service - Latency",
+      "title": "Revenue Over Time",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -206,31 +256,29 @@
         "y": 12
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"reservation-service\", reporter=\"destination\"}[5m])) by (le))",
-          "legendFormat": "P50",
+          "rawSql": "SELECT $__timeGroup(recorded_at, '1h') AS time, SUM(amount) AS revenue FROM transaction_events WHERE $__timeFilter(recorded_at) AND amount > 0 GROUP BY time ORDER BY time",
+          "format": "time_series",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"reservation-service\", reporter=\"destination\"}[5m])) by (le))",
-          "legendFormat": "P95",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ms"
+          "unit": "currencyIDR",
+          "custom": {
+            "fillOpacity": 20
+          }
         }
       }
     },
     {
       "id": 9,
-      "title": "Payment Service - Latency",
-      "type": "timeseries",
+      "title": "Events by Type (Pie)",
+      "type": "piechart",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -238,31 +286,21 @@
         "y": 12
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"payment-service\", reporter=\"destination\"}[5m])) by (le))",
-          "legendFormat": "P50",
+          "rawSql": "SELECT event_type AS metric, COUNT(*) AS value FROM transaction_events WHERE $__timeFilter(recorded_at) GROUP BY event_type ORDER BY value DESC",
+          "format": "table",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"payment-service\", reporter=\"destination\"}[5m])) by (le))",
-          "legendFormat": "P95",
-          "refId": "B"
         }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms"
-        }
-      }
+      ]
     },
     {
       "id": 10,
-      "title": "Billing Service - Error Rate",
-      "type": "timeseries",
+      "title": "Top Spots by Usage",
+      "type": "bargauge",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -270,31 +308,26 @@
         "y": 20
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"billing-service\", response_code=~\"5.*\", reporter=\"destination\"}[5m]))",
-          "legendFormat": "5xx errors",
+          "rawSql": "SELECT spot_id, COUNT(*) AS usage FROM transaction_events WHERE $__timeFilter(recorded_at) AND spot_id IS NOT NULL AND spot_id != '' GROUP BY spot_id ORDER BY usage DESC LIMIT 15",
+          "format": "table",
           "refId": "A"
-        },
-        {
-          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"billing-service\", response_code=~\"4.*\", reporter=\"destination\"}[5m]))",
-          "legendFormat": "4xx errors",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "short"
         }
       }
     },
     {
       "id": 11,
-      "title": "Analytics Event Consumer (logs)",
-      "type": "timeseries",
+      "title": "Vehicle Type Distribution",
+      "type": "piechart",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -302,120 +335,169 @@
         "y": 20
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"analytics-service\"} |= `record` [5m])",
-          "legendFormat": "Events consumed",
+          "rawSql": "SELECT vehicle_type AS metric, COUNT(*) AS value FROM transaction_events WHERE $__timeFilter(recorded_at) AND vehicle_type IS NOT NULL AND vehicle_type != '' GROUP BY vehicle_type",
+          "format": "table",
           "refId": "A"
-        },
-        {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"analytics-service\"} |= `ERR` [5m])",
-          "legendFormat": "Consumer errors",
-          "refId": "B"
         }
       ]
     },
     {
       "id": 12,
-      "title": "Search Service - Queries/s",
+      "title": "Hourly Occupancy Pattern",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
         "y": 28
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"search-service\", reporter=\"destination\"}[5m]))",
-          "legendFormat": "Search req/s",
+          "rawSql": "SELECT $__timeGroup(recorded_at, '1h') AS time, COUNT(*) AS checkins FROM transaction_events WHERE $__timeFilter(recorded_at) AND event_type = 'checkin.confirmed' GROUP BY time ORDER BY time",
+          "format": "time_series",
           "refId": "A"
+        },
+        {
+          "rawSql": "SELECT $__timeGroup(recorded_at, '1h') AS time, COUNT(*) AS checkouts FROM transaction_events WHERE $__timeFilter(recorded_at) AND event_type = 'checkout.completed' GROUP BY time ORDER BY time",
+          "format": "time_series",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 15
+          }
         }
       }
     },
     {
       "id": 13,
-      "title": "Presence Service - Checkin/Checkout Rate",
-      "type": "timeseries",
+      "title": "Average Revenue per Transaction",
+      "type": "stat",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 28
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 36
       },
       "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"presence-service\", reporter=\"destination\"}[5m]))",
-          "legendFormat": "Presence req/s",
+          "rawSql": "SELECT COALESCE(AVG(amount), 0) AS \"Avg Revenue\" FROM transaction_events WHERE $__timeFilter(recorded_at) AND amount > 0",
+          "format": "table",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "currencyIDR"
         }
       }
     },
     {
       "id": 14,
-      "title": "Notification Delivery (logs)",
-      "type": "timeseries",
+      "title": "Unique Drivers Today",
+      "type": "stat",
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
+        "h": 4,
+        "w": 8,
+        "x": 8,
         "y": 36
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"notification-service\"} |= `sent` [5m])",
-          "legendFormat": "Notifications sent",
+          "rawSql": "SELECT COUNT(DISTINCT driver_id) AS \"Unique Drivers\" FROM transaction_events WHERE recorded_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
           "refId": "A"
-        },
-        {
-          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"notification-service\"} |= `ERR` [5m])",
-          "legendFormat": "Notification errors",
-          "refId": "B"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
     },
     {
       "id": 15,
-      "title": "Analytics Service Logs",
-      "type": "logs",
+      "title": "Cancellation Rate (%)",
+      "type": "gauge",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "analytics-db"
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT CASE WHEN total = 0 THEN 0 ELSE (cancelled::float / total * 100) END AS \"Cancel Rate\" FROM (SELECT COUNT(*) FILTER (WHERE event_type IN ('reservation.cancelled', 'reservation.expired')) AS cancelled, COUNT(*) AS total FROM transaction_events WHERE recorded_at >= NOW() - INTERVAL '24 hours') sub",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 25
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Recent Events",
+      "type": "table",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 40
       },
       "datasource": {
-        "type": "loki",
-        "uid": "loki"
+        "type": "postgres",
+        "uid": "analytics-db"
       },
       "targets": [
         {
-          "expr": "{namespace=\"parkir-pintar\", app=\"analytics-service\"}",
+          "rawSql": "SELECT recorded_at AS \"Time\", event_type AS \"Event\", spot_id AS \"Spot\", vehicle_type AS \"Vehicle\", amount AS \"Amount (IDR)\", driver_id AS \"Driver\" FROM transaction_events WHERE $__timeFilter(recorded_at) ORDER BY recorded_at DESC LIMIT 50",
+          "format": "table",
           "refId": "A"
         }
       ]

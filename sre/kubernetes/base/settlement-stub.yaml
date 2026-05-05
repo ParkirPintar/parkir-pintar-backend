@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settlement-stub-mappings
+  namespace: parkir-pintar
+data:
+  settlement-qris.json: |
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/v1/qris/create"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "qr_code": "STUB-QR-00000000-0000-0000-0000-000000000001",
+          "payment_id": "00000000-0000-0000-0000-000000000001",
+          "status": "PENDING"
+        }
+      }
+    }
+  settlement-status.json: |
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/v1/settlement/.*"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "status": "PAID"
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: settlement-stub
+  namespace: parkir-pintar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: settlement-stub
+  template:
+    metadata:
+      labels:
+        app: settlement-stub
+    spec:
+      containers:
+        - name: wiremock
+          image: wiremock/wiremock:3.5.4
+          args: ["--verbose"]
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: mappings
+              mountPath: /home/wiremock/mappings
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /__admin/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /__admin/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: mappings
+          configMap:
+            name: settlement-stub-mappings
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: settlement-stub
+  namespace: parkir-pintar
+spec:
+  selector:
+    app: settlement-stub
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP

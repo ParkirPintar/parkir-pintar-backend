@@ -25,7 +25,7 @@ data:
             - datasourceUid: tempo
               matcherRegex: '"traceID":"(\w+)"'
               name: TraceID
-              url: '$${__value.raw}'
+              url: '${__value.raw}'
       - name: Tempo
         type: tempo
         uid: tempo
@@ -44,6 +44,21 @@ data:
             enabled: true
           lokiSearch:
             datasourceUid: loki
+      - name: Analytics DB
+        type: postgres
+        uid: analytics-db
+        access: proxy
+        url: $__env{ANALYTICS_DB_HOST}:$__env{ANALYTICS_DB_PORT}
+        user: $__env{ANALYTICS_DB_USER}
+        editable: false
+        jsonData:
+          database: $__env{ANALYTICS_DB_NAME}
+          sslmode: require
+          maxOpenConns: 5
+          maxIdleConns: 2
+          connMaxLifetime: 14400
+        secureJsonData:
+          password: $__env{ANALYTICS_DB_PASSWORD}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -80,6 +95,31 @@ spec:
                 secretKeyRef:
                   name: grafana-secret
                   key: admin-password
+            - name: ANALYTICS_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: host
+            - name: ANALYTICS_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: port
+            - name: ANALYTICS_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: database
+            - name: ANALYTICS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: username
+            - name: ANALYTICS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-db-secret
+                  key: password
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
@@ -119,6 +159,19 @@ type: Opaque
 stringData:
   admin-user: admin
   admin-password: parkirpintar-monitor
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-db-secret
+  namespace: monitoring
+type: Opaque
+stringData:
+  host: "parkirpintar-analytics.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com"
+  port: "5432"
+  database: "analytics"
+  username: "parkirpintar"
+  password: "parkirpintar12345#"
 ---
 apiVersion: v1
 kind: Service

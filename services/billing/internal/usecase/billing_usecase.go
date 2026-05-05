@@ -231,6 +231,7 @@ func (u *billingUsecase) publishEvent(ctx context.Context, eventType string, b *
 	}
 
 	payload, err := json.Marshal(map[string]any{
+		"event_type":       eventType,
 		"invoice_id":       b.ID,
 		"reservation_id":   b.ReservationID,
 		"booking_fee":      b.BookingFee,
@@ -240,6 +241,7 @@ func (u *billingUsecase) publishEvent(ctx context.Context, eventType string, b *
 		"noshow_fee":       b.NoshowFee,
 		"cancellation_fee": b.CancelFee,
 		"total":            b.Total,
+		"amount":           b.Total,
 		"status":           string(b.Status),
 		"payment_id":       b.PaymentID,
 		"qr_code":          b.QRCode,

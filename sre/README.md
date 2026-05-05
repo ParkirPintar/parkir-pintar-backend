@@ -305,6 +305,8 @@ kubectl get svc -n istio-system istio-ingressgateway \
 
 ### 4. Deploy Kubernetes Manifests
 
+> **Sebelum deploy:** File `kubernetes/base/config.yaml` berisi placeholder (`<RDS_RESERVATION_HOST>`, `<DB_USERNAME>`, `<DB_PASSWORD>`, dll). Ganti semua placeholder dengan nilai aktual dari `terraform output` (lihat [Get Credentials](#get-credentials)) sebelum apply.
+
 ```bash
 # Namespace harus di-apply duluan (kubectl apply -f dir/ diproses alfabetikal)
 kubectl apply -f kubernetes/base/namespace.yaml

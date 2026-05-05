@@ -94,6 +94,23 @@ func (h *Handler) createReservation(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	// Validate required fields
+	if strField(req, "driver_id") == "" {
+		writeError(w, http.StatusBadRequest, "driver_id is required")
+		return
+	}
+	if strField(req, "mode") == "" {
+		writeError(w, http.StatusBadRequest, "mode is required (SYSTEM_ASSIGNED or USER_SELECTED)")
+		return
+	}
+	if strField(req, "vehicle_type") == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_type is required")
+		return
+	}
+	if strField(req, "mode") == "USER_SELECTED" && strField(req, "spot_id") == "" {
+		writeError(w, http.StatusBadRequest, "spot_id is required for USER_SELECTED mode")
+		return
+	}
 	// Pass Idempotency-Key from header into request
 	if key := r.Header.Get("Idempotency-Key"); key != "" {
 		req["idempotency_key"] = key
@@ -148,6 +165,10 @@ func (h *Handler) holdSpot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		body = map[string]interface{}{}
 	}
+	if strField(body, "driver_id") == "" {
+		writeError(w, http.StatusBadRequest, "driver_id is required")
+		return
+	}
 	body["spot_id"] = spotID
 	var resp json.RawMessage
 	if err := grpccall.Invoke(r.Context(), h.reservation, "/reservation.ReservationService/HoldSpot", body, &resp); err != nil {
@@ -165,6 +186,14 @@ func (h *Handler) checkIn(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if strField(body, "reservation_id") == "" {
+		writeError(w, http.StatusBadRequest, "reservation_id is required")
+		return
+	}
+	if strField(body, "spot_id") == "" {
+		writeError(w, http.StatusBadRequest, "spot_id is required")
+		return
+	}
 	var resp json.RawMessage
 	if err := grpccall.Invoke(r.Context(), h.presence, "/presence.PresenceService/CheckIn", body, &resp); err != nil {
 		writeGRPCError(w, err)
@@ -179,6 +208,10 @@ func (h *Handler) checkout(w http.ResponseWriter, r *http.Request) {
 	body, err := readBody(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if strField(body, "reservation_id") == "" {
+		writeError(w, http.StatusBadRequest, "reservation_id is required")
 		return
 	}
 	if key := r.Header.Get("Idempotency-Key"); key != "" {
@@ -200,6 +233,10 @@ func (h *Handler) checkOut(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if strField(body, "reservation_id") == "" {
+		writeError(w, http.StatusBadRequest, "reservation_id is required")
+		return
+	}
 	var resp json.RawMessage
 	if err := grpccall.Invoke(r.Context(), h.presence, "/presence.PresenceService/CheckOut", body, &resp); err != nil {
 		writeGRPCError(w, err)
@@ -212,6 +249,10 @@ func (h *Handler) updateLocation(w http.ResponseWriter, r *http.Request) {
 	body, err := readBody(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if strField(body, "reservation_id") == "" {
+		writeError(w, http.StatusBadRequest, "reservation_id is required")
 		return
 	}
 	var resp json.RawMessage
@@ -351,4 +392,15 @@ func grpcToHTTP(code codes.Code) int {
 	default:
 		return http.StatusInternalServerError
 	}
+}
+
+// strField safely extracts a string field from a map.
+func strField(m map[string]interface{}, key string) string {
+	if m == nil {
+		return ""
+	}
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
 }

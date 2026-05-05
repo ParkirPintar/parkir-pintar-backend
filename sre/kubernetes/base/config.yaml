@@ -11,6 +11,8 @@ data:
   BILLING_ADDR: "billing-service.parkir-pintar.svc.cluster.local:50051"
   SEARCH_ADDR: "search-service.parkir-pintar.svc.cluster.local:50051"
   RESERVATION_ADDR: "reservation-service.parkir-pintar.svc.cluster.local:50051"
+  PRESENCE_ADDR: "presence-service.parkir-pintar.svc.cluster.local:50051"
+  SETTLEMENT_URL: "http://settlement-stub.parkir-pintar.svc.cluster.local:8080"
 ---
 apiVersion: v1
 kind: Secret
@@ -19,12 +21,14 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<reservation-db-endpoint>"
+  DB_HOST: "<RDS_RESERVATION_HOST>"
   DB_PORT: "5432"
   DB_NAME: "reservation"
-  DB_USER: "<db_username>"
-  DB_PASSWORD: "<db_password>"
-  DB_REPLICA_HOST: "<reservation-replica-endpoint>"
+  DB_USER: "<DB_USERNAME>"
+  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_SSLMODE: "require"
+  DB_REPLICA_HOST: "<RDS_RESERVATION_REPLICA_HOST>"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_RESERVATION_HOST>:5432/reservation?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -33,11 +37,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<billing-db-endpoint>"
+  DB_HOST: "<RDS_BILLING_HOST>"
   DB_PORT: "5432"
   DB_NAME: "billing"
-  DB_USER: "<db_username>"
-  DB_PASSWORD: "<db_password>"
+  DB_USER: "<DB_USERNAME>"
+  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_SSLMODE: "require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_BILLING_HOST>:5432/billing?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -46,11 +52,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<payment-db-endpoint>"
+  DB_HOST: "<RDS_PAYMENT_HOST>"
   DB_PORT: "5432"
   DB_NAME: "payment"
-  DB_USER: "<db_username>"
-  DB_PASSWORD: "<db_password>"
+  DB_USER: "<DB_USERNAME>"
+  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_SSLMODE: "require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_PAYMENT_HOST>:5432/payment?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -59,11 +67,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<analytics-db-endpoint>"
+  DB_HOST: "<RDS_ANALYTICS_HOST>"
   DB_PORT: "5432"
   DB_NAME: "analytics"
-  DB_USER: "<db_username>"
-  DB_PASSWORD: "<db_password>"
+  DB_USER: "<DB_USERNAME>"
+  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_SSLMODE: "require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_ANALYTICS_HOST>:5432/analytics?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -72,7 +82,7 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  REDIS_HOST: "<redis-endpoint>"
+  REDIS_HOST: "<ELASTICACHE_HOST>"
   REDIS_PORT: "6379"
 ---
 apiVersion: v1
@@ -82,4 +92,4 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  RABBITMQ_URL: "<rabbitmq-endpoint>"
+  RABBITMQ_URL: "amqps://<MQ_USERNAME>:<MQ_PASSWORD>@<AMAZON_MQ_HOST>:5671"
