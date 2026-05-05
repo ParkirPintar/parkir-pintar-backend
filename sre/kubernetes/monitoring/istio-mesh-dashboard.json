@@ -1,0 +1,324 @@
+{
+  "uid": "parkir-istio-mesh",
+  "title": "Parkir Pintar - Istio Mesh",
+  "tags": [
+    "parkir-pintar",
+    "istio"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Mesh Request Rate by Service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", reporter=\"destination\"}[5m])) by (destination_service_name)",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Mesh Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", reporter=\"destination\", response_code=~\"5.*\"}[5m])) by (destination_service_name)",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Mesh Latency P95 by Service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", reporter=\"destination\"}[5m])) by (le, destination_service_name))",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Request/Response Bytes",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_request_bytes_sum{destination_workload_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+          "legendFormat": "req {{destination_service_name}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(istio_response_bytes_sum{destination_workload_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+          "legendFormat": "resp {{destination_service_name}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Request Size (bytes sent)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_request_bytes_sum{destination_workload_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Response Size (bytes received)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_response_bytes_sum{destination_workload_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "mTLS Traffic Distribution",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(istio_requests_total{destination_workload_namespace=\"parkir-pintar\"}[1h])) by (connection_security_policy)",
+          "legendFormat": "{{connection_security_policy}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "gRPC Status Codes",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", request_protocol=\"grpc\"}[1h])) by (grpc_response_status)",
+          "legendFormat": "grpc_status={{grpc_response_status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "xDS Push Count (Config Updates)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pilot_xds_pushes[5m])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Pilot Proxy Convergence Time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[5m])) by (le))",
+          "legendFormat": "P99 convergence",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(pilot_proxy_convergence_time_bucket[5m])) by (le))",
+          "legendFormat": "P50 convergence",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Service-to-Service Traffic Map",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", reporter=\"destination\"}[5m])) by (source_workload, destination_service_name, response_code)",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "source_workload": "Source",
+              "destination_service_name": "Destination",
+              "response_code": "Status",
+              "Value": "Req/s"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39
+}

@@ -1,0 +1,425 @@
+{
+  "uid": "parkir-analytics",
+  "title": "Parkir Pintar - Business Analytics",
+  "tags": [
+    "parkir-pintar",
+    "analytics",
+    "business"
+  ],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Requests Today",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(istio_requests_total{destination_workload_namespace=\"parkir-pintar\"}[24h]))",
+          "legendFormat": "Requests",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Reservations (logs)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"reservation-service\"} |= `confirmed` [24h])",
+          "legendFormat": "Reservations",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Check-ins (logs)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"presence-service\"} |= `checkin` [24h])",
+          "legendFormat": "Check-ins",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Checkouts (logs)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"billing-service\"} |= `checkout` [24h])",
+          "legendFormat": "Checkouts",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Payments (logs)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"payment-service\"} |= `completed` [24h])",
+          "legendFormat": "Payments",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Errors (logs)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\"} |= `ERR` [24h])",
+          "legendFormat": "Errors",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Transaction Flow - Request Rate per Service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=~\"reservation-service|presence-service|billing-service|payment-service|search-service\", reporter=\"destination\"}[5m])) by (destination_service_name)",
+          "legendFormat": "{{destination_service_name}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Reservation Service - Latency",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"reservation-service\", reporter=\"destination\"}[5m])) by (le))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"reservation-service\", reporter=\"destination\"}[5m])) by (le))",
+          "legendFormat": "P95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Payment Service - Latency",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"payment-service\", reporter=\"destination\"}[5m])) by (le))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"payment-service\", reporter=\"destination\"}[5m])) by (le))",
+          "legendFormat": "P95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Billing Service - Error Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"billing-service\", response_code=~\"5.*\", reporter=\"destination\"}[5m]))",
+          "legendFormat": "5xx errors",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"billing-service\", response_code=~\"4.*\", reporter=\"destination\"}[5m]))",
+          "legendFormat": "4xx errors",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Analytics Event Consumer (logs)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"analytics-service\"} |= `record` [5m])",
+          "legendFormat": "Events consumed",
+          "refId": "A"
+        },
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"analytics-service\"} |= `ERR` [5m])",
+          "legendFormat": "Consumer errors",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Search Service - Queries/s",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"search-service\", reporter=\"destination\"}[5m]))",
+          "legendFormat": "Search req/s",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Presence Service - Checkin/Checkout Rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{destination_workload_namespace=\"parkir-pintar\", destination_service_name=\"presence-service\", reporter=\"destination\"}[5m]))",
+          "legendFormat": "Presence req/s",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Notification Delivery (logs)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"notification-service\"} |= `sent` [5m])",
+          "legendFormat": "Notifications sent",
+          "refId": "A"
+        },
+        {
+          "expr": "count_over_time({namespace=\"parkir-pintar\", app=\"notification-service\"} |= `ERR` [5m])",
+          "legendFormat": "Notification errors",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Analytics Service Logs",
+      "type": "logs",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "expr": "{namespace=\"parkir-pintar\", app=\"analytics-service\"}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39
+}

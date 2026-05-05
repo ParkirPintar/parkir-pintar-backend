@@ -1,0 +1,269 @@
+{
+    "uid": "parkir-tracing",
+    "title": "Parkir Pintar - Distributed Tracing",
+    "tags": [
+        "parkir-pintar",
+        "tracing",
+        "tempo",
+        "beyla"
+    ],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "templating": {
+        "list": []
+    },
+    "panels": [
+        {
+            "id": 1,
+            "title": "Service Map",
+            "type": "nodeGraph",
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "datasource": {
+                "type": "tempo",
+                "uid": "tempo"
+            },
+            "targets": [
+                {
+                    "queryType": "serviceMap",
+                    "refId": "A",
+                    "serviceMapQuery": "{}"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "title": "HTTP Request Rate",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 10
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_server_request_duration_seconds_count{server_port=\"8080\"}[5m])) by (http_route)",
+                    "legendFormat": "{{http_route}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "fillOpacity": 10
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "title": "HTTP Latency P95 / P50",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 10
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{server_port=\"8080\"}[5m])) by (le))",
+                    "legendFormat": "p95",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.50, sum(rate(http_server_request_duration_seconds_bucket{server_port=\"8080\"}[5m])) by (le))",
+                    "legendFormat": "p50",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "fillOpacity": 5
+                    }
+                }
+            }
+        },
+        {
+            "id": 4,
+            "title": "HTTP Error Rate (5xx)",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 18
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_server_request_duration_seconds_count{server_port=\"8080\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{server_port=\"8080\"}[5m])) * 100",
+                    "legendFormat": "error %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "custom": {
+                        "fillOpacity": 10
+                    },
+                    "thresholds": {
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 1
+                            },
+                            {
+                                "color": "red",
+                                "value": 5
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 5,
+            "title": "gRPC Request Rate by Method",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 18
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(rpc_server_duration_seconds_count{server_port=\"50051\", rpc_method!~\"/grpc.health.*|/rpc.CNI.*|/envoy.*\"}[5m])) by (rpc_method)",
+                    "legendFormat": "{{rpc_method}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "fillOpacity": 10
+                    }
+                }
+            }
+        },
+        {
+            "id": 6,
+            "title": "gRPC Latency P95 by Method",
+            "type": "timeseries",
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 26
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(rpc_server_duration_seconds_bucket{server_port=\"50051\", rpc_method!~\"/grpc.health.*|/rpc.CNI.*|/envoy.*\"}[5m])) by (le, rpc_method))",
+                    "legendFormat": "p95 {{rpc_method}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "fillOpacity": 5
+                    }
+                }
+            }
+        },
+        {
+            "id": 7,
+            "title": "Recent Traces",
+            "type": "table",
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 34
+            },
+            "datasource": {
+                "type": "tempo",
+                "uid": "tempo"
+            },
+            "targets": [
+                {
+                    "queryType": "traceql",
+                    "refId": "A",
+                    "query": "{status = error || duration > 50ms}",
+                    "limit": 20
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "title": "Total gRPC Calls (1h)",
+            "type": "stat",
+            "gridPos": {
+                "h": 4,
+                "w": 24,
+                "x": 0,
+                "y": 44
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "expr": "sum(increase(rpc_server_duration_seconds_count{server_port=\"50051\", rpc_method!~\"/grpc.health.*|/rpc.CNI.*|/envoy.*\"}[1h])) by (rpc_method)",
+                    "legendFormat": "{{rpc_method}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "textMode": "auto",
+                "colorMode": "background"
+            }
+        }
+    ],
+    "schemaVersion": 39
+}
