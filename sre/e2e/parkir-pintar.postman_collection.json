@@ -218,7 +218,10 @@
                                     "pm.test('Booking fee 5000', () => pm.expect(body.booking_fee).to.eql(5000));",
                                     "pm.test('Spot matches held spot', () => pm.expect(body.spot_id).to.eql(pm.environment.get('spot_id')));",
                                     "if (body.reservation_id) { pm.environment.set('reservation_id', body.reservation_id); }",
-                                    "console.log('Reserved spot: ' + body.spot_id + ' id: ' + (body.reservation_id || 'async'));"
+                                    "if (body.payment_id) { pm.environment.set('booking_payment_id', body.payment_id); }",
+                                    "if (body.qr_code) { pm.environment.set('booking_qr_code', body.qr_code); }",
+                                    "console.log('Reserved spot: ' + body.spot_id + ' id: ' + (body.reservation_id || 'async'));",
+                                    "console.log('Booking fee payment_id: ' + (body.payment_id || 'pending'));"
                                 ]
                             }
                         }
@@ -306,9 +309,12 @@
                                     "const attempt = parseInt(pm.environment.get('poll_attempt') || '0') + 1;",
                                     "if (body.reservation_id && body.reservation_id !== '') {",
                                     "  pm.environment.set('reservation_id', body.reservation_id);",
+                                    "  if (body.payment_id) { pm.environment.set('booking_payment_id', body.payment_id); }",
+                                    "  if (body.qr_code) { pm.environment.set('booking_qr_code', body.qr_code); }",
                                     "  pm.environment.set('poll_attempt', '0');",
                                     "  pm.test('Got reservation_id', () => pm.expect(body.reservation_id).to.be.a('string'));",
                                     "  console.log('Resolved reservation_id: ' + body.reservation_id + ' (attempt ' + attempt + ')');",
+                                    "  console.log('Booking payment_id: ' + (body.payment_id || 'N/A'));",
                                     "} else if (attempt < 10) {",
                                     "  pm.environment.set('poll_attempt', String(attempt));",
                                     "  postman.setNextRequest('3c. Poll for reservation_id');",
@@ -352,10 +358,53 @@
             ]
         },
         {
-            "name": "4. Check-in",
+            "name": "4. Booking Fee Payment",
             "item": [
                 {
-                    "name": "4a. Check-in (correct spot)",
+                    "name": "4a. Get Booking Fee Payment Status",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const paymentId = pm.environment.get('booking_payment_id');",
+                                    "if (!paymentId) {",
+                                    "  pm.test('Skipped (no booking_payment_id)', () => true);",
+                                    "  return;",
+                                    "}",
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "if (pm.response.code === 200) {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.test('Valid status', () => pm.expect(body.status).to.be.oneOf(['PENDING', 'PAID', 'FAILED']));",
+                                    "  pm.test('Amount is 5000 (booking fee)', () => pm.expect(body.amount).to.eql(5000));",
+                                    "  console.log('Booking fee payment status: ' + body.status);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/payments/{{booking_payment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "payments",
+                                "{{booking_payment_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Check-in",
+            "item": [
+                {
+                    "name": "5a. Check-in (correct spot)",
                     "event": [
                         {
                             "listen": "test",
@@ -402,10 +451,10 @@
             ]
         },
         {
-            "name": "5. Location Update",
+            "name": "6. Location Update",
             "item": [
                 {
-                    "name": "5a. Update Location",
+                    "name": "6a. Update Location",
                     "event": [
                         {
                             "listen": "test",
@@ -452,10 +501,10 @@
             ]
         },
         {
-            "name": "6. Checkout",
+            "name": "7. Checkout",
             "item": [
                 {
-                    "name": "6a. Checkout (invoice + QRIS)",
+                    "name": "7a. Checkout (invoice + QRIS)",
                     "event": [
                         {
                             "listen": "prerequest",
@@ -478,9 +527,10 @@
                                     "  pm.test('Has invoice_id', () => pm.expect(body.invoice_id).to.be.a('string'));",
                                     "  pm.test('Has payment_id', () => pm.expect(body.payment_id).to.be.a('string'));",
                                     "  pm.test('Total > 0', () => pm.expect(body.total).to.be.above(0));",
+                                    "  pm.test('Booking fee not in total (paid separately at reservation)', () => { if (body.booking_fee > 0 && body.hourly_fee > 0) { pm.expect(body.total).to.eql(body.hourly_fee + (body.overnight_fee || 0) + (body.noshow_fee || 0) + (body.cancellation_fee || 0) + (body.penalty || 0)); } });",
                                     "  pm.test('Status PENDING', () => pm.expect(body.status).to.eql('PENDING'));",
                                     "  pm.environment.set('payment_id', body.payment_id);",
-                                    "  console.log('Checkout total: ' + body.total + ' IDR');",
+                                    "  console.log('Checkout total: ' + body.total + ' IDR (hourly: ' + body.hourly_fee + ', booking fee paid separately: ' + body.booking_fee + ')');",
                                     "}"
                                 ]
                             }
@@ -517,10 +567,10 @@
             ]
         },
         {
-            "name": "7. Payment",
+            "name": "8. Checkout Payment",
             "item": [
                 {
-                    "name": "7a. Get Payment Status",
+                    "name": "8a. Get Checkout Payment Status",
                     "event": [
                         {
                             "listen": "test",
@@ -559,10 +609,10 @@
             ]
         },
         {
-            "name": "8. Cancel (new reservation)",
+            "name": "9. Cancel (new reservation)",
             "item": [
                 {
-                    "name": "8a. Hold spot for cancel test",
+                    "name": "9a. Hold spot for cancel test",
                     "event": [
                         {
                             "listen": "prerequest",
@@ -627,7 +677,7 @@
                     }
                 },
                 {
-                    "name": "8b. Create reservation to cancel",
+                    "name": "9b. Create reservation to cancel",
                     "event": [
                         {
                             "listen": "prerequest",
@@ -678,7 +728,7 @@
                     }
                 },
                 {
-                    "name": "8c. Poll cancel reservation_id",
+                    "name": "9c. Poll cancel reservation_id",
                     "event": [
                         {
                             "listen": "test",
@@ -695,7 +745,7 @@
                                     "  console.log('Cancel reservation_id: ' + body.reservation_id + ' (attempt ' + attempt + ')');",
                                     "} else if (attempt < 10) {",
                                     "  pm.environment.set('cancel_poll', String(attempt));",
-                                    "  postman.setNextRequest('8c. Poll cancel reservation_id');",
+                                    "  postman.setNextRequest('9c. Poll cancel reservation_id');",
                                     "  console.log('Cancel poll attempt ' + attempt + '...');",
                                     "} else {",
                                     "  pm.environment.set('cancel_poll', '0');",
@@ -734,7 +784,7 @@
                     }
                 },
                 {
-                    "name": "8d. Cancel Reservation",
+                    "name": "9d. Cancel Reservation",
                     "event": [
                         {
                             "listen": "test",
@@ -774,10 +824,10 @@
             ]
         },
         {
-            "name": "9. Exit Gate",
+            "name": "10. Exit Gate",
             "item": [
                 {
-                    "name": "9a. CheckOut Gate",
+                    "name": "10a. CheckOut Gate",
                     "event": [
                         {
                             "listen": "test",

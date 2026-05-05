@@ -62,6 +62,8 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
+            - name: dashboards-topology
+              mountPath: /var/lib/grafana/dashboards/topology
             - name: data
               mountPath: /var/lib/grafana
       volumes:
@@ -74,6 +76,9 @@ spec:
         - name: dashboards
           configMap:
             name: grafana-dashboards
+        - name: dashboards-topology
+          configMap:
+            name: grafana-dashboard-topology
         - name: data
           persistentVolumeClaim:
             claimName: grafana-pvc

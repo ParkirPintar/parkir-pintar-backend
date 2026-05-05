@@ -409,7 +409,7 @@ terraform output rabbitmq_endpoint
 
 ## Observability
 
-Stack: **Prometheus** (metrics) + **Grafana** (dashboard) + **Loki** (logs) + **Tempo** (traces) + **OTel Collector** (receiver).
+Stack: **Prometheus** (metrics) + **Grafana** (dashboard) + **Loki** (logs) + **Tempo** (traces) + **OTel Collector** (receiver) + **Kiali** (service mesh topology).
 
 Semua di-deploy ke namespace `monitoring` di EKS.
 
@@ -446,6 +446,7 @@ Default credentials ada di `secrets.yaml` (`grafana-secret` → `admin-password`
 | Grafana | 3000 | Dashboard — datasource: Prometheus, Loki, Tempo |
 | Promtail | DaemonSet | Collect logs dari semua pod, kirim ke Loki |
 | Beyla | DaemonSet | eBPF-based auto-instrumentation (zero-code tracing) |
+| Kiali | 20001 | Service mesh topology, traffic visualization, Istio config validation (deployed in `istio-system`) |
 
 ### Flow Data
 
@@ -459,13 +460,30 @@ Service (zerolog + OTel SDK)
                                     Grafana (unified dashboard)
 ```
 
+### Akses Kiali
+
+Kiali di-deploy ke namespace `istio-system` (bukan `monitoring`) karena membutuhkan akses langsung ke Istio CRDs.
+
+```bash
+# Via Istio Ingress Gateway (ELB)
+http://<ELB_ENDPOINT>/kiali
+
+# Via port-forward (lokal / troubleshooting)
+kubectl port-forward svc/kiali 20001:20001 -n istio-system
+# buka http://localhost:20001/kiali
+```
+
+Auth strategy: `anonymous` (no login required). Kiali connects to Prometheus, Grafana, and Tempo for unified mesh observability.
+
 ### Check Status
 
 ```bash
 kubectl get pods -n monitoring
+kubectl get pods -n istio-system -l app=kiali
 kubectl logs -n monitoring deployment/otel-collector
 kubectl logs -n monitoring deployment/prometheus
 kubectl logs -n monitoring deployment/grafana
+kubectl logs -n istio-system deployment/kiali
 ```
 
 ---

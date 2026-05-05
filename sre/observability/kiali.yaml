@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kiali
+  labels:
+    app: kiali
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+      - endpoints
+      - pods
+      - pods/log
+      - pods/proxy
+      - services
+      - replicationcontrollers
+      - namespaces
+      - nodes
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources:
+      - jobs
+      - cronjobs
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.istio.io"]
+    resources:
+      - destinationrules
+      - gateways
+      - serviceentries
+      - sidecars
+      - virtualservices
+      - workloadentries
+      - workloadgroups
+      - envoyfilters
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["security.istio.io"]
+    resources:
+      - authorizationpolicies
+      - peerauthentications
+      - requestauthentications
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["telemetry.istio.io"]
+    resources:
+      - telemetries
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions.istio.io"]
+    resources:
+      - wasmplugins
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kiali
+  labels:
+    app: kiali
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kiali
+subjects:
+  - kind: ServiceAccount
+    name: kiali
+    namespace: istio-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+data:
+  config.yaml: |
+    auth:
+      strategy: anonymous
+    login_token:
+      signing_key: "parkir-pintar-kiali-k8s"
+    deployment:
+      accessible_namespaces:
+        - "**"
+      view_only_mode: false
+    external_services:
+      prometheus:
+        url: http://prometheus.monitoring.svc.cluster.local:9090
+      grafana:
+        enabled: true
+        in_cluster_url: http://grafana.monitoring.svc.cluster.local:3000
+        url: http://grafana.monitoring.svc.cluster.local:3000
+      tracing:
+        enabled: true
+        in_cluster_url: http://tempo.monitoring.svc.cluster.local:3200
+        use_grpc: false
+    istio_namespace: istio-system
+    server:
+      port: 20001
+      web_root: /kiali
+    kubernetes_config:
+      cache_enabled: true
+      cache_duration: 60
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kiali
+  template:
+    metadata:
+      labels:
+        app: kiali
+    spec:
+      serviceAccountName: kiali
+      containers:
+        - name: kiali
+          image: quay.io/kiali/kiali:v1.82
+          command: ["/opt/kiali/kiali"]
+          args: ["-config", "/kiali-configuration/config.yaml"]
+          ports:
+            - containerPort: 20001
+              name: http
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: ACTIVE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          readinessProbe:
+            httpGet:
+              path: /kiali/healthz
+              port: 20001
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /kiali/healthz
+              port: 20001
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: kiali-config
+              mountPath: /kiali-configuration
+      volumes:
+        - name: kiali-config
+          configMap:
+            name: kiali
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+spec:
+  selector:
+    app: kiali
+  ports:
+    - name: http
+      port: 20001
+      targetPort: 20001
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+  type: ClusterIP
