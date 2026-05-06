@@ -68,14 +68,30 @@ func main() {
 
 	// HTTP health endpoint for K8s probes (port 8081)
 	go func() {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		healthMux := http.NewServeMux()
+		healthMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("ok"))
 		})
 		log.Info().Msg("health endpoint listening on :8081")
-		if err := http.ListenAndServe(":8081", mux); err != nil {
+		if err := http.ListenAndServe(":8081", healthMux); err != nil {
 			log.Error().Err(err).Msg("health endpoint failed")
+		}
+	}()
+
+	// HTTP REST API server (public-facing, port 8080)
+	httpHandler := handler.NewHTTPHandler(uc)
+	go func() {
+		httpMux := http.NewServeMux()
+		httpHandler.Register(httpMux)
+		httpMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		})
+		httpAddr := envOr("HTTP_ADDR", ":8080")
+		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
+		if err := http.ListenAndServe(httpAddr, httpMux); err != nil {
+			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()
 

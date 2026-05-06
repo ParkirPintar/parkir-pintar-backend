@@ -98,7 +98,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │   ├── reservation/
 │   │   ├── cmd/                  # main.go — entrypoint
 │   │   ├── internal/
-│   │   │   ├── handler/          # gRPC handler (transport layer)
+│   │   │   ├── handler/          # gRPC + HTTP handlers (transport layer)
 │   │   │   ├── usecase/          # Business logic
 │   │   │   ├── repository/       # DB + Redis access
 │   │   │   ├── adapter/          # External service clients (gRPC, HTTP)
@@ -146,7 +146,7 @@ services/{service}/
 ├── cmd/
 │   └── main.go               # Entrypoint — wire dependencies, start gRPC server
 ├── internal/
-│   ├── handler/              # Transport layer — gRPC handlers, request/response mapping
+│   ├── handler/              # Transport layer — gRPC + HTTP handlers, request/response mapping
 │   ├── usecase/              # Business logic — pure, no framework dependency
 │   ├── repository/           # Data access — PostgreSQL (pgx), Redis (go-redis)
 │   ├── adapter/              # External service clients (gRPC clients, HTTP clients)
@@ -162,7 +162,7 @@ services/{service}/
 
 | Layer | Responsibility | Depends On |
 |---|---|---|
-| `handler` | Receive gRPC request, call usecase, return response | `usecase` |
+| `handler` | Receive gRPC/HTTP request, call usecase, return response | `usecase` |
 | `usecase` | Business rules, orchestration | `repository`, `adapter`, `model` |
 | `repository` | DB/Redis queries, no business logic | `model` |
 | `adapter` | External service clients (gRPC, HTTP) | external proto/contracts |
@@ -343,7 +343,7 @@ graph TD
 | **Kong Gateway** | 80/443 | Rate limiting, REST routing to Gateway Service |
 | **Gateway** | 8080 | REST-to-gRPC translation (HTTP/JSON ↔ gRPC JSON codec) |
 | **Search** | 50055 | Query spot availability per floor & vehicle type, Redis cache + PostgreSQL read replica |
-| **Reservation** | 50052 | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker |
+| **Reservation** | 50052 (gRPC), 8080 (HTTP) | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker. Also exposes direct REST endpoints |
 | **Billing** | 50053 | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
 | **Payment** | 50054 | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
 | **Presence** | 50056 | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
