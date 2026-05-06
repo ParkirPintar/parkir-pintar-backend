@@ -83,7 +83,6 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │       ├── ci-presence.yml       # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-analytics.yml      # CI (auto on push/PR) + Build & Deploy (manual trigger)
-│       ├── ci-gateway.yml        # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-db-migrate.yml     # DB migration via golang-migrate (auto on push to sre/migrations/)
 │       └── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │
@@ -114,8 +113,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │   ├── search/                   # Same structure as reservation
 │   ├── presence/                 # Same structure as reservation
 │   ├── notification/             # Same structure as reservation
-│   ├── analytics/                # Same structure as reservation
-│   └── gateway/                 # REST API Gateway (HTTP/JSON → gRPC translation)
+│   └── analytics/                # Same structure as reservation
 │
 ├── sre/
 │   ├── e2e/
@@ -340,13 +338,12 @@ graph TD
 
 | Service | Port | Responsibility |
 |---|---|---|
-| **Kong Gateway** | 80/443 | Rate limiting, REST routing to Gateway Service |
-| **Gateway** | 8080 | REST-to-gRPC translation (HTTP/JSON ↔ gRPC JSON codec) |
+| **Kong Gateway** | 80/443 | Rate limiting, REST routing, REST-to-gRPC translation |
 | **Search** | 50055 | Query spot availability per floor & vehicle type, Redis cache + PostgreSQL read replica |
 | **Reservation** | 50052 (gRPC), 8080 (HTTP) | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker. Also exposes direct REST endpoints |
 | **Billing** | 50053 | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
 | **Payment** | 50054 | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
-| **Presence** | 50056 | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
+| **Presence** | 50056 (gRPC), 8080 (HTTP) | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
 | **Notification** | 50057 | Internal event consumer (RabbitMQ), forwards to external Notification Provider stub via HTTP |
 | **Analytics** | 50058 | Consume events from RabbitMQ, store transaction metrics for business monitoring |
 
@@ -1566,12 +1563,11 @@ newman run sre/e2e/parkir-pintar.postman_collection.json \
 ```
 Client (Newman/Postman)
   → Cloudflare (HTTPS)
-    → Kong Gateway (rate limiting, routing /v1/*)
-      → Gateway Service (REST → gRPC translation)
-        → Backend gRPC Services (Search, Reservation, Billing, Payment, Presence)
+    → Kong Gateway (rate limiting, routing /v1/*, REST-to-gRPC translation)
+      → Backend gRPC Services (Search, Reservation, Billing, Payment, Presence)
 ```
 
-The Gateway Service (`services/gateway/`) translates REST/JSON requests to gRPC calls using the same JSON codec as the backend services. This allows standard HTTP testing tools (Postman, Newman, curl) to interact with the gRPC microservices.
+Kong Gateway handles REST-to-gRPC translation, allowing standard HTTP testing tools (Postman, Newman, curl) to interact with the gRPC microservices.
 
 ### REST API Endpoints
 

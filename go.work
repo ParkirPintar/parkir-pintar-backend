@@ -3,7 +3,6 @@ go 1.25.0
 use (
 	./services/analytics
 	./services/billing
-	./services/gateway
 	./services/notification
 	./services/payment
 	./services/presence

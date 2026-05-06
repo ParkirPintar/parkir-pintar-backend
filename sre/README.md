@@ -37,7 +37,7 @@ docker compose down -v
 | Billing Service | 50053 | `localhost:50053` (gRPC) |
 | Payment Service | 50054 | `localhost:50054` (gRPC) |
 | Search Service | 50055 | `localhost:50055` (gRPC) |
-| Presence Service | 50056 | `localhost:50056` (gRPC) |
+| Presence Service | 50056, 8080 | `localhost:50056` (gRPC), `localhost:8080` (HTTP) |
 
 ### Databases
 
