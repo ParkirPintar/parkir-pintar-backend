@@ -358,7 +358,7 @@ func TestCheckout_IncludesNoshowFee(t *testing.T) {
 		ID:            "inv-1",
 		ReservationID: "res-1",
 		BookingFee:    5000,
-		NoshowFee:     10000, // Pre-existing noshow fee from expiry worker
+		NoshowFee:     5000, // Pre-existing noshow fee from expiry worker
 		Status:        model.BillingPending,
 		SessionStart:  &start,
 	}
@@ -369,8 +369,8 @@ func TestCheckout_IncludesNoshowFee(t *testing.T) {
 	}
 
 	// Noshow fee should be included in total via pricing engine.
-	if b.NoshowFee != 10000 {
-		t.Errorf("noshow_fee = %d, want 10000", b.NoshowFee)
+	if b.NoshowFee != 5000 {
+		t.Errorf("noshow_fee = %d, want 5000", b.NoshowFee)
 	}
 	if b.Total <= b.HourlyFee {
 		t.Errorf("total %d should include noshow_fee beyond hourly", b.Total)

@@ -84,11 +84,11 @@ func TestPricingEngine_JDM_NoshowFee(t *testing.T) {
 		BookingFee: 5000,
 	})
 
-	if out.NoshowFee != 10000 {
-		t.Errorf("noshow_fee = %d, want 10000", out.NoshowFee)
+	if out.NoshowFee != 5000 {
+		t.Errorf("noshow_fee = %d, want 5000", out.NoshowFee)
 	}
-	if out.Total != 15000 {
-		t.Errorf("total = %d, want 15000 (5000 booking + 10000 noshow)", out.Total)
+	if out.Total != 10000 {
+		t.Errorf("total = %d, want 10000 (5000 booking + 5000 noshow)", out.Total)
 	}
 }
 

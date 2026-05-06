@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/parkir-pintar/reservation/internal/adapter"
@@ -11,6 +13,16 @@ import (
 	"github.com/parkir-pintar/reservation/internal/repository"
 	"github.com/rs/zerolog/log"
 )
+
+// getEnvDuration reads an env var as seconds and returns a time.Duration.
+func getEnvDuration(key string, defaultSeconds int) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if sec, err := strconv.Atoi(v); err == nil && sec > 0 {
+			return time.Duration(sec) * time.Second
+		}
+	}
+	return time.Duration(defaultSeconds) * time.Second
+}
 
 // ReservationUsecase defines the business logic interface for reservations.
 type ReservationUsecase interface {
@@ -165,7 +177,8 @@ func (u *reservationUsecase) HoldSpot(ctx context.Context, spotID, driverID stri
 	if err := u.repo.HoldSpot(ctx, spotID, driverID); err != nil {
 		return time.Time{}, err
 	}
-	return time.Now().Add(60 * time.Second), nil
+	holdTTL := getEnvDuration("HOLD_TTL_SECONDS", 10)
+	return time.Now().Add(holdTTL), nil
 }
 
 // CancelReservation cancels a reservation, releases the Redis lock, records

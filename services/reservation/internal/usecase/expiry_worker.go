@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/parkir-pintar/reservation/internal/adapter"
@@ -15,9 +16,54 @@ const (
 	// expiryInterval is how often the expiry worker scans for expired reservations.
 	expiryInterval = 30 * time.Second
 
-	// noshowFee is the penalty for not checking in within the reservation window.
-	noshowFee int64 = 10000
+	// defaultNoshowFee is the fallback no-show fee if gorules JSON cannot be read.
+	defaultNoshowFee int64 = 5000
 )
+
+// getNoshowFeeFromRules reads the no-show fee from the gorules pricing JSON file.
+// This keeps the pricing.json as the single source of truth for all fee values.
+// Falls back to defaultNoshowFee (5000 IDR) if the file cannot be read or parsed.
+func getNoshowFeeFromRules() int64 {
+	rulesPath := os.Getenv("PRICING_RULES_PATH")
+	if rulesPath == "" {
+		rulesPath = "rules/pricing.json"
+	}
+
+	data, err := os.ReadFile(rulesPath)
+	if err != nil {
+		log.Warn().Err(err).Str("path", rulesPath).Msg("cannot read pricing rules, using default noshow fee")
+		return defaultNoshowFee
+	}
+
+	var rules struct {
+		Nodes []struct {
+			ID      string `json:"id"`
+			Content struct {
+				Rules []map[string]string `json:"rules"`
+			} `json:"content"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal(data, &rules); err != nil {
+		log.Warn().Err(err).Msg("cannot parse pricing rules, using default noshow fee")
+		return defaultNoshowFee
+	}
+
+	// Find the noshow-fee-table node and extract the fee from the first rule
+	for _, node := range rules.Nodes {
+		if node.ID == "noshow-fee-table" {
+			for _, rule := range node.Content.Rules {
+				if val, ok := rule["ns_o1"]; ok && val != "0" {
+					var fee int64
+					if err := json.Unmarshal([]byte(val), &fee); err == nil && fee > 0 {
+						return fee
+					}
+				}
+			}
+		}
+	}
+
+	return defaultNoshowFee
+}
 
 // ExpiryWorker periodically scans for expired reservations and processes them.
 type ExpiryWorker struct {
@@ -105,7 +151,9 @@ func (w *ExpiryWorker) processExpired(ctx context.Context, res *model.Reservatio
 	}
 
 	// Apply no-show fee via Billing Service (Requirement 10.2)
-	if err := w.billing.ApplyPenalty(ctx, res.ID, "noshow", noshowFee); err != nil {
+	// Fee value is read from gorules pricing.json (single source of truth)
+	fee := getNoshowFeeFromRules()
+	if err := w.billing.ApplyPenalty(ctx, res.ID, "noshow", fee); err != nil {
 		logger.Error().Err(err).Msg("failed to apply no-show fee")
 	}
 
@@ -120,7 +168,7 @@ func (w *ExpiryWorker) processExpired(ctx context.Context, res *model.Reservatio
 		"reservation_id": res.ID,
 		"driver_id":      res.DriverID,
 		"spot_id":        res.SpotID,
-		"noshow_fee":     noshowFee,
+		"noshow_fee":     fee,
 		"expired_at":     time.Now().Format(time.RFC3339),
 	}
 	eventPayload, _ := json.Marshal(event)

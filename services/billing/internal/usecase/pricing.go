@@ -3,12 +3,55 @@ package usecase
 import (
 	"encoding/json"
 	"math"
+	"os"
 	"time"
 
 	zen "github.com/gorules/zen-go"
 	"github.com/parkir-pintar/billing/internal/model"
 	"github.com/rs/zerolog/log"
 )
+
+// getNoshowFeeFromRules reads the no-show fee from the gorules pricing JSON file.
+// This keeps pricing.json as the single source of truth for all fee values.
+// Falls back to 5000 IDR if the file cannot be read or parsed.
+func getNoshowFeeFromRules() int64 {
+	rulesPath := os.Getenv("PRICING_RULES_PATH")
+	if rulesPath == "" {
+		rulesPath = "rules/pricing.json"
+	}
+
+	data, err := os.ReadFile(rulesPath)
+	if err != nil {
+		return 5000
+	}
+
+	var rules struct {
+		Nodes []struct {
+			ID      string `json:"id"`
+			Content struct {
+				Rules []map[string]string `json:"rules"`
+			} `json:"content"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal(data, &rules); err != nil {
+		return 5000
+	}
+
+	for _, node := range rules.Nodes {
+		if node.ID == "noshow-fee-table" {
+			for _, rule := range node.Content.Rules {
+				if val, ok := rule["ns_o1"]; ok && val != "0" {
+					var fee int64
+					if err := json.Unmarshal([]byte(val), &fee); err == nil && fee > 0 {
+						return fee
+					}
+				}
+			}
+		}
+	}
+
+	return 5000
+}
 
 // PricingEngine evaluates pricing rules using gorules/zen-go JDM engine.
 // When ruleContent is provided, it delegates to the JDM engine.
@@ -118,7 +161,7 @@ func toInt64(v any) int64 {
 //   - Booking fee: 5,000 IDR (passed through from input or default)
 //   - Hourly rate: 5,000 IDR per started hour (ceil)
 //   - Overnight fee: 20,000 IDR per midnight crossing (cumulative)
-//   - No-show fee: 10,000 IDR
+//   - No-show fee: read from gorules pricing.json (default 5,000 IDR)
 //   - Cancellation > 2 min: 5,000 IDR; ≤ 2 min: 0 IDR
 //   - Total = booking_fee + hourly_fee + overnight_fee + noshow_fee + cancellation_fee
 func evaluatePricing(in model.PricingInput) model.PricingOutput {
@@ -141,9 +184,9 @@ func evaluatePricing(in model.PricingInput) model.PricingOutput {
 		out.OvernightFee = int64(in.MidnightCrossings) * 20000
 	}
 
-	// No-show fee: 10,000.
+	// No-show fee: read from gorules pricing.json (single source of truth).
 	if in.IsNoshow {
-		out.NoshowFee = 10000
+		out.NoshowFee = getNoshowFeeFromRules()
 	}
 
 	// Cancellation fee: 5,000 if elapsed > 2 min, else 0.

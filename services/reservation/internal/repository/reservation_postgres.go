@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,11 +12,22 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	holdTTL        = 60 * time.Second
+var (
+	holdTTL        = getEnvDuration("HOLD_TTL_SECONDS", 10)
 	lockTTL        = 1 * time.Hour
 	idempotencyTTL = 24 * time.Hour
 )
+
+// getEnvDuration reads an env var as seconds and returns a time.Duration.
+// Falls back to defaultSeconds if the env var is not set or invalid.
+func getEnvDuration(key string, defaultSeconds int) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if sec, err := strconv.Atoi(v); err == nil && sec > 0 {
+			return time.Duration(sec) * time.Second
+		}
+	}
+	return time.Duration(defaultSeconds) * time.Second
+}
 
 type reservationRepo struct {
 	db    *pgxpool.Pool
