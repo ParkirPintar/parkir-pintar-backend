@@ -17,6 +17,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9091"
     spec:
+    spec:
       containers:
         - name: search-service
           image: parkirpintar/search-service:latest
@@ -24,7 +25,7 @@ spec:
             - containerPort: 50051
               name: grpc
             - containerPort: 8080
-              name: http
+              name: http-rest
           envFrom:
             - configMapRef:
                 name: parkirpintar-config
@@ -71,5 +72,5 @@ spec:
     - appProtocol: http
       port: 8080
       targetPort: 8080
-      name: http
+      name: http-rest
   type: ClusterIP
