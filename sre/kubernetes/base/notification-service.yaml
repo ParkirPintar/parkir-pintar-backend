@@ -23,6 +23,8 @@ spec:
           ports:
             - containerPort: 50051
               name: grpc
+            - containerPort: 8080
+              name: http
           envFrom:
             - configMapRef:
                 name: parkirpintar-config
@@ -48,4 +50,7 @@ spec:
     - port: 50051
       targetPort: 50051
       name: grpc
+    - port: 8080
+      targetPort: 8080
+      name: http
   type: ClusterIP

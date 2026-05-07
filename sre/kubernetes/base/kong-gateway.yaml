@@ -33,6 +33,10 @@ spec:
               value: "0.0.0.0:8001"
             - name: KONG_DECLARATIVE_CONFIG
               value: "/etc/kong/kong.yml"
+            - name: KONG_DNS_RESOLVER
+              value: "172.20.0.10"
+            - name: KONG_DNS_ORDER
+              value: "LAST,A,SRV,CNAME"
           volumeMounts:
             - name: kong-config
               mountPath: /etc/kong
@@ -81,12 +85,60 @@ data:
           policy: local
 
     services:
-      # REST API Gateway — translates HTTP/JSON to gRPC
-      - name: api
-        url: http://gateway-service.parkir-pintar.svc.cluster.local:8080
+      # Search Service — availability queries
+      - name: search
+        url: http://search-service.parkir-pintar.svc.cluster.local:8080
         routes:
-          - name: api-route
-            paths: ["/v1"]
+          - name: search-availability
+            paths: ["/v1/availability"]
+            strip_path: false
+            protocols: [http, https]
+
+      # Reservation Service — create, hold, cancel, get reservations
+      - name: reservation
+        url: http://reservation-service.parkir-pintar.svc.cluster.local:8080
+        routes:
+          - name: reservation-spots
+            paths: ["/v1/spots"]
+            strip_path: false
+            protocols: [http, https]
+          - name: reservation-api
+            paths: ["/v1/reservations"]
+            strip_path: false
+            protocols: [http, https]
+
+      # Presence Service — check-in, check-out, location
+      - name: presence
+        url: http://presence-service.parkir-pintar.svc.cluster.local:8080
+        routes:
+          - name: presence-checkin
+            paths: ["/v1/checkin"]
+            strip_path: false
+            protocols: [http, https]
+          - name: presence-location
+            paths: ["/v1/presence"]
+            strip_path: false
+            protocols: [http, https]
+          - name: presence-checkout-gate
+            paths: ["/v1/checkout/gate"]
+            strip_path: false
+            protocols: [http, https]
+
+      # Billing Service — checkout/invoice
+      - name: billing
+        url: http://billing-service.parkir-pintar.svc.cluster.local:8080
+        routes:
+          - name: billing-checkout
+            paths: ["/v1/checkout"]
+            strip_path: false
+            protocols: [http, https]
+
+      # Payment Service — payment status, retry
+      - name: payment
+        url: http://payment-service.parkir-pintar.svc.cluster.local:8080
+        routes:
+          - name: payment-api
+            paths: ["/v1/payments"]
             strip_path: false
             protocols: [http, https]
 
