@@ -13,6 +13,8 @@ spec:
       labels:
         app: kong-gateway
         version: v1
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: "8080"
     spec:
       containers:
         - name: kong

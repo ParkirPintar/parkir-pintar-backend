@@ -16,7 +16,7 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9091"
-    spec:
+        traffic.sidecar.istio.io/excludeInboundPorts: "8080"
       containers:
         - name: notification-service
           image: parkirpintar/notification-service:latest

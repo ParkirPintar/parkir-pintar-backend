@@ -338,11 +338,11 @@ graph TD
 
 | Service | Port | Responsibility |
 |---|---|---|
-| **Kong Gateway** | 80/443 | Rate limiting, REST routing, REST-to-gRPC translation |
-| **Search** | 50055 | Query spot availability per floor & vehicle type, Redis cache + PostgreSQL read replica |
-| **Reservation** | 50052 (gRPC), 8080 (HTTP) | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker. Also exposes direct REST endpoints |
-| **Billing** | 50053 | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
-| **Payment** | 50054 | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
+| **Kong Gateway** | 80/443 | Rate limiting, REST routing directly to each service's HTTP endpoint |
+| **Search** | 50055 (gRPC), 8080 (HTTP) | Query spot availability per floor & vehicle type, Redis cache + PostgreSQL read replica |
+| **Reservation** | 50052 (gRPC), 8080 (HTTP) | Create/cancel/hold reservation, Redis inventory lock, expiry TTL, idempotency, RabbitMQ enqueue, queue worker, expiry worker |
+| **Billing** | 50053 (gRPC), 8080 (HTTP) | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
+| **Payment** | 50054 (gRPC), 8080 (HTTP) | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
 | **Presence** | 50056 (gRPC), 8080 (HTTP) | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
 | **Notification** | 50057 | Internal event consumer (RabbitMQ), forwards to external Notification Provider stub via HTTP |
 | **Analytics** | 50058 | Consume events from RabbitMQ, store transaction metrics for business monitoring |
@@ -375,7 +375,7 @@ Assignment Modes:
 | Read replica | Search Service + Reservation Service read from PostgreSQL read replica |
 | Driver auth | Driver identity via `driver_id` field in request — auth handled by super app |
 | Service-to-service auth | mTLS via Istio PeerAuthentication (STRICT mode) |
-| API Gateway | Kong (rate limiting, REST-to-gRPC routing) |
+| API Gateway | Kong (rate limiting, REST routing directly to per-service HTTP endpoints) |
 | Check-in/check-out trigger | API call ke **Presence Service** — Presence calls Reservation.CheckIn + Billing.StartBillingSession |
 | Payment flow | Pay before exit — Driver harus bayar via QRIS sebelum bisa keluar |
 | Presence | Unary gRPC API (bukan stream) — app hit API setiap ≤30s |
@@ -847,7 +847,7 @@ go func() {
 
 ## API Gateway: Kong
 
-Kong sits in front of the Istio mesh as the application-level gateway. It handles driver-facing concerns before traffic enters the mesh.
+Kong sits in front of the Istio mesh as the application-level gateway. It handles driver-facing concerns before traffic enters the mesh. Kong routes REST requests directly to each service's HTTP endpoint (port 8080) based on path prefix — no intermediary translation layer is needed.
 
 ```mermaid
 graph LR
@@ -872,7 +872,7 @@ Kong is deployed as a pod inside the cluster — it also gets Istio sidecar inje
 | Kong Responsibility | Detail |
 |---|---|
 | Rate limiting | Per-driver request throttle to prevent abuse |
-| Routing | Map REST endpoints to upstream gRPC services |
+| Routing | Map REST path prefixes directly to per-service HTTP endpoints |
 | Plugin ecosystem | Logging, CORS, request transformation |
 
 ---
@@ -1563,11 +1563,11 @@ newman run sre/e2e/parkir-pintar.postman_collection.json \
 ```
 Client (Newman/Postman)
   → Cloudflare (HTTPS)
-    → Kong Gateway (rate limiting, routing /v1/*, REST-to-gRPC translation)
-      → Backend gRPC Services (Search, Reservation, Billing, Payment, Presence)
+    → Kong Gateway (rate limiting, path-based routing)
+      → Per-service HTTP endpoints (Search :8080, Reservation :8080, Billing :8080, Payment :8080, Presence :8080)
 ```
 
-Kong Gateway handles REST-to-gRPC translation, allowing standard HTTP testing tools (Postman, Newman, curl) to interact with the gRPC microservices.
+Kong routes REST requests directly to each service's HTTP endpoint based on path prefix. Each service exposes its own HTTP handler (port 8080) alongside gRPC, allowing standard HTTP testing tools (Postman, Newman, curl) to interact with the services without an intermediary translation layer.
 
 ### REST API Endpoints
 
