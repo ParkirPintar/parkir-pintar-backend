@@ -15,7 +15,7 @@ import (
 	"github.com/parkir-pintar/payment/internal/repository"
 	"github.com/parkir-pintar/payment/internal/usecase"
 	pb "github.com/parkir-pintar/payment/pkg/proto"
-	"github.com/rs/zerolog"
+	"github.com/parkir-pintar/shared/observability"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -24,10 +24,26 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "payment-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
 
 	ctx := context.Background()
+
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "payment-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// --- Database (PostgreSQL) ---
 	dbURL := buildDatabaseURL("DATABASE_URL", "payment")
@@ -49,7 +65,9 @@ func main() {
 	h := handler.NewPaymentHandler(uc)
 
 	// --- gRPC server ---
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(observability.UnaryServerInterceptor()),
+	)
 
 	// --- Register gRPC service ---
 	pb.RegisterPaymentServiceServer(srv, h)
@@ -81,8 +99,9 @@ func main() {
 			w.Write([]byte("ok"))
 		})
 		httpAddr := envOr("HTTP_ADDR", ":8080")
+		traced := observability.HTTPMiddleware("payment-service")(httpMux)
 		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
-		if err := http.ListenAndServe(httpAddr, httpMux); err != nil {
+		if err := http.ListenAndServe(httpAddr, traced); err != nil {
 			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	"github.com/parkir-pintar/shared/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/parkir-pintar/notification/internal/adapter"
@@ -24,13 +25,30 @@ func envOr(key, fallback string) string {
 }
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "notification-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
+
+	ctx := context.Background()
+
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "notification-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// RabbitMQ connection
 	rabbitmqURL := envOr("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
 	var conn *amqp.Connection
-	var err error
 	if strings.HasPrefix(rabbitmqURL, "amqps://") {
 		conn, err = amqp.DialTLS(rabbitmqURL, &tls.Config{})
 	} else {

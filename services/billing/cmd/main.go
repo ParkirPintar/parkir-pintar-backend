@@ -17,9 +17,9 @@ import (
 	"github.com/parkir-pintar/billing/internal/repository"
 	"github.com/parkir-pintar/billing/internal/usecase"
 	pb "github.com/parkir-pintar/billing/pkg/proto"
+	"github.com/parkir-pintar/shared/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -29,10 +29,26 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "billing-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
 
 	ctx := context.Background()
+
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "billing-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// --- Database (PostgreSQL) ---
 	dbURL := buildDatabaseURL("DATABASE_URL", "billing")
@@ -54,7 +70,10 @@ func main() {
 
 	// --- Payment gRPC client ---
 	paymentAddr := envOr("PAYMENT_ADDR", "localhost:50054")
-	paymentConn, err := grpc.NewClient(paymentAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	paymentConn, err := grpc.NewClient(paymentAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(observability.UnaryClientInterceptor()),
+	)
 	if err != nil {
 		log.Fatal().Err(err).Str("addr", paymentAddr).Msg("failed to dial Payment service")
 	}
@@ -91,7 +110,9 @@ func main() {
 	h := handler.NewBillingHandler(uc)
 
 	// --- gRPC server ---
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(observability.UnaryServerInterceptor()),
+	)
 
 	// --- Register gRPC service ---
 	pb.RegisterBillingServiceServer(srv, h)
@@ -123,8 +144,9 @@ func main() {
 			w.Write([]byte("ok"))
 		})
 		httpAddr := envOr("HTTP_ADDR", ":8080")
+		traced := observability.HTTPMiddleware("billing-service")(httpMux)
 		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
-		if err := http.ListenAndServe(httpAddr, httpMux); err != nil {
+		if err := http.ListenAndServe(httpAddr, traced); err != nil {
 			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()
@@ -158,9 +180,6 @@ func envOr(key, def string) string {
 	return def
 }
 
-// buildDatabaseURL composes a PostgreSQL connection string from individual
-// env vars (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME) provided by
-// K8s secrets. Falls back to DATABASE_URL or a local default.
 func buildDatabaseURL(envKey, defaultDB string) string {
 	if v := os.Getenv(envKey); v != "" {
 		return v
@@ -174,8 +193,6 @@ func buildDatabaseURL(envKey, defaultDB string) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", user, pass, host, port, name, sslmode)
 }
 
-// buildRedisAddr composes a Redis address from REDIS_ADDR or
-// REDIS_HOST + REDIS_PORT provided by K8s secrets.
 func buildRedisAddr() string {
 	if v := os.Getenv("REDIS_ADDR"); v != "" {
 		return v
@@ -185,8 +202,6 @@ func buildRedisAddr() string {
 	return host + ":" + port
 }
 
-// buildGRPCAddr returns the gRPC listen address from GRPC_ADDR or
-// GRPC_PORT provided by K8s ConfigMap.
 func buildGRPCAddr(defaultAddr string) string {
 	if v := os.Getenv("GRPC_ADDR"); v != "" {
 		return v

@@ -10,8 +10,8 @@ import (
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/parkir-pintar/shared/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/parkir-pintar/analytics/internal/handler"
@@ -40,10 +40,26 @@ func buildDatabaseURL(envKey, defaultDB string) string {
 }
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "analytics-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
 
 	ctx := context.Background()
+
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "analytics-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// PostgreSQL connection pool
 	databaseURL := buildDatabaseURL("DATABASE_URL", "analytics")

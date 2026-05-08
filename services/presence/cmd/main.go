@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"github.com/parkir-pintar/presence/internal/handler"
 	"github.com/parkir-pintar/presence/internal/usecase"
 	pb "github.com/parkir-pintar/presence/pkg/proto"
-	"github.com/rs/zerolog"
+	"github.com/parkir-pintar/shared/observability"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,13 +22,32 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "presence-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
+
+	ctx := context.Background()
+
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "presence-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// Reservation gRPC client
 	reservationConn, err := grpc.NewClient(
 		envOr("RESERVATION_ADDR", "localhost:50052"),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(observability.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Reservation Service")
@@ -39,6 +59,7 @@ func main() {
 	billingConn, err := grpc.NewClient(
 		envOr("BILLING_ADDR", "localhost:50053"),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(observability.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Billing Service")
@@ -59,7 +80,9 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(observability.UnaryServerInterceptor()),
+	)
 	pb.RegisterPresenceServiceServer(srv, h)
 	healthSrv := health.NewServer()
 	healthpb.RegisterHealthServer(srv, healthSrv)
@@ -89,8 +112,9 @@ func main() {
 			w.Write([]byte("ok"))
 		})
 		httpAddr := envOr("HTTP_ADDR", ":8080")
+		traced := observability.HTTPMiddleware("presence-service")(httpMux)
 		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
-		if err := http.ListenAndServe(httpAddr, httpMux); err != nil {
+		if err := http.ListenAndServe(httpAddr, traced); err != nil {
 			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()
