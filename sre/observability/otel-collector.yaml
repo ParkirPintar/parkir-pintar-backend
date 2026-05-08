@@ -12,10 +12,24 @@ data:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
+    connectors:
+      spanmetrics:
+        histogram:
+          explicit:
+            buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s, 10s]
+        dimensions:
+          - name: http.method
+          - name: http.status_code
+        namespace: traces
     processors:
       batch:
         timeout: 5s
         send_batch_size: 1024
+      resource:
+        attributes:
+          - key: service.namespace
+            value: parkir-pintar
+            action: upsert
     exporters:
       otlp/tempo:
         endpoint: tempo.monitoring.svc.cluster.local:4317
@@ -23,14 +37,15 @@ data:
           insecure: true
       prometheus:
         endpoint: 0.0.0.0:8889
+        namespace: traces
     service:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [batch]
-          exporters: [otlp/tempo]
+          processors: [batch, resource]
+          exporters: [otlp/tempo, spanmetrics]
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, spanmetrics]
           processors: [batch]
           exporters: [prometheus]
 ---

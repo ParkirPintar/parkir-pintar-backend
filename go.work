@@ -8,4 +8,5 @@ use (
 	./services/presence
 	./services/reservation
 	./services/search
+	./services/shared
 )

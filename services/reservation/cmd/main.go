@@ -17,9 +17,9 @@ import (
 	"github.com/parkir-pintar/reservation/internal/repository"
 	"github.com/parkir-pintar/reservation/internal/usecase"
 	pb "github.com/parkir-pintar/reservation/pkg/proto"
+	"github.com/parkir-pintar/shared/observability"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -29,11 +29,29 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	// Initialize structured logger with service name
+	observability.InitLogger(observability.LogConfig{
+		ServiceName: "reservation-service",
+		Pretty:      os.Getenv("APP_ENV") == "local" || os.Getenv("APP_ENV") == "",
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize OpenTelemetry tracer
+	shutdown, err := observability.InitTracer(ctx, observability.Config{
+		ServiceName:    "reservation-service",
+		ServiceVersion: envOr("APP_VERSION", "dev"),
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to init tracer, continuing without tracing")
+	} else {
+		defer func() {
+			if err := shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("tracer shutdown error")
+			}
+		}()
+	}
 
 	// Database
 	dbPool, err := pgxpool.New(ctx, buildDatabaseURL("DATABASE_URL", "reservation"))
@@ -67,10 +85,11 @@ func main() {
 	}
 	defer amqpCh.Close()
 
-	// gRPC client connections
+	// gRPC client connections (with OTel client interceptor for trace propagation)
 	searchConn, err := grpc.NewClient(
 		envOr("SEARCH_ADDR", "localhost:50055"),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(observability.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Search Service")
@@ -80,6 +99,7 @@ func main() {
 	billingConn, err := grpc.NewClient(
 		envOr("BILLING_ADDR", "localhost:50053"),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(observability.UnaryClientInterceptor()),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to Billing Service")
@@ -100,14 +120,16 @@ func main() {
 	// Handler
 	h := handler.NewReservationHandler(uc)
 
-	// gRPC server
+	// gRPC server (with OTel server interceptor for incoming trace extraction)
 	addr := buildGRPCAddr(":50052")
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(observability.UnaryServerInterceptor()),
+	)
 	pb.RegisterReservationServiceServer(srv, h)
 	healthSrv := health.NewServer()
 	healthpb.RegisterHealthServer(srv, healthSrv)
@@ -127,7 +149,7 @@ func main() {
 		}
 	}()
 
-	// HTTP REST API server (public-facing, port 8080)
+	// HTTP REST API server (public-facing, port 8080) with tracing middleware
 	httpHandler := handler.NewHTTPHandler(uc)
 	go func() {
 		httpMux := http.NewServeMux()
@@ -137,8 +159,9 @@ func main() {
 			w.Write([]byte("ok"))
 		})
 		httpAddr := envOr("HTTP_ADDR", ":8080")
+		traced := observability.HTTPMiddleware("reservation-service")(httpMux)
 		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
-		if err := http.ListenAndServe(httpAddr, httpMux); err != nil {
+		if err := http.ListenAndServe(httpAddr, traced); err != nil {
 			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()

@@ -20,9 +20,9 @@ spec:
             privileged: true
           env:
             - name: BEYLA_OPEN_PORT
-              value: "50051,8080"
-            - name: BEYLA_SERVICE_NAME
-              value: "parkirpintar"
+              value: "50051-50058,8080"
+            - name: BEYLA_SERVICE_NAMESPACE
+              value: "parkir-pintar"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector.monitoring.svc.cluster.local:4317"
             - name: OTEL_EXPORTER_OTLP_PROTOCOL

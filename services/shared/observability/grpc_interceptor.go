@@ -1,0 +1,132 @@
+package observability
+
+import (
+	"context"
+	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+)
+
+// UnaryServerInterceptor returns a gRPC unary server interceptor that:
+// - Extracts trace context from incoming metadata
+// - Creates a server span for each RPC
+// - Records gRPC status, method, and duration as span attributes
+// - Sets span status on error
+func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
+	tracer := otel.Tracer("grpc.server")
+	propagator := otel.GetTextMapPropagator()
+
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		// Extract trace context from gRPC metadata
+		md, _ := metadata.FromIncomingContext(ctx)
+		ctx = propagator.Extract(ctx, metadataCarrier(md))
+
+		// Start span
+		ctx, span := tracer.Start(ctx, info.FullMethod,
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(
+				semconv.RPCSystemGRPC,
+				semconv.RPCMethod(info.FullMethod),
+			),
+		)
+		defer span.End()
+
+		start := time.Now()
+		resp, err := handler(ctx, req)
+		duration := time.Since(start)
+
+		span.SetAttributes(attribute.Float64("rpc.duration_ms", float64(duration.Milliseconds())))
+
+		if err != nil {
+			st, _ := status.FromError(err)
+			span.SetAttributes(attribute.String("rpc.grpc.status_code", st.Code().String()))
+			span.SetStatus(codes.Error, st.Message())
+			span.RecordError(err)
+		} else {
+			span.SetAttributes(attribute.String("rpc.grpc.status_code", "OK"))
+			span.SetStatus(codes.Ok, "")
+		}
+
+		return resp, err
+	}
+}
+
+// UnaryClientInterceptor returns a gRPC unary client interceptor that:
+// - Injects trace context into outgoing metadata
+// - Creates a client span for each outgoing RPC
+// - Records gRPC status and duration
+func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
+	tracer := otel.Tracer("grpc.client")
+	propagator := otel.GetTextMapPropagator()
+
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		// Start client span
+		ctx, span := tracer.Start(ctx, method,
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(
+				semconv.RPCSystemGRPC,
+				semconv.RPCMethod(method),
+				attribute.String("rpc.target", cc.Target()),
+			),
+		)
+		defer span.End()
+
+		// Inject trace context into outgoing metadata
+		md, ok := metadata.FromOutgoingContext(ctx)
+		if !ok {
+			md = metadata.New(nil)
+		} else {
+			md = md.Copy()
+		}
+		propagator.Inject(ctx, metadataCarrier(md))
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+		start := time.Now()
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		duration := time.Since(start)
+
+		span.SetAttributes(attribute.Float64("rpc.duration_ms", float64(duration.Milliseconds())))
+
+		if err != nil {
+			st, _ := status.FromError(err)
+			span.SetAttributes(attribute.String("rpc.grpc.status_code", st.Code().String()))
+			span.SetStatus(codes.Error, st.Message())
+			span.RecordError(err)
+		} else {
+			span.SetAttributes(attribute.String("rpc.grpc.status_code", "OK"))
+			span.SetStatus(codes.Ok, "")
+		}
+
+		return err
+	}
+}
+
+// metadataCarrier adapts gRPC metadata.MD to the OTel TextMapCarrier interface.
+type metadataCarrier metadata.MD
+
+func (mc metadataCarrier) Get(key string) string {
+	vals := metadata.MD(mc).Get(key)
+	if len(vals) == 0 {
+		return ""
+	}
+	return vals[0]
+}
+
+func (mc metadataCarrier) Set(key, value string) {
+	metadata.MD(mc).Set(key, value)
+}
+
+func (mc metadataCarrier) Keys() []string {
+	keys := make([]string, 0, len(mc))
+	for k := range mc {
+		keys = append(keys, k)
+	}
+	return keys
+}

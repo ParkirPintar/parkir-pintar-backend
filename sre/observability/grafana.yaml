@@ -18,6 +18,18 @@ data:
         uid: loki
         access: proxy
         url: http://loki:3100
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: '"trace_id":"([a-f0-9]+)"'
+              name: TraceID
+              url: "$${__value.raw}"
+              urlDisplayLabel: "View Trace"
+            - datasourceUid: tempo
+              matcherRegex: 'trace_id=([a-f0-9]+)'
+              name: TraceID
+              url: "$${__value.raw}"
+              urlDisplayLabel: "View Trace"
       - name: Tempo
         type: tempo
         uid: tempo
@@ -26,6 +38,29 @@ data:
         jsonData:
           tracesToLogsV2:
             datasourceUid: loki
+            spanStartTimeShift: "-1h"
+            spanEndTimeShift: "1h"
+            filterByTraceID: true
+            filterBySpanID: false
+            tags:
+              - key: "service"
+                value: "service_name"
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: "-1h"
+            spanEndTimeShift: "1h"
+            tags:
+              - key: "service.name"
+                value: "destination_service_name"
+            queries:
+              - name: "Request Rate"
+                query: "sum(rate(istio_requests_total{destination_service_name=\"$${__tags}\"}[5m]))"
+              - name: "Error Rate"
+                query: "sum(rate(istio_requests_total{destination_service_name=\"$${__tags}\", response_code=~\"5.*\"}[5m]))"
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true
           lokiSearch:
             datasourceUid: loki
       - name: Analytics DB
@@ -110,6 +145,8 @@ spec:
               mountPath: /var/lib/grafana/dashboards
             - name: dashboards-topology
               mountPath: /var/lib/grafana/dashboards/topology
+            - name: dashboards-traces
+              mountPath: /var/lib/grafana/dashboards/traces
             - name: data
               mountPath: /var/lib/grafana
       volumes:
@@ -125,6 +162,9 @@ spec:
         - name: dashboards-topology
           configMap:
             name: grafana-dashboard-topology
+        - name: dashboards-traces
+          configMap:
+            name: grafana-dashboard-traces
         - name: data
           persistentVolumeClaim:
             claimName: grafana-pvc

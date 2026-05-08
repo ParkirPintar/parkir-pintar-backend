@@ -11,7 +11,8 @@ import (
 	"github.com/parkir-pintar/reservation/internal/adapter"
 	"github.com/parkir-pintar/reservation/internal/model"
 	"github.com/parkir-pintar/reservation/internal/repository"
-	"github.com/rs/zerolog/log"
+	"github.com/parkir-pintar/shared/observability"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // getEnvDuration reads an env var as seconds and returns a time.Duration.
@@ -59,8 +60,16 @@ func NewReservationUsecase(
 // It validates inputs, checks idempotency, and publishes a booking message to RabbitMQ
 // for serial processing by the queue worker.
 func (u *reservationUsecase) CreateReservation(ctx context.Context, driverID, mode, vehicleType, spotID, idempotencyKey string) (*model.Reservation, error) {
+	ctx, span := observability.StartSpan(ctx, "reservation.usecase", "CreateReservation",
+		attribute.String("driver_id", driverID),
+		attribute.String("mode", mode),
+		attribute.String("vehicle_type", vehicleType),
+	)
+	defer span.End()
+
 	// Idempotency check: return existing reservation if key was already processed
 	if existing, err := u.repo.GetIdempotency(ctx, idempotencyKey); err == nil && existing != "" {
+		observability.SetSpanAttributes(ctx, attribute.String("idempotency", "hit"))
 		return u.repo.GetByID(ctx, existing)
 	}
 
@@ -107,7 +116,8 @@ func (u *reservationUsecase) createSystemAssigned(ctx context.Context, driverID,
 		return nil, fmt.Errorf("publish booking: %w", err)
 	}
 
-	log.Info().
+	logger := observability.LoggerFromContext(ctx)
+	logger.Info().
 		Str("driver_id", driverID).
 		Str("spot_id", spotID).
 		Str("mode", "SYSTEM_ASSIGNED").
@@ -156,7 +166,8 @@ func (u *reservationUsecase) createUserSelected(ctx context.Context, driverID, s
 		return nil, fmt.Errorf("publish booking: %w", err)
 	}
 
-	log.Info().
+	logger := observability.LoggerFromContext(ctx)
+	logger.Info().
 		Str("driver_id", driverID).
 		Str("spot_id", spotID).
 		Str("mode", "USER_SELECTED").
@@ -208,13 +219,15 @@ func (u *reservationUsecase) CancelReservation(ctx context.Context, reservationI
 
 	// Release Redis lock (Requirement 9.3, 19.3)
 	if err := u.repo.ReleaseLock(ctx, res.SpotID); err != nil {
-		log.Error().Err(err).Str("spot_id", res.SpotID).Msg("failed to release lock on cancel")
+		logger := observability.LoggerFromContext(ctx)
+		logger.Error().Err(err).Str("spot_id", res.SpotID).Msg("failed to release lock on cancel")
 	}
 
 	// Call Billing to record cancellation fee (Requirement 9.3)
 	if fee > 0 {
 		if err := u.billing.ApplyPenalty(ctx, reservationID, "cancellation", fee); err != nil {
-			log.Error().Err(err).Str("reservation_id", reservationID).Msg("failed to record cancellation fee")
+			logger := observability.LoggerFromContext(ctx)
+			logger.Error().Err(err).Str("reservation_id", reservationID).Msg("failed to record cancellation fee")
 		}
 	}
 
@@ -229,10 +242,12 @@ func (u *reservationUsecase) CancelReservation(ctx context.Context, reservationI
 	}
 	eventPayload, _ := json.Marshal(event)
 	if err := u.publisher.PublishEvent(ctx, "reservation.cancelled", eventPayload); err != nil {
-		log.Error().Err(err).Msg("failed to publish reservation.cancelled event")
+		logger := observability.LoggerFromContext(ctx)
+		logger.Error().Err(err).Msg("failed to publish reservation.cancelled event")
 	}
 
-	log.Info().
+	logger := observability.LoggerFromContext(ctx)
+	logger.Info().
 		Str("reservation_id", reservationID).
 		Int64("cancellation_fee", fee).
 		Msg("reservation cancelled")
@@ -264,7 +279,8 @@ func (u *reservationUsecase) CheckIn(ctx context.Context, reservationID, actualS
 
 	// Release Redis lock since the spot is now physically occupied (Requirement 19.4)
 	if err := u.repo.ReleaseLock(ctx, res.SpotID); err != nil {
-		log.Error().Err(err).Str("spot_id", res.SpotID).Msg("failed to release lock on checkin")
+		logger := observability.LoggerFromContext(ctx)
+		logger.Error().Err(err).Str("spot_id", res.SpotID).Msg("failed to release lock on checkin")
 	}
 
 	// Detect wrong spot — BLOCKED, not penalized
@@ -290,10 +306,12 @@ func (u *reservationUsecase) CheckIn(ctx context.Context, reservationID, actualS
 	}
 	eventPayload, _ := json.Marshal(event)
 	if err := u.publisher.PublishEvent(ctx, eventType, eventPayload); err != nil {
-		log.Error().Err(err).Str("event_type", eventType).Msg("failed to publish checkin event")
+		checkinLogger := observability.LoggerFromContext(ctx)
+		checkinLogger.Error().Err(err).Str("event_type", eventType).Msg("failed to publish checkin event")
 	}
 
-	log.Info().
+	checkinLogger := observability.LoggerFromContext(ctx)
+	checkinLogger.Info().
 		Str("reservation_id", reservationID).
 		Msg("check-in processed")
 

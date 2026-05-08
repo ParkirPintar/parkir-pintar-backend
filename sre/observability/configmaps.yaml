@@ -165,9 +165,32 @@ metadata:
   namespace: monitoring
 data:
   beyla.yml: |
-    open_port: "50051,8080"
+    open_port: "50051-50058,8080"
+    service:
+      namespace: parkir-pintar
+    discovery:
+      services:
+        - k8s_pod_name: "reservation-.*"
+          name: "reservation-service"
+        - k8s_pod_name: "billing-.*"
+          name: "billing-service"
+        - k8s_pod_name: "payment-.*"
+          name: "payment-service"
+        - k8s_pod_name: "search-.*"
+          name: "search-service"
+        - k8s_pod_name: "presence-.*"
+          name: "presence-service"
+        - k8s_pod_name: "notification-.*"
+          name: "notification-service"
+        - k8s_pod_name: "analytics-.*"
+          name: "analytics-service"
+        - k8s_pod_name: "gateway-.*"
+          name: "gateway-service"
     otel_traces_export:
-      endpoint: http://tempo:4317
+      endpoint: http://otel-collector.monitoring.svc.cluster.local:4317
+      protocol: grpc
+    otel_metrics_export:
+      endpoint: http://otel-collector.monitoring.svc.cluster.local:4317
       protocol: grpc
     prometheus_export:
       port: 9090
