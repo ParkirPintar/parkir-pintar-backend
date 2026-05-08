@@ -16,4 +16,5 @@ RUN cd services/billing && CGO_ENABLED=1 GOOS=linux go build -o /service ./cmd
 FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /service /service
+COPY --from=builder /app/services/billing/rules/ /rules/
 ENTRYPOINT ["/service"]
