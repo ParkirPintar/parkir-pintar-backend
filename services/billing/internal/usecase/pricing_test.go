@@ -111,48 +111,6 @@ func TestPricingEngine_JDM_TwoNightsOvernightFee(t *testing.T) {
 	}
 }
 
-func TestPricingEngine_JDM_NoshowFee(t *testing.T) {
-	rules := loadJDMRules(t)
-	engine, err := NewPricingEngine(rules)
-	if err != nil {
-		t.Fatalf("failed to create engine: %v", err)
-	}
-	defer engine.Dispose()
-
-	out, err := engine.Evaluate(model.PricingInput{
-		IsNoshow:   true,
-		BookingFee: 5000,
-	})
-	if err != nil {
-		t.Fatalf("evaluate failed: %v", err)
-	}
-
-	if out.NoshowFee != 5000 {
-		t.Errorf("noshow_fee = %d, want 5000", out.NoshowFee)
-	}
-	if out.Total != 10000 {
-		t.Errorf("total = %d, want 10000 (5000 booking + 5000 noshow)", out.Total)
-	}
-}
-
-func TestPricingEngine_JDM_EvaluateNoshow(t *testing.T) {
-	rules := loadJDMRules(t)
-	engine, err := NewPricingEngine(rules)
-	if err != nil {
-		t.Fatalf("failed to create engine: %v", err)
-	}
-	defer engine.Dispose()
-
-	fee, err := engine.EvaluateNoshow(5000)
-	if err != nil {
-		t.Fatalf("EvaluateNoshow failed: %v", err)
-	}
-
-	if fee != 5000 {
-		t.Errorf("noshow fee = %d, want 5000", fee)
-	}
-}
-
 func TestPricingEngine_JDM_CancellationFreeUnder2Min(t *testing.T) {
 	rules := loadJDMRules(t)
 	engine, err := NewPricingEngine(rules)

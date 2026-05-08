@@ -526,7 +526,7 @@
                                     "  const body = pm.response.json();",
                                     "  pm.test('Has invoice_id', () => pm.expect(body.invoice_id).to.be.a('string'));",
                                     "  pm.test('Has payment_id', () => pm.expect(body.payment_id).to.be.a('string'));",
-                                    "  pm.test('Total > 0', () => pm.expect(body.total).to.be.above(0));",
+                                    "  pm.test('Total >= 0', () => pm.expect(body.total).to.be.at.least(0));",
                                     "  pm.test('Booking fee not in total (paid separately at reservation)', () => { if (body.booking_fee > 0 && body.hourly_fee > 0) { pm.expect(body.total).to.eql(body.hourly_fee + (body.overnight_fee || 0) + (body.noshow_fee || 0) + (body.cancellation_fee || 0) + (body.penalty || 0)); } });",
                                     "  pm.test('Status PENDING', () => pm.expect(body.status).to.eql('PENDING'));",
                                     "  pm.environment.set('payment_id', body.payment_id);",

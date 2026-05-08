@@ -61,7 +61,6 @@ func (e *PricingEngine) Evaluate(in model.PricingInput) (model.PricingOutput, er
 	input := map[string]any{
 		"durationHours":        in.DurationHours,
 		"midnightCrossings":    in.MidnightCrossings,
-		"isNoshow":             in.IsNoshow,
 		"cancelElapsedMinutes": in.CancelElapsedMinutes,
 		"bookingFee":           in.BookingFee,
 	}
@@ -81,25 +80,11 @@ func (e *PricingEngine) Evaluate(in model.PricingInput) (model.PricingOutput, er
 		BookingFee:      toInt64(result["bookingFeeResult"]),
 		HourlyFee:       toInt64(result["hourlyFee"]),
 		OvernightFee:    toInt64(result["overnightFee"]),
-		NoshowFee:       toInt64(result["noshowFee"]),
 		CancellationFee: toInt64(result["cancellationFee"]),
 		Total:           toInt64(result["total"]),
 	}
 
 	return out, nil
-}
-
-// EvaluateNoshow computes the no-show fee using the JDM engine.
-// This is used by ApplyPenalty to determine the fee from rules rather than hardcoding.
-func (e *PricingEngine) EvaluateNoshow(bookingFee int64) (int64, error) {
-	out, err := e.Evaluate(model.PricingInput{
-		IsNoshow:   true,
-		BookingFee: bookingFee,
-	})
-	if err != nil {
-		return 0, err
-	}
-	return out.NoshowFee, nil
 }
 
 // toInt64 safely converts a JSON number (float64) to int64.

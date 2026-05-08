@@ -78,9 +78,10 @@ func (w *ExpiryWorker) scan(ctx context.Context) {
 // processExpired handles a single expired reservation:
 // 1. Skip if status is ACTIVE or COMPLETED (Requirement 10.3)
 // 2. Update status to EXPIRED (Requirement 10.1)
-// 3. Apply no-show fee via Billing — fee determined by gorules engine (Requirement 10.2)
-// 4. Release Redis lock (Requirement 10.2)
-// 5. Publish reservation.expired event (Requirement 10.4)
+// 3. Release Redis lock (Requirement 10.2)
+// 4. Publish reservation.expired event (Requirement 10.4)
+// Note: No additional penalty is charged for no-show. The driver only forfeits
+// the booking fee (5,000 IDR) that was already paid during reservation confirmation.
 func (w *ExpiryWorker) processExpired(ctx context.Context, res *model.Reservation) {
 	logger := log.With().
 		Str("reservation_id", res.ID).
@@ -101,12 +102,8 @@ func (w *ExpiryWorker) processExpired(ctx context.Context, res *model.Reservatio
 		return
 	}
 
-	// Apply no-show fee via Billing Service (Requirement 10.2)
-	// Fee is determined by the Billing Service's gorules pricing engine — not hardcoded here.
-	// We pass amount=0 as a signal; billing service uses gorules to determine the actual fee.
-	if err := w.billing.ApplyPenalty(ctx, res.ID, "noshow", 0); err != nil {
-		logger.Error().Err(err).Msg("failed to apply no-show fee")
-	}
+	// No additional penalty for no-show — driver only forfeits the booking fee
+	// that was already charged during reservation confirmation.
 
 	// Release Redis lock to free the spot (Requirement 10.2)
 	if err := w.repo.ReleaseLock(ctx, res.SpotID); err != nil {

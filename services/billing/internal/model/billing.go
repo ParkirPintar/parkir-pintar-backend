@@ -17,7 +17,7 @@ type BillingRecord struct {
 	HourlyFee      int64         `db:"hourly_fee"`
 	OvernightFee   int64         `db:"overnight_fee"`
 	Penalty        int64         `db:"penalty"`
-	NoshowFee      int64         `db:"noshow_fee"`
+	NoshowFee      int64         `db:"noshow_fee"` // Deprecated: always 0, kept for DB schema compatibility
 	CancelFee      int64         `db:"cancellation_fee"`
 	Total          int64         `db:"total"`
 	Status         BillingStatus `db:"status"`
@@ -31,7 +31,6 @@ type BillingRecord struct {
 type PricingInput struct {
 	DurationHours        float64
 	MidnightCrossings    int
-	IsNoshow             bool
 	CancelElapsedMinutes float64
 	BookingFee           int64
 }
@@ -40,7 +39,6 @@ type PricingOutput struct {
 	BookingFee      int64
 	HourlyFee       int64
 	OvernightFee    int64
-	NoshowFee       int64
 	CancellationFee int64
 	Total           int64
 }

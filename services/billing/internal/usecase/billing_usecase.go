@@ -148,23 +148,13 @@ func (u *billingUsecase) ApplyPenalty(ctx context.Context, reservationID, reason
 		return err
 	}
 
-	// For noshow penalties, determine fee from gorules engine (single source of truth).
-	// The amount parameter is ignored for noshow — rules engine decides the fee.
+	// No-show has no additional penalty — driver only forfeits the booking fee.
 	if reason == "noshow" {
-		u.mu.RLock()
-		engine := u.engine
-		u.mu.RUnlock()
-
-		noshowFee, evalErr := engine.EvaluateNoshow(b.BookingFee)
-		if evalErr != nil {
-			return fmt.Errorf("evaluate noshow fee from rules: %w", evalErr)
-		}
-		b.NoshowFee = noshowFee
-		b.Total += noshowFee
-	} else {
-		b.Penalty += amount
-		b.Total += amount
+		return nil
 	}
+
+	b.Penalty += amount
+	b.Total += amount
 
 	return u.repo.Update(ctx, b)
 }
@@ -214,7 +204,6 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 		DurationHours:     durationHours,
 		MidnightCrossings: midnightCrossings,
 		BookingFee:        b.BookingFee,
-		IsNoshow:          b.NoshowFee > 0,
 	}
 	output, evalErr := engine.Evaluate(input)
 	if evalErr != nil {
@@ -223,11 +212,9 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 
 	b.HourlyFee = output.HourlyFee
 	b.OvernightFee = output.OvernightFee
-	b.NoshowFee = output.NoshowFee
 	b.CancelFee = output.CancellationFee
 	// Booking fee is already paid separately during reservation — exclude from checkout total
-	b.Total = output.HourlyFee + output.OvernightFee +
-		output.NoshowFee + output.CancellationFee
+	b.Total = output.HourlyFee + output.OvernightFee + output.CancellationFee
 	b.IdempotencyKey = idempotencyKey
 
 	// Step 5: Call Payment.CreatePayment to get QR code and payment_id.
@@ -291,7 +278,6 @@ func (u *billingUsecase) publishEvent(ctx context.Context, eventType string, b *
 		"hourly_fee":       b.HourlyFee,
 		"overnight_fee":    b.OvernightFee,
 		"penalty":          b.Penalty,
-		"noshow_fee":       b.NoshowFee,
 		"cancellation_fee": b.CancelFee,
 		"total":            b.Total,
 		"amount":           b.Total,

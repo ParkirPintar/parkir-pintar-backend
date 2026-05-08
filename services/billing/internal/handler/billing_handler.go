@@ -54,11 +54,6 @@ func (h *BillingHandler) ApplyPenalty(ctx context.Context, req *pb.ApplyPenaltyR
 	if req.Reason == "" {
 		return nil, status.Error(codes.InvalidArgument, "reason is required")
 	}
-	// For "noshow" reason, amount is determined by gorules engine in the usecase layer.
-	// For other reasons, amount must be provided.
-	if req.Reason != "noshow" && req.Amount <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "amount must be greater than 0")
-	}
 	if err := h.uc.ApplyPenalty(ctx, req.ReservationId, req.Reason, req.Amount); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply penalty: %v", err)
 	}
@@ -80,7 +75,7 @@ func (h *BillingHandler) Checkout(ctx context.Context, req *pb.CheckoutRequest) 
 		HourlyFee:       b.HourlyFee,
 		OvernightFee:    b.OvernightFee,
 		Penalty:         b.Penalty,
-		NoshowFee:       b.NoshowFee,
+		NoshowFee:       0, // No-show has no additional fee — driver forfeits booking fee only
 		CancellationFee: b.CancelFee,
 		Total:           b.Total,
 		Status:          string(b.Status),

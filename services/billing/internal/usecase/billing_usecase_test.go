@@ -364,37 +364,6 @@ func TestCheckout_NilPublisher_GracefulDegradation(t *testing.T) {
 	}
 }
 
-func TestCheckout_IncludesNoshowFee(t *testing.T) {
-	repo := newMockRepo()
-	pc := &mockPaymentClient{paymentID: "pay-123", qrCode: "qr-abc"}
-	pub := &mockPublisher{}
-
-	uc := newTestUsecase(repo, pc, pub)
-
-	start := time.Now().Add(-1 * time.Hour)
-	repo.records["res-1"] = &model.BillingRecord{
-		ID:            "inv-1",
-		ReservationID: "res-1",
-		BookingFee:    5000,
-		NoshowFee:     5000, // Pre-existing noshow fee from expiry worker
-		Status:        model.BillingPending,
-		SessionStart:  &start,
-	}
-
-	b, err := uc.Checkout(context.Background(), "res-1", "idem-key-1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Noshow fee should be included in total via pricing engine.
-	if b.NoshowFee != 5000 {
-		t.Errorf("noshow_fee = %d, want 5000", b.NoshowFee)
-	}
-	if b.Total <= b.HourlyFee {
-		t.Errorf("total %d should include noshow_fee beyond hourly", b.Total)
-	}
-}
-
 func TestCheckout_IncludesPenalty(t *testing.T) {
 	repo := newMockRepo()
 	pc := &mockPaymentClient{paymentID: "pay-123", qrCode: "qr-abc"}

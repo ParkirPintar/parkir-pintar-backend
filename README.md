@@ -230,7 +230,7 @@ flowchart TD
     A([Driver cancels]) --> B{When?}
     B -->|≤ 2 min after confirm| C[Fee: 0 IDR]
     B -->|> 2 min, before check-in| D[Fee: 5.000 IDR]
-    B -->|No-show > 1 hour| E[Fee: 10.000 IDR\nReservation auto-expired]
+    B -->|No-show > 1 hour| E[Fee: 0 IDR additional\nDriver forfeits booking fee\nReservation auto-expired]
     C --> F[Release spot to inventory]
     D --> F
     E --> F
@@ -251,7 +251,7 @@ Tarif **tidak** ditentukan di awal seperti kompetitor yang lock fixed price untu
 | Wrong spot | **BLOCKED** | Driver tidak bisa parkir di spot yang salah — akses diblokir |
 | Cancel ≤ 2 min | 0 IDR | Free cancellation |
 | Cancel > 2 min (before check-in) | 5.000 IDR | |
-| No-show (> 1 hour) | 10.000 IDR | Reservasi auto-expired |
+| No-show (> 1 hour) | 0 IDR additional | Reservasi auto-expired. Driver hanya kehilangan booking fee (5.000 IDR) yang sudah dibayar saat konfirmasi |
 | Overstay | No penalty | Tarif jam standar tetap berlaku, tidak ada penalty tambahan |
 
 ---
@@ -784,7 +784,6 @@ Input ke gorules engine:
   "duration_hours": 3,
   "crosses_midnight": true,
   "midnight_crossings": 1,
-  "is_noshow": false,
   "cancel_elapsed_minutes": 0
 }
 ```
@@ -797,7 +796,6 @@ Output dari gorules engine:
   "hourly_fee": 15000,
   "overnight_fee": 20000,
   "cancellation_fee": 0,
-  "noshow_fee": 0,
   "total": 40000
 }
 ```
@@ -811,7 +809,7 @@ Output dari gorules engine:
 | Overnight fee | `midnight_crossings * 20000` | 20.000 IDR flat per midnight crossing (kumulatif) |
 | Cancel free | `cancel_elapsed_minutes <= 2` | 0 IDR |
 | Cancel fee | `cancel_elapsed_minutes > 2` | 5.000 IDR |
-| No-show fee | `is_noshow == true` | 10.000 IDR |
+| No-show | reservation expires after 1 hour | No additional penalty — driver forfeits booking fee (5.000 IDR) only |
 | Overstay | no condition | standard hourly rate applies, no penalty |
 | Wrong spot | N/A | **BLOCKED** — driver cannot park at wrong spot |
 
@@ -828,7 +826,6 @@ result, _ := engine.Evaluate("pricing", map[string]any{
     "crosses_midnight":        true,
     "midnight_crossings":      1,
     "cancel_elapsed_minutes":  0,
-    "is_noshow":               false,
 })
 
 // hot-reload goroutine
@@ -1264,11 +1261,7 @@ sequenceDiagram
 
     alt status still RESERVED (no check-in within 1 hour)
         Worker->>DB: UPDATE reservation SET status=EXPIRED
-        Worker->>Billing: gRPC ApplyPenalty(reservation_id, "noshow", 0)
-        note right of Worker: Fee determined by Billing's gorules engine
-        Billing->>Billing: gorules evaluates no-show fee
-        Billing->>DB: UPDATE billing_record (noshow_fee from rules)
-        Billing-->>Worker: OK
+        note right of Worker: No additional penalty — driver forfeits booking fee only
         Worker->>Redis: DEL lock:{spot_id}
         Worker->>Notif: publish reservation.expired
         Notif-->>Worker: stub OK
@@ -1442,7 +1435,7 @@ erDiagram
         bigint hourly_fee "ceil(hours) * 5000"
         bigint overnight_fee "crossings * 20000"
         bigint penalty "0 — wrong spot is blocked"
-        bigint noshow_fee "10000 if no-show"
+        bigint noshow_fee "0 — no additional penalty, driver forfeits booking fee"
         bigint cancellation_fee "0 or 5000"
         bigint total
         varchar status "PENDING / PAID / FAILED"
@@ -1636,8 +1629,8 @@ curl -s -X POST https://parkir-pintar.pondongopi.biz.id/v1/reservations \
 
 | Service | Test File | Coverage |
 |---|---|---|
-| Billing | `billing_usecase_test.go` | Checkout happy path, idempotency, payment failure, graceful degradation, no-show fee, penalty |
-| Billing | `pricing.go` (JDM engine) | Pricing rules via gorules: hourly, overnight, cancellation, no-show |
+| Billing | `billing_usecase_test.go` | Checkout happy path, idempotency, payment failure, graceful degradation, penalty |
+| Billing | `pricing.go` (JDM engine) | Pricing rules via gorules: hourly, overnight, cancellation |
 | Payment | `payment_usecase_test.go` | Create payment, idempotency, circuit breaker fallback |
 | Payment | `settlement_client_test.go` | Settlement HTTP client, error handling |
 | Billing | `publisher_test.go` | Event publishing to RabbitMQ |

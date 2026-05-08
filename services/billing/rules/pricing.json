@@ -99,53 +99,11 @@
             }
         },
         {
-            "id": "noshow-fee-table",
-            "type": "decisionTableNode",
-            "name": "No-Show Fee",
-            "position": {
-                "x": 1000,
-                "y": 50
-            },
-            "content": {
-                "hitPolicy": "first",
-                "inputs": [
-                    {
-                        "id": "ns_i1",
-                        "name": "Is No-Show",
-                        "field": "isNoshow"
-                    }
-                ],
-                "outputs": [
-                    {
-                        "id": "ns_o1",
-                        "name": "No-Show Fee",
-                        "field": "noshowFee"
-                    }
-                ],
-                "rules": [
-                    {
-                        "_id": "ns_r1",
-                        "ns_i1": "== true",
-                        "ns_o1": "5000"
-                    },
-                    {
-                        "_id": "ns_r2",
-                        "ns_i1": "",
-                        "ns_o1": "0"
-                    }
-                ],
-                "passThrough": true,
-                "inputField": null,
-                "outputPath": null,
-                "executionMode": "single"
-            }
-        },
-        {
             "id": "cancel-fee-table",
             "type": "decisionTableNode",
             "name": "Cancellation Fee",
             "position": {
-                "x": 1250,
+                "x": 1000,
                 "y": 50
             },
             "content": {
@@ -187,7 +145,7 @@
             "type": "expressionNode",
             "name": "Total Calculation",
             "position": {
-                "x": 1500,
+                "x": 1250,
                 "y": 200
             },
             "content": {
@@ -195,7 +153,7 @@
                     {
                         "id": "t_e1",
                         "key": "total",
-                        "value": "bookingFeeResult + hourlyFee + overnightFee + noshowFee + cancellationFee"
+                        "value": "bookingFeeResult + hourlyFee + overnightFee + cancellationFee"
                     }
                 ],
                 "passThrough": true,
@@ -209,7 +167,7 @@
             "type": "outputNode",
             "name": "Pricing Output",
             "position": {
-                "x": 1750,
+                "x": 1500,
                 "y": 200
             },
             "content": {
@@ -242,26 +200,19 @@
         {
             "id": "e4",
             "sourceId": "overnight-fee-expr",
-            "targetId": "noshow-fee-table",
-            "sourceHandle": null,
-            "type": "edge"
-        },
-        {
-            "id": "e5",
-            "sourceId": "noshow-fee-table",
             "targetId": "cancel-fee-table",
             "sourceHandle": null,
             "type": "edge"
         },
         {
-            "id": "e6",
+            "id": "e5",
             "sourceId": "cancel-fee-table",
             "targetId": "total-expr",
             "sourceHandle": null,
             "type": "edge"
         },
         {
-            "id": "e7",
+            "id": "e6",
             "sourceId": "total-expr",
             "targetId": "output",
             "sourceHandle": null,
@@ -269,8 +220,8 @@
         }
     ],
     "metadata": {
-        "version": "1.0.0",
-        "description": "ParkirPintar pricing rules — booking fee, hourly rate, overnight fee, no-show fee, cancellation fee",
+        "version": "1.1.0",
+        "description": "ParkirPintar pricing rules — booking fee, hourly rate, overnight fee, cancellation fee. No-show has no additional penalty (driver forfeits booking fee only).",
         "tags": [
             "pricing",
             "parking",
