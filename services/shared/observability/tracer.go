@@ -73,16 +73,11 @@ func InitTracer(ctx context.Context, cfg Config) (Shutdown, error) {
 	}
 
 	// Build resource with service metadata
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			attribute.String("service.name", cfg.ServiceName),
-			attribute.String("service.version", cfg.ServiceVersion),
-			attribute.String("deployment.environment", cfg.Environment),
-		),
+	res := resource.NewSchemaless(
+		attribute.String("service.name", cfg.ServiceName),
+		attribute.String("service.version", cfg.ServiceVersion),
+		attribute.String("deployment.environment", cfg.Environment),
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	// Create tracer provider
 	tp := sdktrace.NewTracerProvider(

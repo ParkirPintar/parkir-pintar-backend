@@ -460,6 +460,15 @@ Service (zerolog + OTel SDK)
                                     Grafana (unified dashboard)
 ```
 
+### mTLS Exception for Monitoring
+
+Namespace `monitoring` tidak memiliki Istio sidecar injection, sehingga services di mesh (`parkir-pintar` namespace, STRICT mTLS) tidak bisa langsung kirim traces ke OTel Collector dan Tempo. DestinationRule di `observability/destination-rule-otel.yaml` disable mTLS untuk traffic ke:
+
+- `otel-collector.monitoring.svc.cluster.local` (trace/metric receiver)
+- `tempo.monitoring.svc.cluster.local` (trace storage)
+
+Tanpa DestinationRule ini, services akan gagal export traces dengan error TLS handshake.
+
 ### Akses Kiali
 
 Kiali di-deploy ke namespace `istio-system` (bukan `monitoring`) karena membutuhkan akses langsung ke Istio CRDs.

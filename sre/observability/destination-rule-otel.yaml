@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: otel-collector-no-mtls
+  namespace: parkir-pintar
+spec:
+  host: otel-collector.monitoring.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: tempo-no-mtls
+  namespace: monitoring
+spec:
+  host: tempo.monitoring.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
