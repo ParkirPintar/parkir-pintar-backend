@@ -213,8 +213,16 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 	b.HourlyFee = output.HourlyFee
 	b.OvernightFee = output.OvernightFee
 	b.CancelFee = output.CancellationFee
-	// Booking fee is already paid separately during reservation — exclude from checkout total
-	b.Total = output.HourlyFee + output.OvernightFee + output.CancellationFee
+	// Option B: Booking fee acts as a deposit — deduct from checkout total.
+	// Driver already paid booking_fee at reservation time, so net checkout amount
+	// is the remaining balance after subtracting the deposit.
+	grossTotal := output.HourlyFee + output.OvernightFee + output.CancellationFee
+	if grossTotal > b.BookingFee {
+		b.Total = grossTotal - b.BookingFee
+	} else {
+		// Booking fee covers the entire session — nothing more to pay.
+		b.Total = 0
+	}
 	b.IdempotencyKey = idempotencyKey
 
 	// Step 5: Call Payment.CreatePayment to get QR code and payment_id.

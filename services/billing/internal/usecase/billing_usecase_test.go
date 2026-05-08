@@ -390,9 +390,15 @@ func TestCheckout_IncludesPenalty(t *testing.T) {
 	if b.Penalty != 0 {
 		t.Errorf("penalty = %d, want 0 (wrong-spot is BLOCKED)", b.Penalty)
 	}
-	// Total should be hourly_fee (booking_fee is paid separately during reservation)
-	if b.Total < b.HourlyFee {
-		t.Errorf("total %d should be at least hourly_fee", b.Total)
+	// Option B: Total = gross - booking_fee (deposit deducted).
+	// 1-hour session: hourlyFee=5000, gross=5000, total = 5000 - 5000 = 0
+	grossTotal := b.HourlyFee + b.OvernightFee + b.CancelFee
+	expectedTotal := grossTotal - b.BookingFee
+	if expectedTotal < 0 {
+		expectedTotal = 0
+	}
+	if b.Total != expectedTotal {
+		t.Errorf("total = %d, want %d (gross %d - booking deposit %d)", b.Total, expectedTotal, grossTotal, b.BookingFee)
 	}
 }
 

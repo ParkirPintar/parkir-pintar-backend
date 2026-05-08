@@ -41,7 +41,7 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 - **Payment before exit**: Driver harus bayar dulu (via QRIS/Pondo Ngopi) sebelum bisa keluar area parkir
 - **Overnight fee**: Biaya tambahan flat 20.000 IDR setiap kali sesi melewati tengah malam (kumulatif per crossing)
 - **Location tracking**: App mengirim location update setiap ≤30 detik via unary API call
-- **Booking fee**: 5.000 IDR per reservasi sukses, dicharge saat konfirmasi (terpisah dari hitungan jam parkir)
+- **Booking fee**: 5.000 IDR per reservasi sukses, dicharge saat konfirmasi (berfungsi sebagai deposit, dikurangi dari total checkout)
 
 ---
 
@@ -53,7 +53,7 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 4. **Check-out**: Driver harus bayar dulu baru bisa keluar (payment before exit)
 5. **Wrong-spot**: Driver **diblokir** dari parkir di spot yang salah — bukan dikenakan penalty. Sistem tidak mengizinkan parkir di spot selain yang di-assign
 6. **Overnight fee**: Biaya tambahan 20.000 IDR flat **setiap kali** sesi melewati tengah malam (00:00). Jika parkir 2 malam = 2 × 20.000 IDR. Setelah midnight crossing, hitungan jam normal berlanjut
-7. **Booking fee** 5.000 IDR — driver **harus bayar via QRIS** setelah reservasi. Reservasi baru confirmed setelah payment success. Ini **di luar** hitungan jam parkir
+7. **Booking fee** 5.000 IDR — driver **harus bayar via QRIS** setelah reservasi. Reservasi baru confirmed setelah payment success. Booking fee berfungsi sebagai **deposit** yang dikurangi dari total checkout (net checkout = hourly + overnight − booking_fee, minimum 0)
 8. **Konfirmasi reservasi** berasal dari sistem. Setelah masuk gerbang parkir, kendaraan harus berada di parking lot yang ditentukan dalam waktu 1 jam
 9. **Parking lot ID** dikirim sebagai response API (bukan AR navigation)
 10. **Pricing** dihitung dari durasi aktual sesi parkir, bukan fixed price di awal seperti kompetitor
@@ -216,7 +216,7 @@ flowchart TD
     C -->|No| E[Standard hourly rate]
     D --> E
     E --> F([Driver triggers checkout\nMust pay before exit])
-    F --> G[Calculate total:\nbooking_fee + hourly + overnight fees]
+    F --> G[Calculate total:\nhourly + overnight - booking_fee deposit]
     G --> H[Generate invoice\nidempotent]
     H --> I[Payment via QRIS\nPondo Ngopi engine]
     I -->|Success| J([Status: COMPLETED\nDriver can exit])
@@ -244,7 +244,7 @@ Tarif **tidak** ditentukan di awal seperti kompetitor yang lock fixed price untu
 
 | Condition | Fee | Notes |
 |---|---|---|
-| Booking fee (on confirm) | 5.000 IDR | **Harus dibayar** via QRIS setelah reservasi. Reservasi baru confirmed setelah payment success |
+| Booking fee (on confirm) | 5.000 IDR | **Harus dibayar** via QRIS setelah reservasi. Berfungsi sebagai deposit — dikurangi dari total checkout. Jika sesi ≤ booking fee, tidak ada tambahan bayar |
 | First hour | 5.000 IDR | Dihitung saat check-in |
 | Each subsequent started hour | 5.000 IDR | Ceil — setiap jam yang dimulai dihitung penuh |
 | Overnight (crosses midnight) | 20.000 IDR flat per crossing | Biaya tambahan per hari jika lewat tengah malam. 2 malam = 2 × 20.000 IDR |
@@ -800,11 +800,13 @@ Output dari gorules engine:
 }
 ```
 
+> **Note**: `total` dari engine adalah gross total. Checkout amount yang ditagih ke driver = `max(0, hourly_fee + overnight_fee - booking_fee)` = 30.000 IDR (booking fee sudah dibayar sebagai deposit).
+
 ### Pricing Rules Summary (sebagai JDM nodes)
 
 | Rule | Condition | Output |
 |---|---|---|
-| Booking fee | always on confirm | 5.000 IDR (charged separately, outside hourly) |
+| Booking fee | always on confirm | 5.000 IDR (acts as deposit, deducted from checkout total) |
 | Hourly fee | `ceil(duration_hours) * 5000` | variable |
 | Overnight fee | `midnight_crossings * 20000` | 20.000 IDR flat per midnight crossing (kumulatif) |
 | Cancel free | `cancel_elapsed_minutes <= 2` | 0 IDR |
@@ -1165,8 +1167,8 @@ sequenceDiagram
             note right of Billing: e.g. 2 nights = 40.000 IDR
         end
 
-        Billing->>Billing: Sum total
-        note right of Billing: total = booking_fee + hourly + overnight
+        Billing->>Billing: Sum total (deduct booking fee deposit)
+        note right of Billing: total = max(0, hourly + overnight - booking_fee)
 
         Billing->>DB: INSERT invoice (total, status=PENDING)
         Billing->>DB: SET idempotency:{key} = invoice_id
