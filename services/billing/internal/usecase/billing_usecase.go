@@ -231,7 +231,8 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 	b.IdempotencyKey = idempotencyKey
 
 	// Step 5: Call Payment.CreatePayment to get QR code and payment_id.
-	if u.paymentClient != nil {
+	// Skip payment if total is 0 (e.g. session not started, or instant checkout).
+	if u.paymentClient != nil && b.Total > 0 {
 		paymentID, qrCode, payErr := u.paymentClient.CreatePayment(ctx, b.ID, b.Total, idempotencyKey)
 		if payErr != nil {
 			log.Error().Err(payErr).
