@@ -17,6 +17,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9091"
         traffic.sidecar.istio.io/excludeInboundPorts: "8080"
+    spec:
       containers:
         - name: payment-service
           image: parkirpintar/payment-service:latest
