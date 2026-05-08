@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -53,7 +53,7 @@ type Shutdown func(ctx context.Context) error
 //	defer shutdown(ctx)
 func InitTracer(ctx context.Context, cfg Config) (Shutdown, error) {
 	if cfg.OTLPEndpoint == "" {
-		cfg.OTLPEndpoint = envOr("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317")
+		cfg.OTLPEndpoint = envOr("OTEL_EXPORTER_OTLP_ENDPOINT", "otel-collector.monitoring.svc.cluster.local:4318")
 	}
 	if cfg.Environment == "" {
 		cfg.Environment = envOr("APP_ENV", "local")
@@ -62,10 +62,11 @@ func InitTracer(ctx context.Context, cfg Config) (Shutdown, error) {
 		cfg.SampleRatio = 1.0
 	}
 
-	// Create OTLP gRPC exporter
-	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
-		otlptracegrpc.WithInsecure(), // mTLS handled by Istio sidecar
+	// Create OTLP HTTP exporter (avoids proto wire format issues with older collectors)
+	exporter, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpoint(cfg.OTLPEndpoint),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithTimeout(5*time.Second),
 	)
 	if err != nil {
 		return nil, err
