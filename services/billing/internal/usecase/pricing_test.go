@@ -12,20 +12,45 @@ func loadJDMRules(t *testing.T) []byte {
 	t.Helper()
 	data, err := os.ReadFile("../../rules/pricing.json")
 	if err != nil {
-		t.Skipf("JDM rules file not found, skipping JDM tests: %v", err)
+		t.Fatalf("JDM rules file not found — gorules is mandatory: %v", err)
 	}
 	return data
 }
 
+func TestNewPricingEngine_EmptyRules_ReturnsError(t *testing.T) {
+	_, err := NewPricingEngine(nil)
+	if err == nil {
+		t.Fatal("expected error when creating engine with nil rules, got nil")
+	}
+
+	_, err = NewPricingEngine([]byte{})
+	if err == nil {
+		t.Fatal("expected error when creating engine with empty rules, got nil")
+	}
+}
+
+func TestNewPricingEngine_InvalidRules_ReturnsError(t *testing.T) {
+	_, err := NewPricingEngine([]byte("not valid json"))
+	if err == nil {
+		t.Fatal("expected error when creating engine with invalid rules, got nil")
+	}
+}
+
 func TestPricingEngine_JDM_HourlyFee(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	out, err := engine.Evaluate(model.PricingInput{
 		DurationHours: 3,
 		BookingFee:    5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.BookingFee != 5000 {
 		t.Errorf("booking_fee = %d, want 5000", out.BookingFee)
@@ -40,14 +65,20 @@ func TestPricingEngine_JDM_HourlyFee(t *testing.T) {
 
 func TestPricingEngine_JDM_OvernightFee(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	out, err := engine.Evaluate(model.PricingInput{
 		DurationHours:     10,
 		MidnightCrossings: 1,
 		BookingFee:        5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.OvernightFee != 20000 {
 		t.Errorf("overnight_fee = %d, want 20000", out.OvernightFee)
@@ -60,14 +91,20 @@ func TestPricingEngine_JDM_OvernightFee(t *testing.T) {
 
 func TestPricingEngine_JDM_TwoNightsOvernightFee(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	out, err := engine.Evaluate(model.PricingInput{
 		DurationHours:     30,
 		MidnightCrossings: 2,
 		BookingFee:        5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.OvernightFee != 40000 {
 		t.Errorf("overnight_fee = %d, want 40000 (2 crossings * 20000)", out.OvernightFee)
@@ -76,13 +113,19 @@ func TestPricingEngine_JDM_TwoNightsOvernightFee(t *testing.T) {
 
 func TestPricingEngine_JDM_NoshowFee(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	out, err := engine.Evaluate(model.PricingInput{
 		IsNoshow:   true,
 		BookingFee: 5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.NoshowFee != 5000 {
 		t.Errorf("noshow_fee = %d, want 5000", out.NoshowFee)
@@ -92,15 +135,39 @@ func TestPricingEngine_JDM_NoshowFee(t *testing.T) {
 	}
 }
 
-func TestPricingEngine_JDM_CancellationFreeUnder2Min(t *testing.T) {
+func TestPricingEngine_JDM_EvaluateNoshow(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	fee, err := engine.EvaluateNoshow(5000)
+	if err != nil {
+		t.Fatalf("EvaluateNoshow failed: %v", err)
+	}
+
+	if fee != 5000 {
+		t.Errorf("noshow fee = %d, want 5000", fee)
+	}
+}
+
+func TestPricingEngine_JDM_CancellationFreeUnder2Min(t *testing.T) {
+	rules := loadJDMRules(t)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
+	defer engine.Dispose()
+
+	out, err := engine.Evaluate(model.PricingInput{
 		CancelElapsedMinutes: 1.5,
 		BookingFee:           5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.CancellationFee != 0 {
 		t.Errorf("cancellation_fee = %d, want 0 (under 2 min)", out.CancellationFee)
@@ -109,49 +176,22 @@ func TestPricingEngine_JDM_CancellationFreeUnder2Min(t *testing.T) {
 
 func TestPricingEngine_JDM_CancellationFeeOver2Min(t *testing.T) {
 	rules := loadJDMRules(t)
-	engine := NewPricingEngine(rules)
+	engine, err := NewPricingEngine(rules)
+	if err != nil {
+		t.Fatalf("failed to create engine: %v", err)
+	}
 	defer engine.Dispose()
 
-	out := engine.Evaluate(model.PricingInput{
+	out, err := engine.Evaluate(model.PricingInput{
 		CancelElapsedMinutes: 5,
 		BookingFee:           5000,
 	})
+	if err != nil {
+		t.Fatalf("evaluate failed: %v", err)
+	}
 
 	if out.CancellationFee != 5000 {
 		t.Errorf("cancellation_fee = %d, want 5000", out.CancellationFee)
-	}
-}
-
-func TestPricingEngine_GoFallback_HourlyFee(t *testing.T) {
-	// No JDM rules — should use Go fallback
-	engine := NewPricingEngine(nil)
-	defer engine.Dispose()
-
-	out := engine.Evaluate(model.PricingInput{
-		DurationHours: 2.5,
-		BookingFee:    5000,
-	})
-
-	if out.HourlyFee != 15000 {
-		t.Errorf("hourly_fee = %d, want 15000 (ceil(2.5) * 5000)", out.HourlyFee)
-	}
-	if out.Total != 20000 {
-		t.Errorf("total = %d, want 20000", out.Total)
-	}
-}
-
-func TestPricingEngine_GoFallback_OvernightCumulative(t *testing.T) {
-	engine := NewPricingEngine(nil)
-	defer engine.Dispose()
-
-	out := engine.Evaluate(model.PricingInput{
-		DurationHours:     30,
-		MidnightCrossings: 2,
-		BookingFee:        5000,
-	})
-
-	if out.OvernightFee != 40000 {
-		t.Errorf("overnight_fee = %d, want 40000 (2 * 20000)", out.OvernightFee)
 	}
 }
 

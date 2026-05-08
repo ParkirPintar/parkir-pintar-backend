@@ -84,7 +84,10 @@ func main() {
 
 	// --- Wire dependencies ---
 	repo := repository.NewBillingRepository(pool, rdb)
-	uc := usecase.NewBillingUsecase(ctx, repo, paymentClient, publisher)
+	uc, err := usecase.NewBillingUsecase(ctx, repo, paymentClient, publisher)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize billing usecase — gorules pricing engine required")
+	}
 	h := handler.NewBillingHandler(uc)
 
 	// --- gRPC server ---

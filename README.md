@@ -1264,8 +1264,10 @@ sequenceDiagram
 
     alt status still RESERVED (no check-in within 1 hour)
         Worker->>DB: UPDATE reservation SET status=EXPIRED
-        Worker->>Billing: gRPC ApplyNoShowFee(reservation_id, 10000)
-        Billing->>DB: UPDATE billing_record (noshow_fee=10000)
+        Worker->>Billing: gRPC ApplyPenalty(reservation_id, "noshow", 0)
+        note right of Worker: Fee determined by Billing's gorules engine
+        Billing->>Billing: gorules evaluates no-show fee
+        Billing->>DB: UPDATE billing_record (noshow_fee from rules)
         Billing-->>Worker: OK
         Worker->>Redis: DEL lock:{spot_id}
         Worker->>Notif: publish reservation.expired
@@ -1635,7 +1637,7 @@ curl -s -X POST https://parkir-pintar.pondongopi.biz.id/v1/reservations \
 | Service | Test File | Coverage |
 |---|---|---|
 | Billing | `billing_usecase_test.go` | Checkout happy path, idempotency, payment failure, graceful degradation, no-show fee, penalty |
-| Billing | `pricing.go` (pure Go fallback) | Pricing rules: hourly, overnight, cancellation, no-show |
+| Billing | `pricing.go` (JDM engine) | Pricing rules via gorules: hourly, overnight, cancellation, no-show |
 | Payment | `payment_usecase_test.go` | Create payment, idempotency, circuit breaker fallback |
 | Payment | `settlement_client_test.go` | Settlement HTTP client, error handling |
 | Billing | `publisher_test.go` | Event publishing to RabbitMQ |

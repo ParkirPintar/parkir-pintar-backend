@@ -4,12 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/parkir-pintar/billing/internal/adapter"
 	"github.com/parkir-pintar/billing/internal/model"
 )
+
+func TestMain(m *testing.M) {
+	// Set PRICING_RULES_PATH so NewBillingUsecase can find the JDM rules file
+	// when tests run from the internal/usecase/ directory.
+	if os.Getenv("PRICING_RULES_PATH") == "" {
+		os.Setenv("PRICING_RULES_PATH", "../../rules/pricing.json")
+	}
+	os.Exit(m.Run())
+}
 
 // --- Mock repository ---
 
@@ -55,6 +65,8 @@ func (m *mockBillingRepo) Update(_ context.Context, b *model.BillingRecord) erro
 }
 
 func (m *mockBillingRepo) GetActivePricingRule(_ context.Context) ([]byte, int, error) {
+	// Return nil — NewBillingUsecase will try file first, then DB.
+	// Tests should set PRICING_RULES_PATH to point to the rules file.
 	return nil, 0, nil
 }
 
@@ -117,7 +129,13 @@ func (m *mockPublisher) Publish(_ context.Context, eventType string, payload []b
 func newTestUsecase(repo *mockBillingRepo, pc adapter.PaymentClient, pub adapter.EventPublisher) BillingUsecase {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately to prevent hotReload goroutine from running
-	return NewBillingUsecase(ctx, repo, pc, pub)
+	uc, err := NewBillingUsecase(ctx, repo, pc, pub)
+	if err != nil {
+		// If rules file not found in test environment, this will fail.
+		// Tests must be run from the service root or PRICING_RULES_PATH must be set.
+		panic(fmt.Sprintf("newTestUsecase: failed to create usecase: %v", err))
+	}
+	return uc
 }
 
 // --- Tests ---

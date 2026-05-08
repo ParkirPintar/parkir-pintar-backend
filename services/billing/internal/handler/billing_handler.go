@@ -54,7 +54,9 @@ func (h *BillingHandler) ApplyPenalty(ctx context.Context, req *pb.ApplyPenaltyR
 	if req.Reason == "" {
 		return nil, status.Error(codes.InvalidArgument, "reason is required")
 	}
-	if req.Amount <= 0 {
+	// For "noshow" reason, amount is determined by gorules engine in the usecase layer.
+	// For other reasons, amount must be provided.
+	if req.Reason != "noshow" && req.Amount <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "amount must be greater than 0")
 	}
 	if err := h.uc.ApplyPenalty(ctx, req.ReservationId, req.Reason, req.Amount); err != nil {

@@ -38,8 +38,8 @@ type billingUsecase struct {
 	engine        *PricingEngine
 }
 
-func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository, paymentClient adapter.PaymentClient, publisher adapter.EventPublisher) BillingUsecase {
-	// Try to load JDM rules from file first, then from DB
+func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository, paymentClient adapter.PaymentClient, publisher adapter.EventPublisher) (BillingUsecase, error) {
+	// Load JDM rules from file first, then from DB — fail if neither available.
 	var ruleContent []byte
 	if data, err := os.ReadFile(envOr("PRICING_RULES_PATH", "rules/pricing.json")); err == nil {
 		ruleContent = data
@@ -49,19 +49,22 @@ func NewBillingUsecase(ctx context.Context, repo repository.BillingRepository, p
 		if content, _, err := repo.GetActivePricingRule(ctx); err == nil && len(content) > 0 {
 			ruleContent = content
 			log.Info().Msg("loaded JDM pricing rules from database")
-		} else {
-			log.Warn().Msg("no JDM pricing rules found, using Go fallback")
 		}
+	}
+
+	engine, err := NewPricingEngine(ruleContent)
+	if err != nil {
+		return nil, fmt.Errorf("pricing engine initialization failed: %w", err)
 	}
 
 	uc := &billingUsecase{
 		repo:          repo,
 		paymentClient: paymentClient,
 		publisher:     publisher,
-		engine:        NewPricingEngine(ruleContent),
+		engine:        engine,
 	}
 	go uc.hotReload(ctx)
-	return uc
+	return uc, nil
 }
 
 // hotReload polls DB every 30s and reloads pricing rules when version changes.
@@ -80,9 +83,15 @@ func (u *billingUsecase) hotReload(ctx context.Context) {
 			}
 			u.mu.Lock()
 			if version != u.ruleVersion {
+				newEngine, err := NewPricingEngine(content)
+				if err != nil {
+					log.Error().Err(err).Int("version", version).Msg("failed to reload pricing rules, keeping current engine")
+					u.mu.Unlock()
+					continue
+				}
 				u.ruleVersion = version
 				oldEngine := u.engine
-				u.engine = NewPricingEngine(content)
+				u.engine = newEngine
 				if oldEngine != nil {
 					oldEngine.Dispose()
 				}
@@ -138,7 +147,25 @@ func (u *billingUsecase) ApplyPenalty(ctx context.Context, reservationID, reason
 	if err != nil {
 		return err
 	}
-	b.Penalty += amount
+
+	// For noshow penalties, determine fee from gorules engine (single source of truth).
+	// The amount parameter is ignored for noshow — rules engine decides the fee.
+	if reason == "noshow" {
+		u.mu.RLock()
+		engine := u.engine
+		u.mu.RUnlock()
+
+		noshowFee, evalErr := engine.EvaluateNoshow(b.BookingFee)
+		if evalErr != nil {
+			return fmt.Errorf("evaluate noshow fee from rules: %w", evalErr)
+		}
+		b.NoshowFee = noshowFee
+		b.Total += noshowFee
+	} else {
+		b.Penalty += amount
+		b.Total += amount
+	}
+
 	return u.repo.Update(ctx, b)
 }
 
@@ -189,7 +216,10 @@ func (u *billingUsecase) Checkout(ctx context.Context, reservationID, idempotenc
 		BookingFee:        b.BookingFee,
 		IsNoshow:          b.NoshowFee > 0,
 	}
-	output := engine.Evaluate(input)
+	output, evalErr := engine.Evaluate(input)
+	if evalErr != nil {
+		return nil, fmt.Errorf("pricing evaluation failed: %w", evalErr)
+	}
 
 	b.HourlyFee = output.HourlyFee
 	b.OvernightFee = output.OvernightFee
