@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -73,12 +72,10 @@ func InitTracer(ctx context.Context, cfg Config) (Shutdown, error) {
 	}
 
 	// Build resource with service metadata
-	res, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(cfg.ServiceName),
-			semconv.ServiceVersion(cfg.ServiceVersion),
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			attribute.String("service.name", cfg.ServiceName),
+			attribute.String("service.version", cfg.ServiceVersion),
 			attribute.String("deployment.environment", cfg.Environment),
 		),
 	)

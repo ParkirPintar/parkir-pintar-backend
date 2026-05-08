@@ -17,10 +17,8 @@ data:
         "list": [
           {
             "name": "service",
-            "type": "query",
-            "datasource": "Tempo",
-            "query": "{} | select(resource.service.name)",
-            "refresh": 2,
+            "type": "custom",
+            "query": "reservation-service,billing-service,payment-service,search-service,presence-service,notification-service,analytics-service,gateway-service",
             "multi": false,
             "includeAll": true,
             "current": { "text": "All", "value": "$__all" }
@@ -36,8 +34,8 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "🔍 Trace Search (Tempo)",
-          "description": "Search traces by service, duration, and status. Click a trace to see full span waterfall.",
+          "title": "\uD83D\uDD0D Trace Search (Tempo)",
+          "description": "Search traces by service and duration. Click a trace to see full span waterfall.",
           "type": "traces",
           "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
           "datasource": "Tempo",
@@ -45,33 +43,16 @@ data:
             {
               "refId": "A",
               "datasource": "Tempo",
-              "queryType": "traceqlSearch",
-              "filters": [
-                {
-                  "id": "service-name",
-                  "tag": "resource.service.name",
-                  "operator": "=",
-                  "value": ["$service"],
-                  "valueType": "string",
-                  "scope": "resource"
-                },
-                {
-                  "id": "min-duration",
-                  "tag": "duration",
-                  "operator": ">",
-                  "value": ["$min_duration"],
-                  "valueType": "duration",
-                  "scope": "span"
-                }
-              ],
+              "queryType": "traceql",
+              "query": "{duration > $min_duration}",
               "limit": 20
             }
           ]
         },
         {
           "id": 2,
-          "title": "🚨 Error Traces",
-          "description": "Traces with errors — click to investigate root cause across services",
+          "title": "\uD83D\uDEA8 Error Traces",
+          "description": "Traces with errors - click to investigate root cause across services",
           "type": "traces",
           "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
           "datasource": "Tempo",
@@ -79,43 +60,26 @@ data:
             {
               "refId": "A",
               "datasource": "Tempo",
-              "queryType": "traceqlSearch",
-              "filters": [
-                {
-                  "id": "status-error",
-                  "tag": "status",
-                  "operator": "=",
-                  "value": ["error"],
-                  "valueType": "string",
-                  "scope": "span"
-                },
-                {
-                  "id": "service-name",
-                  "tag": "resource.service.name",
-                  "operator": "=",
-                  "value": ["$service"],
-                  "valueType": "string",
-                  "scope": "resource"
-                }
-              ],
+              "queryType": "traceql",
+              "query": "{status = error}",
               "limit": 20
             }
           ]
         },
         {
           "id": 3,
-          "title": "📊 Trace Duration Distribution (P50/P95/P99)",
-          "description": "Span duration percentiles from Tempo metrics — shows latency trends per service",
+          "title": "\uD83D\uDCCA Trace Duration Distribution (P50/P95/P99)",
+          "description": "Span duration percentiles from Tempo metrics - shows latency trends per service",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
           "datasource": "Prometheus",
           "targets": [
             {
-              "expr": "histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket{service_name=~\".*service.*\"}[5m])) by (le, service_name))",
+              "expr": "histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name))",
               "legendFormat": "P50 {{service_name}}"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~\".*service.*\"}[5m])) by (le, service_name))",
+              "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name))",
               "legendFormat": "P95 {{service_name}}"
             }
           ],
@@ -123,14 +87,14 @@ data:
         },
         {
           "id": 4,
-          "title": "📈 Span Rate per Service",
-          "description": "Number of spans generated per service — shows activity level",
+          "title": "\uD83D\uDCC8 Span Rate per Service",
+          "description": "Number of spans generated per service - shows activity level",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
           "datasource": "Prometheus",
           "targets": [
             {
-              "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=~\".*service.*\"}[5m])) by (service_name)",
+              "expr": "sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name)",
               "legendFormat": "{{service_name}}"
             }
           ],
@@ -138,14 +102,14 @@ data:
         },
         {
           "id": 5,
-          "title": "📋 Logs with Trace Context (Loki)",
+          "title": "\uD83D\uDCCB Logs with Trace Context (Loki)",
           "description": "Structured logs with trace_id field. Click the TraceID link to jump to the full trace in Tempo.",
           "type": "logs",
           "gridPos": { "h": 12, "w": 24, "x": 0, "y": 34 },
           "datasource": "Loki",
           "targets": [
             {
-              "expr": "{namespace=\"parkir-pintar\"} | json | trace_id != \"\" | line_format \"{{.level}} [{{.service}}] {{.msg}} trace_id={{.trace_id}}\"",
+              "expr": "{namespace=\"parkir-pintar\"} | json | trace_id != ``",
               "refId": "A"
             }
           ],
@@ -162,14 +126,14 @@ data:
         },
         {
           "id": 6,
-          "title": "🚨 Error Logs with Trace Context",
-          "description": "Error-level logs with trace correlation — click TraceID to see what went wrong across services",
+          "title": "\uD83D\uDEA8 Error Logs with Trace Context",
+          "description": "Error-level logs with trace correlation - click TraceID to see what went wrong across services",
           "type": "logs",
           "gridPos": { "h": 10, "w": 24, "x": 0, "y": 46 },
           "datasource": "Loki",
           "targets": [
             {
-              "expr": "{namespace=\"parkir-pintar\"} | json | level = \"error\" | line_format \"{{.service}} | {{.msg}} | err={{.error}} | trace_id={{.trace_id}}\"",
+              "expr": "{namespace=\"parkir-pintar\"} | json | level = `error`",
               "refId": "A"
             }
           ],
@@ -182,7 +146,7 @@ data:
         },
         {
           "id": 7,
-          "title": "🗺️ Service Graph (from Traces)",
+          "title": "\uD83D\uDDFA\uFE0F Service Graph (from Traces)",
           "description": "Auto-generated service dependency graph from trace data. Shows real call paths between services.",
           "type": "nodeGraph",
           "gridPos": { "h": 14, "w": 24, "x": 0, "y": 56 },
@@ -197,14 +161,14 @@ data:
         },
         {
           "id": 8,
-          "title": "⏱️ Slowest Operations",
-          "description": "Top slowest span operations — helps identify performance bottlenecks",
+          "title": "\u23F1\uFE0F Slowest Operations",
+          "description": "Top slowest span operations - helps identify performance bottlenecks",
           "type": "table",
           "gridPos": { "h": 10, "w": 24, "x": 0, "y": 70 },
           "datasource": "Prometheus",
           "targets": [
             {
-              "expr": "topk(20, histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service_name=~\".*service.*\"}[5m])) by (le, service_name, span_name)))",
+              "expr": "topk(20, histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name, span_name)))",
               "format": "table",
               "instant": true
             }

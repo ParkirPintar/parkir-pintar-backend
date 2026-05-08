@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -36,10 +35,10 @@ func HTTPMiddleware(serviceName string) func(http.Handler) http.Handler {
 			ctx, span := tracer.Start(ctx, spanName,
 				trace.WithSpanKind(trace.SpanKindServer),
 				trace.WithAttributes(
-					semconv.HTTPRequestMethodKey.String(r.Method),
-					semconv.URLPath(r.URL.Path),
-					semconv.ServerAddress(r.Host),
-					semconv.UserAgentOriginal(r.UserAgent()),
+					attribute.String("http.request.method", r.Method),
+					attribute.String("url.path", r.URL.Path),
+					attribute.String("server.address", r.Host),
+					attribute.String("user_agent.original", r.UserAgent()),
 				),
 			)
 			defer span.End()
@@ -52,7 +51,7 @@ func HTTPMiddleware(serviceName string) func(http.Handler) http.Handler {
 			duration := time.Since(start)
 
 			span.SetAttributes(
-				semconv.HTTPResponseStatusCode(rw.statusCode),
+				attribute.Int("http.response.status_code", rw.statusCode),
 				attribute.Float64("http.duration_ms", float64(duration.Milliseconds())),
 			)
 

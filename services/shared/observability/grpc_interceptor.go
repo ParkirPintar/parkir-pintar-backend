@@ -7,7 +7,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -32,8 +31,8 @@ func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 		ctx, span := tracer.Start(ctx, info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(
-				semconv.RPCSystemGRPC,
-				semconv.RPCMethod(info.FullMethod),
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.method", info.FullMethod),
 			),
 		)
 		defer span.End()
@@ -71,8 +70,8 @@ func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 		ctx, span := tracer.Start(ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(
-				semconv.RPCSystemGRPC,
-				semconv.RPCMethod(method),
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.method", method),
 				attribute.String("rpc.target", cc.Target()),
 			),
 		)
