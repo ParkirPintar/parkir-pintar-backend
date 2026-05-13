@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Cyprinus12138/otelgin"
+	"github.com/gin-gonic/gin"
 	"github.com/parkir-pintar/presence/internal/adapter"
 	"github.com/parkir-pintar/presence/internal/handler"
 	"github.com/parkir-pintar/presence/internal/usecase"
@@ -102,19 +104,20 @@ func main() {
 		}
 	}()
 
-	// HTTP REST API server (public-facing, port 8080)
+	// HTTP REST API server (public-facing, port 8080) with Gin + otelgin tracing
 	httpHandler := handler.NewHTTPHandler(uc)
 	go func() {
-		httpMux := http.NewServeMux()
-		httpHandler.Register(httpMux)
-		httpMux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+		gin.SetMode(gin.ReleaseMode)
+		r := gin.New()
+		r.Use(gin.Recovery())
+		r.Use(otelgin.Middleware("presence-service"))
+		httpHandler.Register(r)
+		r.GET("/healthz", func(c *gin.Context) {
+			c.String(http.StatusOK, "ok")
 		})
 		httpAddr := envOr("HTTP_ADDR", ":8080")
-		traced := observability.HTTPMiddleware("presence-service")(httpMux)
 		log.Info().Str("addr", httpAddr).Msg("HTTP REST API listening")
-		if err := http.ListenAndServe(httpAddr, traced); err != nil {
+		if err := r.Run(httpAddr); err != nil {
 			log.Fatal().Err(err).Msg("HTTP server failed")
 		}
 	}()

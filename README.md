@@ -1660,9 +1660,10 @@ Berdasarkan evaluasi antara Golang Native, Beego, dan GoFr:
 | Binary size | 18M | 43M | **11M** |
 | Total Score | 27 | 27 | **32** |
 
-**Keputusan: Golang Native** — karena sistem ini heavily gRPC (bukan REST CRUD biasa), dan performa serta binary size paling optimal. Framework seperti GoFr/Beego justru menambah overhead tanpa benefit signifikan untuk usecase ini.
+**Keputusan: Golang Native + Gin (HTTP layer)** — sistem ini heavily gRPC untuk service-to-service communication. Untuk HTTP/REST endpoints (driver-facing API), digunakan [Gin](https://github.com/gin-gonic/gin) sebagai lightweight HTTP router karena menyediakan routing, JSON binding, dan middleware yang lebih ergonomis dibanding `net/http` standar, tanpa overhead framework full-stack seperti Beego/GoFr.
 
 - Semua service-to-service: **gRPC native** via `google.golang.org/grpc`
+- HTTP/REST endpoints (driver-facing): **Gin** untuk routing dan request handling
 - Presence Service: **unary gRPC API** untuk location tracking dan check-in/check-out
 
 ---
@@ -1692,6 +1693,7 @@ Berdasarkan evaluasi antara Golang Native, Beego, dan GoFr:
 | Pricing Engine | [gorules/gorules](https://github.com/gorules/gorules) | latest | JDM-based rules engine untuk pricing calculation. Rules disimpan di DB, hot-reload tanpa redeploy |
 | OpenTelemetry | [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go) | latest | Distributed tracing antar service. Trace context di-propagate via gRPC metadata |
 | UUID | [google/uuid](https://github.com/google/uuid) | latest | Generate UUID untuk reservation ID, invoice ID, payment ID, idempotency key |
+| HTTP Router | [gin-gonic/gin](https://github.com/gin-gonic/gin) | latest | Lightweight HTTP router untuk REST endpoints (driver-facing API). Menyediakan routing, JSON binding, dan middleware tanpa overhead full framework |
 | DB Migration | [golang-migrate/migrate](https://github.com/golang-migrate/migrate) | v4 | Schema migration untuk semua PostgreSQL DB per service |
 
 ---

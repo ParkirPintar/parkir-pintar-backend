@@ -1,10 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/parkir-pintar/billing/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -19,34 +18,34 @@ func NewHTTPHandler(uc usecase.BillingUsecase) *HTTPHandler {
 	return &HTTPHandler{uc: uc}
 }
 
-// Register mounts all REST routes on the given mux.
-func (h *HTTPHandler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("POST /v1/checkout", h.checkout)
+// Register mounts all REST routes on the given Gin engine.
+func (h *HTTPHandler) Register(r *gin.Engine) {
+	r.POST("/v1/checkout", h.checkout)
 }
 
-func (h *HTTPHandler) checkout(w http.ResponseWriter, r *http.Request) {
-	body, err := readBody(r)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+func (h *HTTPHandler) checkout(c *gin.Context) {
+	var body map[string]interface{}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
 		return
 	}
 
 	reservationID := strField(body, "reservation_id")
 	if reservationID == "" {
-		writeError(w, http.StatusBadRequest, "reservation_id is required")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "reservation_id is required"})
 		return
 	}
 
-	idempotencyKey := r.Header.Get("Idempotency-Key")
+	idempotencyKey := c.GetHeader("Idempotency-Key")
 
-	b, err := h.uc.Checkout(r.Context(), reservationID, idempotencyKey)
+	b, err := h.uc.Checkout(c.Request.Context(), reservationID, idempotencyKey)
 	if err != nil {
 		log.Error().Err(err).Msg("checkout failed")
-		writeError(w, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"invoice_id":       b.ID,
 		"reservation_id":   b.ReservationID,
 		"booking_fee":      b.BookingFee,
@@ -64,19 +63,6 @@ func (h *HTTPHandler) checkout(w http.ResponseWriter, r *http.Request) {
 
 // --- Helpers ---
 
-func readBody(r *http.Request) (map[string]interface{}, error) {
-	defer r.Body.Close()
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func strField(m map[string]interface{}, key string) string {
 	if m == nil {
 		return ""
@@ -85,14 +71,4 @@ func strField(m map[string]interface{}, key string) string {
 		return v
 	}
 	return ""
-}
-
-func writeJSON(w http.ResponseWriter, code int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, code int, msg string) {
-	writeJSON(w, code, map[string]string{"message": msg})
 }

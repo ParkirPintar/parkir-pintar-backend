@@ -1,11 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/parkir-pintar/payment/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -20,29 +19,29 @@ func NewHTTPHandler(uc usecase.PaymentUsecase) *HTTPHandler {
 	return &HTTPHandler{uc: uc}
 }
 
-// Register mounts all REST routes on the given mux.
-func (h *HTTPHandler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/payments/{id}", h.getPaymentStatus)
-	mux.HandleFunc("POST /v1/payments/{id}/retry", h.retryPayment)
+// Register mounts all REST routes on the given Gin engine.
+func (h *HTTPHandler) Register(r *gin.Engine) {
+	r.GET("/v1/payments/:id", h.getPaymentStatus)
+	r.POST("/v1/payments/:id/retry", h.retryPayment)
 }
 
-func (h *HTTPHandler) getPaymentStatus(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+func (h *HTTPHandler) getPaymentStatus(c *gin.Context) {
+	id := c.Param("id")
 	if id == "" {
-		writeError(w, http.StatusBadRequest, "payment_id required")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "payment_id required"})
 		return
 	}
 
-	// Strip /retry suffix if accidentally matched (shouldn't happen with Go 1.22+ routing)
+	// Strip /retry suffix if accidentally matched
 	id = strings.TrimSuffix(id, "/retry")
 
-	p, err := h.uc.GetPaymentStatus(r.Context(), id)
+	p, err := h.uc.GetPaymentStatus(c.Request.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "payment not found")
+		c.JSON(http.StatusNotFound, gin.H{"message": "payment not found"})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"payment_id": p.ID,
 		"invoice_id": p.InvoiceID,
 		"status":     string(p.Status),
@@ -52,31 +51,31 @@ func (h *HTTPHandler) getPaymentStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *HTTPHandler) retryPayment(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+func (h *HTTPHandler) retryPayment(c *gin.Context) {
+	id := c.Param("id")
 	if id == "" {
-		writeError(w, http.StatusBadRequest, "payment_id required")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "payment_id required"})
 		return
 	}
 
-	idempotencyKey := r.Header.Get("Idempotency-Key")
+	idempotencyKey := c.GetHeader("Idempotency-Key")
 
 	// Try to read body for additional params (optional)
-	body, _ := readBody(r)
-	if body != nil {
+	var body map[string]interface{}
+	if err := c.ShouldBindJSON(&body); err == nil && body != nil {
 		if key := strField(body, "idempotency_key"); key != "" {
 			idempotencyKey = key
 		}
 	}
 
-	p, err := h.uc.RetryPayment(r.Context(), id, idempotencyKey)
+	p, err := h.uc.RetryPayment(c.Request.Context(), id, idempotencyKey)
 	if err != nil {
 		log.Error().Err(err).Msg("retry payment failed")
-		writeError(w, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"payment_id": p.ID,
 		"invoice_id": p.InvoiceID,
 		"status":     string(p.Status),
@@ -88,22 +87,6 @@ func (h *HTTPHandler) retryPayment(w http.ResponseWriter, r *http.Request) {
 
 // --- Helpers ---
 
-func readBody(r *http.Request) (map[string]interface{}, error) {
-	defer r.Body.Close()
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	if len(data) == 0 {
-		return nil, nil
-	}
-	var m map[string]interface{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func strField(m map[string]interface{}, key string) string {
 	if m == nil {
 		return ""
@@ -112,14 +95,4 @@ func strField(m map[string]interface{}, key string) string {
 		return v
 	}
 	return ""
-}
-
-func writeJSON(w http.ResponseWriter, code int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, code int, msg string) {
-	writeJSON(w, code, map[string]string{"message": msg})
 }

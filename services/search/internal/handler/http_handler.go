@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/parkir-pintar/search/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -19,34 +19,34 @@ func NewHTTPHandler(uc usecase.SearchUsecase) *HTTPHandler {
 	return &HTTPHandler{uc: uc}
 }
 
-// Register mounts all REST routes on the given mux.
-func (h *HTTPHandler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /v1/availability", h.getAvailability)
-	mux.HandleFunc("GET /v1/availability/first", h.getFirstAvailable)
+// Register mounts all REST routes on the given Gin engine.
+func (h *HTTPHandler) Register(r *gin.Engine) {
+	r.GET("/v1/availability", h.getAvailability)
+	r.GET("/v1/availability/first", h.getFirstAvailable)
 }
 
-func (h *HTTPHandler) getAvailability(w http.ResponseWriter, r *http.Request) {
-	vehicleType := r.URL.Query().Get("vehicle_type")
+func (h *HTTPHandler) getAvailability(c *gin.Context) {
+	vehicleType := c.Query("vehicle_type")
 	if vehicleType == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_type is required")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type is required"})
 		return
 	}
 	if vehicleType != "CAR" && vehicleType != "MOTORCYCLE" {
-		writeError(w, http.StatusBadRequest, "vehicle_type must be CAR or MOTORCYCLE")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type must be CAR or MOTORCYCLE"})
 		return
 	}
 
-	floorStr := r.URL.Query().Get("floor")
+	floorStr := c.Query("floor")
 	floor, err := strconv.Atoi(floorStr)
 	if err != nil || floor < 1 || floor > 5 {
-		writeError(w, http.StatusBadRequest, "floor must be between 1 and 5")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "floor must be between 1 and 5"})
 		return
 	}
 
-	spots, err := h.uc.GetAvailability(r.Context(), floor, vehicleType)
+	spots, err := h.uc.GetAvailability(c.Request.Context(), floor, vehicleType)
 	if err != nil {
 		log.Error().Err(err).Msg("get availability failed")
-		writeError(w, http.StatusInternalServerError, "internal error")
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal error"})
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *HTTPHandler) getAvailability(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"floor":           floor,
 		"vehicle_type":    vehicleType,
 		"total_available": len(spots),
@@ -75,34 +75,24 @@ func (h *HTTPHandler) getAvailability(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *HTTPHandler) getFirstAvailable(w http.ResponseWriter, r *http.Request) {
-	vehicleType := r.URL.Query().Get("vehicle_type")
+func (h *HTTPHandler) getFirstAvailable(c *gin.Context) {
+	vehicleType := c.Query("vehicle_type")
 	if vehicleType == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_type is required")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type is required"})
 		return
 	}
 	if vehicleType != "CAR" && vehicleType != "MOTORCYCLE" {
-		writeError(w, http.StatusBadRequest, "vehicle_type must be CAR or MOTORCYCLE")
+		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type must be CAR or MOTORCYCLE"})
 		return
 	}
 
-	spot, err := h.uc.GetFirstAvailable(r.Context(), vehicleType)
+	spot, err := h.uc.GetFirstAvailable(c.Request.Context(), vehicleType)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "no available spot")
+		c.JSON(http.StatusNotFound, gin.H{"message": "no available spot"})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.JSON(http.StatusOK, gin.H{
 		"spot_id": spot.SpotID,
 	})
-}
-
-func writeJSON(w http.ResponseWriter, code int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, code int, msg string) {
-	writeJSON(w, code, map[string]string{"message": msg})
 }
