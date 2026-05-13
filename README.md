@@ -61,10 +61,11 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 12. **Notification service** adalah stub (tidak ada integrasi push/SMS nyata)
 13. **Presence** menggunakan unary gRPC API (bukan stream), app hit API setiap ≤30 detik
 14. **Driver identity**: Diidentifikasi menggunakan **driver_id** yang di-pass via request field
-15. **mTLS** untuk service-to-service auth via Istio PeerAuthentication (STRICT mode)
-16. **No JWT/auth service**: Sistem ini tidak memiliki User Service atau JWT authentication — autentikasi di-handle oleh super app yang mengintegrasikan ParkirPintar sebagai mini app
-17. **Idempotency keys** di-pass via gRPC metadata headers
-18. **Payment gateway**: Menggunakan engine Pondo Ngopi untuk QRIS payment
+15. **Check-in is manual**: Driver explicitly triggers check-in via API call (POST /v1/checkin). Location updates are for tracking only — no geofence or proximity-based auto-detection
+16. **mTLS** untuk service-to-service auth via Istio PeerAuthentication (STRICT mode)
+17. **No JWT/auth service**: Sistem ini tidak memiliki User Service atau JWT authentication — autentikasi di-handle oleh super app yang mengintegrasikan ParkirPintar sebagai mini app
+18. **Idempotency keys** di-pass via gRPC metadata headers
+19. **Payment gateway**: Menggunakan engine Pondo Ngopi untuk QRIS payment
 
 ---
 
@@ -83,8 +84,7 @@ Monorepo dengan struktur **Clean Architecture + Domain-Driven Design** per servi
 │       ├── ci-presence.yml       # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
 │       ├── ci-analytics.yml      # CI (auto on push/PR) + Build & Deploy (manual trigger)
-│       ├── ci-db-migrate.yml     # DB migration via golang-migrate (auto on push to sre/migrations/)
-│       └── ci-notification.yml   # CI (auto on push/PR) + Build & Deploy (manual trigger)
+│       └── ci-db-migrate.yml     # DB migration via golang-migrate (auto on push to sre/migrations/)
 │
 ├── proto/                        # Shared protobuf definitions (gRPC contracts)
 │   ├── billing/
@@ -344,8 +344,8 @@ graph TD
 | **Billing** | 50053 (gRPC), 8080 (HTTP) | Pricing engine via gorules (JDM), invoice generation, overnight/penalty calculation, hot-reload rules |
 | **Payment** | 50054 (gRPC), 8080 (HTTP) | QRIS integration via Pondo Ngopi engine, idempotent checkout, settlement check (stub), gobreaker circuit breaker |
 | **Presence** | 50056 (gRPC), 8080 (HTTP) | Unary API untuk location update, **check-in/check-out trigger**, calls Billing.StartBillingSession |
-| **Notification** | 50057 | Internal event consumer (RabbitMQ), forwards to external Notification Provider stub via HTTP |
-| **Analytics** | 50058 | Consume events from RabbitMQ, store transaction metrics for business monitoring |
+| **Notification** | — (AMQP consumer) | Internal event consumer (RabbitMQ), forwards to external Notification Provider stub via HTTP |
+| **Analytics** | — (AMQP consumer) | Consume events from RabbitMQ, store transaction metrics for business monitoring |
 
 ### Parking Inventory Structure
 
@@ -1585,19 +1585,21 @@ Kong routes REST requests directly to each service's HTTP endpoint based on path
 
 ### E2E Test Scenarios
 
-The Postman collection runs sequentially — variables are chained between steps.
+The Postman collection runs sequentially — variables are chained between steps. It covers both USER_SELECTED and SYSTEM_ASSIGNED reservation modes.
 
 | # | Folder | Scenario | Assertions |
 |---|--------|----------|------------|
 | 1 | Search | Get availability per floor + first available spot | Status 200, spots array, total_available > 0 |
 | 2 | Hold Spot | Hold a spot (60s TTL) + double-hold conflict (409) | Status 200 + 409 |
-| 3 | Reservation | Create SYSTEM_ASSIGNED + idempotency check | Status 201, booking_fee=5000, same key → same result |
-| 4 | Check-in | Check-in at correct spot via Presence | Status 200, status=ACTIVE, wrong_spot=false |
-| 5 | Location | Update driver location | Status 200, event field present |
-| 6 | Checkout | Generate invoice + QRIS QR code | invoice_id, payment_id, total > 0, status=PENDING |
-| 7 | Payment | Get payment status + retry if failed | status ∈ {PENDING, PAID, FAILED} |
-| 8 | Cancel | Create + cancel reservation | status=CANCELLED |
-| 9 | Exit Gate | CheckOut (open gate) | status field present |
+| 3 | Reservation (USER_SELECTED) | Hold → Create USER_SELECTED + idempotency check | Status 201, booking_fee=5000, same key → same result |
+| 4 | Booking Fee Payment | Get booking fee payment status (deposit) | Status 200, amount=5000, status ∈ {PENDING, PAID} |
+| 5 | Check-in | Check-in at correct spot via Presence | Status 200, status=ACTIVE, wrong_spot=false |
+| 6 | Location | Update driver location | Status 200, event field present |
+| 7 | Checkout | Generate invoice + QRIS QR code (booking fee deducted as deposit) | invoice_id, payment_id, total ≥ 0, status=PENDING |
+| 8 | Checkout Payment | Get checkout payment status | status ∈ {PENDING, PAID, FAILED} |
+| 9 | Cancel | Create + cancel reservation (free within 2 min) | status=CANCELLED, cancellation_fee=0 |
+| 10 | Exit Gate | CheckOut (open gate) | status=CHECKOUT_INITIATED |
+| 11 | System-Assigned Flow | Reserve SYSTEM_ASSIGNED → Check-in → Checkout → Payment | Full happy path without hold step |
 
 ### Postman Import
 
@@ -1631,10 +1633,12 @@ curl -s -X POST https://parkir-pintar.pondongopi.biz.id/v1/reservations \
 
 | Service | Test File | Coverage |
 |---|---|---|
+| Reservation | `reservation_usecase_test.go` | Overlap detection, double-booking prevention, hold contention, idempotency, cancellation policy, wrong-spot blocking, check-in validation |
 | Billing | `billing_usecase_test.go` | Checkout happy path, idempotency, payment failure, graceful degradation, penalty |
 | Billing | `pricing.go` (JDM engine) | Pricing rules via gorules: hourly, overnight, cancellation |
 | Payment | `payment_usecase_test.go` | Create payment, idempotency, circuit breaker fallback |
 | Payment | `settlement_client_test.go` | Settlement HTTP client, error handling |
+| Presence | `presence_usecase_test.go` | Location update, check-in correct spot, wrong-spot blocked, billing failure non-fatal |
 | Billing | `publisher_test.go` | Event publishing to RabbitMQ |
 | Billing | `payment_client_test.go` | gRPC payment client adapter |
 
@@ -1704,7 +1708,7 @@ Berdasarkan evaluasi antara Golang Native, Beego, dan GoFr:
 |---|---|---|
 | Pricing Engine | `services/billing/internal/usecase/pricing.go` | Pure Go pricing engine dengan gorules/JDM support. Hot-reload dari DB setiap 30s |
 | Redis-based Lock | `services/reservation/internal/repository/` | `SETNX` + TTL untuk inventory lock per spot. Dipakai untuk double-booking prevention |
-| Streaming Presence | `services/presence/` | Unary gRPC API untuk location update setiap ≤30s. Owns check-in trigger — calls Reservation.CheckIn + Billing.StartBillingSession |
+| Presence Service | `services/presence/` | Unary gRPC API untuk location update setiap ≤30s. Owns check-in trigger — calls Reservation.CheckIn + Billing.StartBillingSession |
 | Config Loader | Per-service `cmd/main.go` | `buildDatabaseURL()`, `buildRedisAddr()`, `buildGRPCAddr()` — compose connection strings dari K8s env vars |
 | Structured Logging | All services | zerolog dengan JSON format, ConsoleWriter untuk dev, integrated dengan OpenTelemetry |
 | Event Publisher | `services/*/internal/adapter/publisher.go` | RabbitMQ event publisher untuk domain events (reservation.confirmed, checkout.completed, etc.) |

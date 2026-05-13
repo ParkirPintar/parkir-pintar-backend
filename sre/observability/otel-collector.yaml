@@ -20,6 +20,13 @@ data:
         dimensions:
           - name: http.method
           - name: http.status_code
+          - name: http.request.method
+          - name: http.response.status_code
+          - name: rpc.method
+          - name: rpc.system
+        resource_metrics_key_attributes:
+          - service.name
+          - service.namespace
         namespace: traces
     processors:
       batch:

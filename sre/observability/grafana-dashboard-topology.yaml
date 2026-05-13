@@ -9,17 +9,29 @@ data:
       "uid": "parkir-istio-topology",
       "title": "Parkir Pintar - Istio Network Topology & gRPC LB",
       "description": "Service mesh topology visualization, per-pod traffic distribution, and gRPC load balancing validation",
-      "tags": ["parkir-pintar", "istio", "topology", "grpc", "load-balancing"],
+      "tags": [
+        "parkir-pintar",
+        "istio",
+        "topology",
+        "grpc",
+        "load-balancing"
+      ],
       "timezone": "browser",
       "refresh": "10s",
-      "time": { "from": "now-30m", "to": "now" },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
       "templating": {
         "list": [
           {
             "name": "namespace",
             "type": "constant",
             "query": "parkir-pintar",
-            "current": { "value": "parkir-pintar", "text": "parkir-pintar" },
+            "current": {
+              "value": "parkir-pintar",
+              "text": "parkir-pintar"
+            },
             "hide": 2
           },
           {
@@ -30,7 +42,10 @@ data:
             "refresh": 2,
             "multi": true,
             "includeAll": true,
-            "current": { "text": "All", "value": "$__all" }
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            }
           },
           {
             "name": "source_service",
@@ -40,17 +55,25 @@ data:
             "refresh": 2,
             "multi": true,
             "includeAll": true,
-            "current": { "text": "All", "value": "$__all" }
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            }
           }
         ]
       },
       "panels": [
         {
           "id": 100,
-          "title": "🗺️ Service Mesh Traffic Flow (Live)",
-          "description": "Real-time traffic flow between services. Shows source → destination with request rate, protocol, and status.",
+          "title": "\ud83d\uddfa\ufe0f Service Mesh Traffic Flow (Live)",
+          "description": "Real-time traffic flow between services. Shows source \u2192 destination with request rate, protocol, and status.",
           "type": "table",
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -64,7 +87,9 @@ data:
             {
               "id": "organize",
               "options": {
-                "excludeByName": { "Time": true },
+                "excludeByName": {
+                  "Time": true
+                },
                 "renameByName": {
                   "source_workload": "Source (Caller)",
                   "destination_service_name": "Destination (Service)",
@@ -87,7 +112,12 @@ data:
                 "filters": [
                   {
                     "fieldName": "Req/s",
-                    "config": { "id": "greater", "options": { "value": 0 } }
+                    "config": {
+                      "id": "greater",
+                      "options": {
+                        "value": 0
+                      }
+                    }
                   }
                 ],
                 "type": "include",
@@ -99,21 +129,68 @@ data:
             "defaults": {},
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "Req/s" },
+                "matcher": {
+                  "id": "byName",
+                  "options": "Req/s"
+                },
                 "properties": [
-                  { "id": "unit", "value": "reqps" },
-                  { "id": "decimals", "value": 4 },
-                  { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
-                  { "id": "color", "value": { "mode": "continuous-GrYlRd" } }
+                  {
+                    "id": "unit",
+                    "value": "reqps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 4
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "gradient"
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "continuous-GrYlRd"
+                    }
+                  }
                 ]
               },
               {
-                "matcher": { "id": "byName", "options": "Response Code" },
+                "matcher": {
+                  "id": "byName",
+                  "options": "Response Code"
+                },
                 "properties": [
                   {
                     "id": "mappings",
                     "value": [
-                      { "type": "value", "options": { "0": { "text": "OK (gRPC)", "color": "green" }, "200": { "text": "200 OK", "color": "green" }, "503": { "text": "503 Unavailable", "color": "red" }, "500": { "text": "500 Error", "color": "red" }, "404": { "text": "404 Not Found", "color": "yellow" } } }
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": {
+                            "text": "OK (gRPC)",
+                            "color": "green"
+                          },
+                          "200": {
+                            "text": "200 OK",
+                            "color": "green"
+                          },
+                          "503": {
+                            "text": "503 Unavailable",
+                            "color": "red"
+                          },
+                          "500": {
+                            "text": "500 Error",
+                            "color": "red"
+                          },
+                          "404": {
+                            "text": "404 Not Found",
+                            "color": "yellow"
+                          }
+                        }
+                      }
                     ]
                   }
                 ]
@@ -122,27 +199,50 @@ data:
           },
           "options": {
             "showHeader": true,
-            "sortBy": [{ "displayName": "Req/s", "desc": true }],
-            "footer": { "show": true, "reducer": ["sum"], "fields": ["Req/s"] }
+            "sortBy": [
+              {
+                "displayName": "Req/s",
+                "desc": true
+              }
+            ],
+            "footer": {
+              "show": true,
+              "reducer": [
+                "sum"
+              ],
+              "fields": [
+                "Req/s"
+              ]
+            }
           }
         },
         {
           "id": 101,
-          "title": "🗺️ Service Topology — Architecture Reference",
+          "title": "\ud83d\uddfa\ufe0f Service Topology \u2014 Architecture Reference",
           "description": "Static topology reference showing all service connections in the mesh",
           "type": "text",
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 12
+          },
           "options": {
             "mode": "markdown",
-            "content": "## ParkirPintar Service Mesh Topology\n\n```\n                    ┌─────────────────┐\n                    │   Kong Gateway   │\n                    └────────┬────────┘\n                             │ gRPC + mTLS\n              ┌──────────────┼──────────────┐\n              │              │              │\n              ▼              ▼              ▼\n     ┌────────────┐  ┌────────────┐  ┌────────────┐\n     │   Search   │  │Reservation │  │  Presence  │\n     │  Service   │  │  Service   │  │  Service   │\n     └─────┬──────┘  └──┬────┬───┘  └──┬────┬───┘\n           │             │    │         │    │\n     Redis Cache    RabbitMQ  │    gRPC │    │ gRPC\n     + Read Replica       │   │         │    │\n                          │   ▼         ▼    ▼\n                          │ ┌────────────┐ ┌────────────┐\n                          │ │  Billing   │ │Reservation │\n                          │ │  Service   │ │  (CheckIn) │\n                          │ └─────┬──────┘ └────────────┘\n                          │       │\n                          │       ▼ gRPC\n                          │ ┌────────────┐\n                          │ │  Payment   │──► Settlement Stub\n                          │ │  Service   │   (HTTP + gobreaker)\n                          │ └────────────┘\n                          │\n                          ▼\n              ┌────────────────────────┐\n              │      RabbitMQ          │\n              │  (Consistent Hash)     │\n              └───┬──────────────┬─────┘\n                  │              │\n                  ▼              ▼\n         ┌────────────┐  ┌────────────┐\n         │Notification│  │ Analytics  │\n         │  Service   │  │  Service   │\n         └────────────┘  └────────────┘\n```\n\n**Legend:** All intra-mesh traffic uses gRPC + mTLS (Istio PeerAuthentication STRICT). LB: LEAST_CONN per-request (L7).\n\n**💡 Tip:** For interactive topology, use [Kiali](/kiali) which provides real-time animated traffic flow."
+            "content": "## ParkirPintar Service Mesh Topology\n\n```\n                    \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n                    \u2502   Kong Gateway   \u2502\n                    \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                             \u2502 gRPC + mTLS\n              \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n              \u2502              \u2502              \u2502\n              \u25bc              \u25bc              \u25bc\n     \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n     \u2502   Search   \u2502  \u2502Reservation \u2502  \u2502  Presence  \u2502\n     \u2502  Service   \u2502  \u2502  Service   \u2502  \u2502  Service   \u2502\n     \u2514\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2518  \u2514\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2518  \u2514\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2518\n           \u2502             \u2502    \u2502         \u2502    \u2502\n     Redis Cache    RabbitMQ  \u2502    gRPC \u2502    \u2502 gRPC\n     + Read Replica       \u2502   \u2502         \u2502    \u2502\n                          \u2502   \u25bc         \u25bc    \u25bc\n                          \u2502 \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510 \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n                          \u2502 \u2502  Billing   \u2502 \u2502Reservation \u2502\n                          \u2502 \u2502  Service   \u2502 \u2502  (CheckIn) \u2502\n                          \u2502 \u2514\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2518 \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                          \u2502       \u2502\n                          \u2502       \u25bc gRPC\n                          \u2502 \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n                          \u2502 \u2502  Payment   \u2502\u2500\u2500\u25ba Settlement Stub\n                          \u2502 \u2502  Service   \u2502   (HTTP + gobreaker)\n                          \u2502 \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                          \u2502\n                          \u25bc\n              \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n              \u2502      RabbitMQ          \u2502\n              \u2502  (Consistent Hash)     \u2502\n              \u2514\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2518\n                  \u2502              \u2502\n                  \u25bc              \u25bc\n         \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n         \u2502Notification\u2502  \u2502 Analytics  \u2502\n         \u2502  Service   \u2502  \u2502  Service   \u2502\n         \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n**Legend:** All intra-mesh traffic uses gRPC + mTLS (Istio PeerAuthentication STRICT). LB: LEAST_CONN per-request (L7).\n\n**\ud83d\udca1 Tip:** For interactive topology, use [Kiali](/kiali) which provides real-time animated traffic flow."
           }
         },
         {
           "id": 2,
-          "title": "⚖️ gRPC Load Balancing — Request Distribution per Pod",
+          "title": "\u2696\ufe0f gRPC Load Balancing \u2014 Request Distribution per Pod",
           "description": "Shows if LEAST_CONN is distributing evenly across pods. Each instance = one pod. Uneven bars = LB problem",
           "type": "barchart",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 24
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -157,8 +257,17 @@ data:
             "groupWidth": 0.7,
             "barWidth": 0.8,
             "stacking": "none",
-            "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
-            "tooltip": { "mode": "multi" }
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "calcs": [
+                "mean",
+                "max"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
           },
           "fieldConfig": {
             "defaults": {
@@ -166,9 +275,18 @@ data:
               "thresholds": {
                 "mode": "percentage",
                 "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 70 },
-                  { "color": "red", "value": 90 }
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 70
+                  },
+                  {
+                    "color": "red",
+                    "value": 90
+                  }
                 ]
               }
             }
@@ -176,10 +294,15 @@ data:
         },
         {
           "id": 3,
-          "title": "⚖️ Per-Pod Request Rate (Time Series)",
-          "description": "Track per-pod request rate over time — lines should be close together if LB is working correctly",
+          "title": "\u2696\ufe0f Per-Pod Request Rate (Time Series)",
+          "description": "Track per-pod request rate over time \u2014 lines should be close together if LB is working correctly",
           "type": "timeseries",
-          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 34 },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 34
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -200,16 +323,31 @@ data:
             }
           },
           "options": {
-            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "min"] },
-            "tooltip": { "mode": "multi" }
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "mean",
+                "max",
+                "min"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
           }
         },
         {
           "id": 4,
-          "title": "📈 LB Skew Ratio (Max/Avg)",
+          "title": "\ud83d\udcc8 LB Skew Ratio (Max/Avg)",
           "description": "Ratio of busiest pod vs average. Value close to 1.0 = good distribution. >2.0 = LB problem",
           "type": "timeseries",
-          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 34 },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 34
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -229,23 +367,40 @@ data:
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  { "color": "green", "value": null },
-                  { "color": "yellow", "value": 1.5 },
-                  { "color": "red", "value": 2.0 }
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1.5
+                  },
+                  {
+                    "color": "red",
+                    "value": 2.0
+                  }
                 ]
               }
             }
           },
           "options": {
-            "legend": { "displayMode": "list", "placement": "bottom" }
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
           }
         },
         {
           "id": 5,
-          "title": "🔗 Per-Pod Request Count (by Reporter Instance)",
-          "description": "Request count per reporting instance — shows which sidecar proxies are handling traffic",
+          "title": "\ud83d\udd17 Per-Pod Request Count (by Reporter Instance)",
+          "description": "Request count per reporting instance \u2014 shows which sidecar proxies are handling traffic",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 44
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -256,36 +411,52 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "reqps",
-              "custom": { "drawStyle": "line", "fillOpacity": 15 }
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15
+              }
             }
           }
         },
         {
           "id": 6,
-          "title": "📡 Request Rate by Source → Destination (per instance)",
+          "title": "\ud83d\udce1 Request Rate by Source \u2192 Destination (per instance)",
           "description": "Detailed per-instance traffic showing which source pods call which destination pods",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 44
+          },
           "datasource": "Prometheus",
           "targets": [
             {
               "expr": "sum(rate(istio_requests_total{destination_service_namespace=\"$namespace\", destination_service_name=~\"$service\", reporter=\"destination\"}[5m])) by (source_workload, instance)",
-              "legendFormat": "{{source_workload}} → {{instance}}"
+              "legendFormat": "{{source_workload}} \u2192 {{instance}}"
             }
           ],
           "fieldConfig": {
             "defaults": {
               "unit": "reqps",
-              "custom": { "drawStyle": "line", "fillOpacity": 15 }
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15
+              }
             }
           }
         },
         {
           "id": 7,
-          "title": "⏱️ Per-Pod Latency (P95)",
+          "title": "\u23f1\ufe0f Per-Pod Latency (P95)",
           "description": "If one pod has significantly higher latency, LEAST_CONN should route less traffic to it",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 52
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -296,16 +467,24 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "ms",
-              "custom": { "drawStyle": "line", "fillOpacity": 10 }
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10
+              }
             }
           }
         },
         {
           "id": 8,
-          "title": "🚨 Error Rate per Service",
+          "title": "\ud83d\udea8 Error Rate per Service",
           "description": "5xx and 4xx error rates per destination service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 52
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -320,16 +499,24 @@ data:
           "fieldConfig": {
             "defaults": {
               "unit": "reqps",
-              "custom": { "drawStyle": "line", "fillOpacity": 20 }
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
             }
           }
         },
         {
           "id": 9,
-          "title": "📊 Traffic Distribution Heatmap (Instance × Time)",
+          "title": "\ud83d\udcca Traffic Distribution Heatmap (Instance \u00d7 Time)",
           "description": "Heatmap showing request distribution across instances over time. Even color = good LB",
           "type": "heatmap",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 60 },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 60
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -351,10 +538,15 @@ data:
         },
         {
           "id": 10,
-          "title": "🌐 Inbound Traffic per Service",
-          "description": "Who is calling whom — helps identify traffic patterns and potential bottlenecks",
+          "title": "\ud83c\udf10 Inbound Traffic per Service",
+          "description": "Who is calling whom \u2014 helps identify traffic patterns and potential bottlenecks",
           "type": "table",
-          "gridPos": { "h": 10, "w": 12, "x": 0, "y": 68 },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 68
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -367,7 +559,9 @@ data:
             {
               "id": "organize",
               "options": {
-                "excludeByName": { "Time": true },
+                "excludeByName": {
+                  "Time": true
+                },
                 "renameByName": {
                   "source_workload": "Caller",
                   "destination_service_name": "Service",
@@ -378,25 +572,47 @@ data:
             {
               "id": "sortBy",
               "options": {
-                "sort": [{ "field": "Req/s", "desc": true }]
+                "sort": [
+                  {
+                    "field": "Req/s",
+                    "desc": true
+                  }
+                ]
               }
             }
           ],
           "fieldConfig": {
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "Req/s" },
-                "properties": [{ "id": "unit", "value": "reqps" }, { "id": "decimals", "value": 4 }]
+                "matcher": {
+                  "id": "byName",
+                  "options": "Req/s"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "reqps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 4
+                  }
+                ]
               }
             ]
           }
         },
         {
           "id": 11,
-          "title": "📤 Outbound Traffic per Service",
-          "description": "Outbound calls from each service — shows dependency graph",
+          "title": "\ud83d\udce4 Outbound Traffic per Service",
+          "description": "Outbound calls from each service \u2014 shows dependency graph",
           "type": "table",
-          "gridPos": { "h": 10, "w": 12, "x": 12, "y": 68 },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 68
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -409,7 +625,9 @@ data:
             {
               "id": "organize",
               "options": {
-                "excludeByName": { "Time": true },
+                "excludeByName": {
+                  "Time": true
+                },
                 "renameByName": {
                   "source_workload": "Service",
                   "destination_service_name": "Calls To",
@@ -420,25 +638,47 @@ data:
             {
               "id": "sortBy",
               "options": {
-                "sort": [{ "field": "Req/s", "desc": true }]
+                "sort": [
+                  {
+                    "field": "Req/s",
+                    "desc": true
+                  }
+                ]
               }
             }
           ],
           "fieldConfig": {
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "Req/s" },
-                "properties": [{ "id": "unit", "value": "reqps" }, { "id": "decimals", "value": 4 }]
+                "matcher": {
+                  "id": "byName",
+                  "options": "Req/s"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "reqps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 4
+                  }
+                ]
               }
             ]
           }
         },
         {
           "id": 12,
-          "title": "⚡ gRPC Method-Level Traffic",
-          "description": "Traffic breakdown by gRPC method — see which RPCs are hottest",
+          "title": "\u26a1 gRPC Method-Level Traffic",
+          "description": "Traffic breakdown by gRPC method \u2014 see which RPCs are hottest",
           "type": "bargauge",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 78 },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 78
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -451,10 +691,22 @@ data:
               "unit": "reqps",
               "thresholds": {
                 "steps": [
-                  { "color": "blue", "value": null },
-                  { "color": "green", "value": 1 },
-                  { "color": "yellow", "value": 10 },
-                  { "color": "red", "value": 50 }
+                  {
+                    "color": "blue",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 10
+                  },
+                  {
+                    "color": "red",
+                    "value": 50
+                  }
                 ]
               }
             }
@@ -467,10 +719,15 @@ data:
         },
         {
           "id": 13,
-          "title": "📊 Request Volume by Service (Total)",
+          "title": "\ud83d\udcca Request Volume by Service (Total)",
           "description": "Total request volume per service in the last hour",
           "type": "bargauge",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 88 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 88
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -483,10 +740,22 @@ data:
               "unit": "short",
               "thresholds": {
                 "steps": [
-                  { "color": "blue", "value": null },
-                  { "color": "green", "value": 100 },
-                  { "color": "yellow", "value": 1000 },
-                  { "color": "red", "value": 5000 }
+                  {
+                    "color": "blue",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 100
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1000
+                  },
+                  {
+                    "color": "red",
+                    "value": 5000
+                  }
                 ]
               }
             }
@@ -499,10 +768,15 @@ data:
         },
         {
           "id": 14,
-          "title": "✅ Success Rate per Service (%)",
+          "title": "\u2705 Success Rate per Service (%)",
           "description": "Percentage of non-5xx responses per service. Below 99% = investigate",
           "type": "gauge",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 88 },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 88
+          },
           "datasource": "Prometheus",
           "targets": [
             {
@@ -517,10 +791,230 @@ data:
               "max": 100,
               "thresholds": {
                 "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "orange", "value": 95 },
-                  { "color": "green", "value": 99 }
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 95
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
                 ]
+              }
+            }
+          }
+        },
+        {
+          "id": 15,
+          "title": "\ud83d\uddc4\ufe0f External Services (Database, Cache, MQ)",
+          "description": "TCP traffic to external services registered via ServiceEntry. Shows connections to PostgreSQL, Redis, and RabbitMQ.",
+          "type": "table",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 96
+          },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(istio_tcp_sent_bytes_total{destination_service_namespace=\"parkir-pintar\"}[5m])) by (source_workload, destination_service_name)",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "source_workload": "Service",
+                  "destination_service_name": "External Dependency",
+                  "Value": "Bytes/s"
+                }
+              }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "fieldName": "Bytes/s",
+                    "config": {
+                      "id": "greater",
+                      "options": {
+                        "value": 0
+                      }
+                    }
+                  }
+                ],
+                "type": "include",
+                "match": "any"
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Bytes/s",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Bytes/s"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "Bps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 200,
+          "title": "Full Infrastructure Topology (Services + DB + Cache + Queue)",
+          "description": "Complete service dependency map including PostgreSQL, Redis, and RabbitMQ connections tracked by Istio ServiceEntry",
+          "type": "table",
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 96
+          },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(istio_tcp_sent_bytes_total{source_workload_namespace=\"parkir-pintar\", destination_service_name!=\"PassthroughCluster\"}[5m])) by (source_workload, destination_service_name)",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "renameByName": {
+                  "source_workload": "Service",
+                  "destination_service_name": "Infrastructure Target",
+                  "Value": "Throughput"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "Throughput",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Throughput"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "Bps"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 201,
+          "title": "Infrastructure Traffic (TCP to DB/Cache/Queue)",
+          "description": "TCP throughput from services to external infrastructure tracked by Istio",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 108
+          },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(istio_tcp_sent_bytes_total{source_workload_namespace=\"parkir-pintar\", destination_service_name!=\"PassthroughCluster\"}[5m])) by (source_workload, destination_service_name)",
+              "legendFormat": "{{source_workload}} -> {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15
+              }
+            }
+          }
+        },
+        {
+          "id": 202,
+          "title": "TCP Connection Rate to Infrastructure",
+          "description": "New TCP connections per second to databases, cache, and message queue",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 118
+          },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(istio_tcp_connections_opened_total{source_workload_namespace=\"parkir-pintar\", destination_service_name!=\"PassthroughCluster\"}[5m])) by (source_workload, destination_service_name)",
+              "legendFormat": "{{source_workload}} -> {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cps",
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15
               }
             }
           }

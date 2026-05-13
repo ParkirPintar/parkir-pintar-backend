@@ -9,10 +9,18 @@ data:
       "uid": "parkir-traces",
       "title": "Parkir Pintar - Traces & Logs Correlation",
       "description": "Distributed tracing with log correlation. Click trace_id in logs to jump to full trace in Tempo.",
-      "tags": ["parkir-pintar", "traces", "tempo", "correlation"],
+      "tags": [
+        "parkir-pintar",
+        "traces",
+        "tempo",
+        "correlation"
+      ],
       "timezone": "browser",
       "refresh": "30s",
-      "time": { "from": "now-1h", "to": "now" },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
       "templating": {
         "list": [
           {
@@ -21,95 +29,218 @@ data:
             "query": "reservation-service,billing-service,payment-service,search-service,presence-service,notification-service,analytics-service,gateway-service",
             "multi": false,
             "includeAll": true,
-            "current": { "text": "All", "value": "$__all" }
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            }
           },
           {
             "name": "min_duration",
             "type": "custom",
-            "query": "100ms,500ms,1s,2s,5s,10s",
-            "current": { "text": "100ms", "value": "100ms" }
+            "query": "0ms,10ms,50ms,100ms,500ms,1s,2s,5s,10s",
+            "current": {
+              "text": "0ms",
+              "value": "0ms"
+            }
           }
         ]
       },
       "panels": [
         {
           "id": 1,
-          "title": "\uD83D\uDD0D Trace Search (Tempo)",
-          "description": "Search traces by service and duration. Click a trace to see full span waterfall.",
-          "type": "traces",
-          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
-          "datasource": "Tempo",
+          "title": "Recent Trace Operations (by P95 duration)",
+          "description": "Top operations by P95 latency from span metrics. Use Explore for full trace search.",
+          "type": "table",
+          "gridPos": {
+            "h": 14,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "datasource": "Prometheus",
           "targets": [
             {
               "refId": "A",
-              "datasource": "Tempo",
-              "queryType": "traceql",
-              "query": "{duration > $min_duration}",
-              "limit": 20
+              "expr": "topk(20, histogram_quantile(0.95, sum(rate(traces_traces_duration_milliseconds_bucket{span_kind=~\"SPAN_KIND_SERVER|SPAN_KIND_CLIENT\"}[5m])) by (le, service_name, span_name)))",
+              "format": "table",
+              "instant": true
             }
-          ]
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "le": true
+                },
+                "renameByName": {
+                  "service_name": "Service",
+                  "span_name": "Operation",
+                  "Value": "P95 Duration (ms)"
+                }
+              }
+            },
+            {
+              "id": "sortBy",
+              "options": {
+                "sort": [
+                  {
+                    "field": "P95 Duration (ms)",
+                    "desc": true
+                  }
+                ]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "P95 Duration (ms)"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "ms"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "gradient"
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "continuous-GrYlRd"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "id": 2,
-          "title": "\uD83D\uDEA8 Error Traces",
-          "description": "Traces with errors - click to investigate root cause across services",
-          "type": "traces",
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
-          "datasource": "Tempo",
+          "title": "Error Spans Rate",
+          "description": "Rate of spans with error status code, grouped by service and operation",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 14
+          },
+          "datasource": "Prometheus",
           "targets": [
             {
               "refId": "A",
-              "datasource": "Tempo",
-              "queryType": "traceql",
-              "query": "{status = error}",
-              "limit": 20
+              "expr": "sum(rate(traces_traces_calls_total{status_code=\"STATUS_CODE_ERROR\"}[5m])) by (service_name, span_name)",
+              "legendFormat": "{{service_name}} - {{span_name}}"
             }
-          ]
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 20
+              }
+            }
+          }
         },
         {
           "id": 3,
-          "title": "\uD83D\uDCCA Trace Duration Distribution (P50/P95/P99)",
+          "title": "\ud83d\udcca Trace Duration Distribution (P50/P95/P99)",
           "description": "Span duration percentiles from Tempo metrics - shows latency trends per service",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
-          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 26
+          },
+          "datasource": {
+            "uid": "prometheus",
+            "type": "prometheus"
+          },
           "targets": [
             {
-              "expr": "histogram_quantile(0.50, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name))",
-              "legendFormat": "P50 {{service_name}}"
+              "expr": "histogram_quantile(0.50, sum(rate(traces_traces_duration_milliseconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P50 {{span_name}}"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name))",
-              "legendFormat": "P95 {{service_name}}"
+              "expr": "histogram_quantile(0.95, sum(rate(traces_traces_duration_milliseconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P95 {{span_name}}"
             }
           ],
-          "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } } }
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10
+              }
+            }
+          }
         },
         {
           "id": 4,
-          "title": "\uD83D\uDCC8 Span Rate per Service",
+          "title": "\ud83d\udcc8 Span Rate per Service",
           "description": "Number of spans generated per service - shows activity level",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
-          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 26
+          },
+          "datasource": {
+            "uid": "prometheus",
+            "type": "prometheus"
+          },
           "targets": [
             {
-              "expr": "sum(rate(traces_spanmetrics_calls_total[5m])) by (service_name)",
-              "legendFormat": "{{service_name}}"
+              "expr": "sum(rate(traces_traces_calls_total[5m])) by (span_name)",
+              "legendFormat": "{{span_name}}"
             }
           ],
-          "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 15 } } }
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15
+              }
+            }
+          }
         },
         {
           "id": 5,
-          "title": "\uD83D\uDCCB Logs with Trace Context (Loki)",
+          "title": "\ud83d\udccb Logs with Trace Context (Loki)",
           "description": "Structured logs with trace_id field. Click the TraceID link to jump to the full trace in Tempo.",
           "type": "logs",
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 34 },
-          "datasource": "Loki",
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 34
+          },
+          "datasource": {
+            "uid": "loki",
+            "type": "loki"
+          },
           "targets": [
             {
-              "expr": "{namespace=\"parkir-pintar\"} | json | trace_id != ``",
+              "expr": "{namespace=\"parkir-pintar\"} |= \"trace_id\"",
               "refId": "A"
             }
           ],
@@ -126,14 +257,22 @@ data:
         },
         {
           "id": 6,
-          "title": "\uD83D\uDEA8 Error Logs with Trace Context",
+          "title": "\ud83d\udea8 Error Logs with Trace Context",
           "description": "Error-level logs with trace correlation - click TraceID to see what went wrong across services",
           "type": "logs",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 46 },
-          "datasource": "Loki",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 46
+          },
+          "datasource": {
+            "uid": "loki",
+            "type": "loki"
+          },
           "targets": [
             {
-              "expr": "{namespace=\"parkir-pintar\"} | json | level = `error`",
+              "expr": "{namespace=\"parkir-pintar\"} |~ \"ERR|error|ERROR\"",
               "refId": "A"
             }
           ],
@@ -146,29 +285,49 @@ data:
         },
         {
           "id": 7,
-          "title": "\uD83D\uDDFA\uFE0F Service Graph (from Traces)",
+          "title": "\ud83d\uddfa\ufe0f Service Graph (from Traces)",
           "description": "Auto-generated service dependency graph from trace data. Shows real call paths between services.",
           "type": "nodeGraph",
-          "gridPos": { "h": 14, "w": 24, "x": 0, "y": 56 },
-          "datasource": "Tempo",
+          "gridPos": {
+            "h": 14,
+            "w": 24,
+            "x": 0,
+            "y": 56
+          },
+          "datasource": {
+            "uid": "tempo",
+            "type": "tempo"
+          },
           "targets": [
             {
               "refId": "A",
-              "datasource": "Tempo",
-              "queryType": "serviceMap"
+              "datasource": {
+                "uid": "tempo",
+                "type": "tempo"
+              },
+              "queryType": "serviceMap",
+              "expr": ""
             }
           ]
         },
         {
           "id": 8,
-          "title": "\u23F1\uFE0F Slowest Operations",
+          "title": "\u23f1\ufe0f Slowest Operations",
           "description": "Top slowest span operations - helps identify performance bottlenecks",
           "type": "table",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 70 },
-          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 70
+          },
+          "datasource": {
+            "uid": "prometheus",
+            "type": "prometheus"
+          },
           "targets": [
             {
-              "expr": "topk(20, histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket[5m])) by (le, service_name, span_name)))",
+              "expr": "topk(20, histogram_quantile(0.95, sum(rate(traces_traces_duration_milliseconds_bucket[5m])) by (le, span_name)))",
               "format": "table",
               "instant": true
             }
@@ -177,9 +336,11 @@ data:
             {
               "id": "organize",
               "options": {
-                "excludeByName": { "Time": true, "le": true },
+                "excludeByName": {
+                  "Time": true,
+                  "le": true
+                },
                 "renameByName": {
-                  "service_name": "Service",
                   "span_name": "Operation",
                   "Value": "P95 Latency (ms)"
                 }
@@ -188,19 +349,44 @@ data:
             {
               "id": "sortBy",
               "options": {
-                "sort": [{ "field": "P95 Latency (ms)", "desc": true }]
+                "sort": [
+                  {
+                    "field": "P95 Latency (ms)",
+                    "desc": true
+                  }
+                ]
               }
             }
           ],
           "fieldConfig": {
             "overrides": [
               {
-                "matcher": { "id": "byName", "options": "P95 Latency (ms)" },
+                "matcher": {
+                  "id": "byName",
+                  "options": "P95 Latency (ms)"
+                },
                 "properties": [
-                  { "id": "unit", "value": "ms" },
-                  { "id": "decimals", "value": 1 },
-                  { "id": "custom.cellOptions", "value": { "type": "color-background", "mode": "gradient" } },
-                  { "id": "color", "value": { "mode": "continuous-GrYlRd" } }
+                  {
+                    "id": "unit",
+                    "value": "ms"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "gradient"
+                    }
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "continuous-GrYlRd"
+                    }
+                  }
                 ]
               }
             ]

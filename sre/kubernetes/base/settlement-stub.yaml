@@ -34,6 +34,21 @@ data:
         }
       }
     }
+  notification-send.json: |
+    {
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/notify/v1/notifications"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "status": "delivered",
+          "message_id": "stub-notif-00000000-0000-0000-0000-000000000001"
+        }
+      }
+    }
 ---
 apiVersion: apps/v1
 kind: Deployment

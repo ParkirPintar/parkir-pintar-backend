@@ -13,6 +13,7 @@ data:
   RESERVATION_ADDR: "reservation-service.parkir-pintar.svc.cluster.local:50051"
   PRESENCE_ADDR: "presence-service.parkir-pintar.svc.cluster.local:50051"
   SETTLEMENT_URL: "http://settlement-stub.parkir-pintar.svc.cluster.local:8080"
+  NOTIF_PROVIDER_URL: "http://settlement-stub.parkir-pintar.svc.cluster.local:8080/notify"
 ---
 apiVersion: v1
 kind: Secret

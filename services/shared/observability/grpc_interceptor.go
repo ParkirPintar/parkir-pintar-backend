@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -66,13 +67,19 @@ func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	propagator := otel.GetTextMapPropagator()
 
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		// Derive peer.service from target address for service graph
+		target := cc.Target()
+		peerService := extractPeerService(target)
+
 		// Start client span
 		ctx, span := tracer.Start(ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(
 				attribute.String("rpc.system", "grpc"),
 				attribute.String("rpc.method", method),
-				attribute.String("rpc.target", cc.Target()),
+				attribute.String("rpc.target", target),
+				attribute.String("peer.service", peerService),
+				attribute.String("server.address", target),
 			),
 		)
 		defer span.End()
@@ -128,4 +135,30 @@ func (mc metadataCarrier) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+// extractPeerService derives a human-readable service name from a gRPC target address.
+// It handles formats like:
+//   - "service-name.namespace.svc.cluster.local:50051" -> "service-name"
+//   - "service-name:50051" -> "service-name"
+//   - "10.0.1.2:50051" -> "10.0.1.2:50051" (unchanged for raw IPs)
+func extractPeerService(target string) string {
+	// Remove dns:/// prefix if present
+	target = strings.TrimPrefix(target, "dns:///")
+
+	// Split host:port
+	host := target
+	if idx := strings.LastIndex(target, ":"); idx > 0 {
+		host = target[:idx]
+	}
+
+	// If it's a Kubernetes DNS name (contains dots), extract the service name
+	if strings.Contains(host, ".") {
+		parts := strings.Split(host, ".")
+		// e.g. "billing-service.parkir-pintar.svc.cluster.local" -> "billing-service"
+		return parts[0]
+	}
+
+	// If it's just a service name without dots, return as-is
+	return host
 }

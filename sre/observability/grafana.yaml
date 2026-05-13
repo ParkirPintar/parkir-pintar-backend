@@ -36,6 +36,15 @@ data:
         access: proxy
         url: http://tempo:3200
         jsonData:
+          streamingEnabled:
+            search: true
+            traceqlSearch: true
+          search:
+            filters: []
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: "-1h"
+            spanEndTimeShift: "1h"
           tracesToLogsV2:
             datasourceUid: loki
             spanStartTimeShift: "-1h"

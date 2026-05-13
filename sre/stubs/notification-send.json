@@ -1,0 +1,19 @@
+{
+    "request": {
+        "method": "POST",
+        "urlPathPattern": "/notify/v1/notifications"
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "status": "delivered",
+            "message_id": "{{randomValue type='UUID'}}"
+        },
+        "transformers": [
+            "response-template"
+        ]
+    }
+}

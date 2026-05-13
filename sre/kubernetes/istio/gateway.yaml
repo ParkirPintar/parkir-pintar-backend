@@ -12,16 +12,7 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - "*"
-    - port:
-        number: 443
-        name: https
-        protocol: HTTPS
-      tls:
-        mode: SIMPLE
-        credentialName: parkirpintar-tls
-      hosts:
-        - "*"
+        - "parkir-pintar.pondongopi.biz.id"
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -30,7 +21,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - "*"
+    - "parkir-pintar.pondongopi.biz.id"
   gateways:
     - parkirpintar-gateway
   http:

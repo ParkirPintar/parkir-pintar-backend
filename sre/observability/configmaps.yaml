@@ -89,7 +89,9 @@ data:
       filesystem:
         directory: /loki/chunks
     limits_config:
-      retention_period: 7d
+      retention_period: 3d
+      ingestion_rate_mb: 10
+      ingestion_burst_size_mb: 20
     compactor:
       working_directory: /loki/compactor
       shared_store: filesystem
@@ -112,6 +114,28 @@ data:
               endpoint: 0.0.0.0:4317
             http:
               endpoint: 0.0.0.0:4318
+    metrics_generator:
+      registry:
+        external_labels:
+          source: tempo
+      storage:
+        path: /var/tempo/generator/wal
+        remote_write:
+          - url: http://prometheus:9090/api/v1/write
+            send_exemplars: true
+      processor:
+        service_graphs:
+          dimensions:
+            - service.namespace
+        span_metrics:
+          dimensions:
+            - service.namespace
+    overrides:
+      defaults:
+        metrics_generator:
+          processors:
+            - service-graphs
+            - span-metrics
     storage:
       trace:
         backend: local

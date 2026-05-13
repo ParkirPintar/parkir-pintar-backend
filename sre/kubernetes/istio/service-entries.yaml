@@ -1,0 +1,166 @@
+# ServiceEntry resources register external services (databases, caches, message queues)
+# in the Istio mesh so that traffic to them is tracked, measurable, and visible
+# in the service topology (Kiali, Grafana dashboards).
+#
+# This enables:
+# - Istio metrics (istio_requests_total, istio_tcp_*) for external service traffic
+# - Visibility in service graph / topology dashboards
+# - Circuit breaker and timeout policies via DestinationRule
+# - mTLS origination if needed
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: postgres-reservation
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar-reservation.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: postgres-reservation-replica
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar-reservation-replica.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: postgres-billing
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar-billing.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: postgres-payment
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar-payment.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: postgres-analytics
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar-analytics.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: redis-elasticache
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - parkirpintar.hpendq.0001.apse1.cache.amazonaws.com
+  location: MESH_EXTERNAL
+  ports:
+    - number: 6379
+      name: tcp-redis
+      protocol: TCP
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: rabbitmq-amazonmq
+  namespace: parkir-pintar
+spec:
+  hosts:
+    - b-51abc724-0dbf-41c6-9743-642b71dde938.mq.ap-southeast-1.on.aws
+  location: MESH_EXTERNAL
+  ports:
+    - number: 5671
+      name: tcp-amqps
+      protocol: TCP
+  resolution: DNS
+---
+# DestinationRules for external services — enables connection pooling and outlier detection
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: postgres-rds
+  namespace: parkir-pintar
+spec:
+  host: "*.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+        connectTimeout: 5s
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: redis-elasticache
+  namespace: parkir-pintar
+spec:
+  host: parkirpintar.hpendq.0001.apse1.cache.amazonaws.com
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 3s
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: rabbitmq-amazonmq
+  namespace: parkir-pintar
+spec:
+  host: b-51abc724-0dbf-41c6-9743-642b71dde938.mq.ap-southeast-1.on.aws
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 30
+        connectTimeout: 5s
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
