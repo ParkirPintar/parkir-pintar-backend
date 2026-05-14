@@ -88,6 +88,15 @@ data:
         secureJsonData:
           password: $__env{ANALYTICS_DB_PASSWORD}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-env
+  namespace: monitoring
+data:
+  GF_SERVER_ROOT_URL: "https://parkir-pintar.pondongopi.biz.id/monitor"
+  GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

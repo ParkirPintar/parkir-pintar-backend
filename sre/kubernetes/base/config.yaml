@@ -4,8 +4,8 @@ metadata:
   name: parkirpintar-config
   namespace: parkir-pintar
 data:
-  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.monitoring.svc.cluster.local:4317"
-  OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.monitoring.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   GRPC_PORT: "50051"
   PAYMENT_ADDR: "payment-service.parkir-pintar.svc.cluster.local:50051"
   BILLING_ADDR: "billing-service.parkir-pintar.svc.cluster.local:50051"
@@ -14,6 +14,12 @@ data:
   PRESENCE_ADDR: "presence-service.parkir-pintar.svc.cluster.local:50051"
   SETTLEMENT_URL: "http://settlement-stub.parkir-pintar.svc.cluster.local:8080"
   NOTIF_PROVIDER_URL: "http://settlement-stub.parkir-pintar.svc.cluster.local:8080/notify"
+---
+# NOTE: Secrets below use placeholder values.
+# Real values are managed via terraform output and applied manually:
+#   kubectl create secret generic <name> -n parkir-pintar --from-literal=KEY=VALUE
+# NEVER apply this file directly — it will overwrite real secrets with placeholders.
+# See: sre/terraform/outputs.tf for actual values.
 ---
 apiVersion: v1
 kind: Secret
@@ -29,7 +35,7 @@ stringData:
   DB_PASSWORD: "<DB_PASSWORD>"
   DB_SSLMODE: "require"
   DB_REPLICA_HOST: "<RDS_RESERVATION_REPLICA_HOST>"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_RESERVATION_HOST>:5432/reservation?sslmode=require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_RESERVATION_HOST>:5432/reservation?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -44,7 +50,7 @@ stringData:
   DB_USER: "<DB_USERNAME>"
   DB_PASSWORD: "<DB_PASSWORD>"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_BILLING_HOST>:5432/billing?sslmode=require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_BILLING_HOST>:5432/billing?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -59,7 +65,7 @@ stringData:
   DB_USER: "<DB_USERNAME>"
   DB_PASSWORD: "<DB_PASSWORD>"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_PAYMENT_HOST>:5432/payment?sslmode=require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_PAYMENT_HOST>:5432/payment?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -74,7 +80,7 @@ stringData:
   DB_USER: "<DB_USERNAME>"
   DB_PASSWORD: "<DB_PASSWORD>"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD>@<RDS_ANALYTICS_HOST>:5432/analytics?sslmode=require"
+  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_ANALYTICS_HOST>:5432/analytics?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -93,4 +99,4 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  RABBITMQ_URL: "amqps://<MQ_USERNAME>:<MQ_PASSWORD>@<AMAZON_MQ_HOST>:5671"
+  RABBITMQ_URL: "amqps://<MQ_USERNAME>:<MQ_PASSWORD_URLENCODED>@<AMAZON_MQ_HOST>:5671"

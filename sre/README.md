@@ -451,10 +451,10 @@ Default credentials ada di `secrets.yaml` (`grafana-secret` → `admin-password`
 ### Flow Data
 
 ```
-Service (zerolog + OTel SDK)
+Service (zerolog + OTel SDK, HTTP/protobuf)
   │
-  ├── traces  → OTel Collector :4317 → Tempo
-  ├── metrics → OTel Collector :4317 → Prometheus (via :8889)
+  ├── traces  → OTel Collector :4318 (HTTP) → Tempo
+  ├── metrics → OTel Collector :4318 (HTTP) → Prometheus (via :8889)
   └── logs    → stdout → Promtail → Loki
                                         │
                                     Grafana (unified dashboard)

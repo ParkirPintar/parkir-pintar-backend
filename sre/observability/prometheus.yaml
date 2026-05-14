@@ -24,6 +24,7 @@ spec:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.retention.time=7d
             - --storage.tsdb.path=/prometheus
+            - --web.enable-remote-write-receiver
           ports:
             - containerPort: 9090
           volumeMounts:

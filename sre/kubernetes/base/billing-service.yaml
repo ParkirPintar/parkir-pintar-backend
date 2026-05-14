@@ -26,6 +26,11 @@ spec:
               name: grpc
             - containerPort: 8080
               name: http-rest
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "billing-service"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=parkir-pintar"
           envFrom:
             - configMapRef:
                 name: parkirpintar-config
