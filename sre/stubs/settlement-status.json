@@ -1,15 +1,38 @@
-{
-    "request": {
-        "method": "GET",
-        "urlPathPattern": "/v1/settlement/.*"
-    },
-    "response": {
-        "status": 200,
-        "headers": {
-            "Content-Type": "application/json"
+[
+    {
+        "scenarioName": "payment-settlement",
+        "requiredScenarioState": "Started",
+        "newScenarioState": "driver_paid",
+        "request": {
+            "method": "GET",
+            "urlPathPattern": "/v1/settlement/.*"
         },
-        "jsonBody": {
-            "status": "PAID"
+        "response": {
+            "status": 200,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "jsonBody": {
+                "status": "PENDING"
+            }
+        }
+    },
+    {
+        "scenarioName": "payment-settlement",
+        "requiredScenarioState": "driver_paid",
+        "request": {
+            "method": "GET",
+            "urlPathPattern": "/v1/settlement/.*"
+        },
+        "response": {
+            "status": 200,
+            "fixedDelayMilliseconds": 2000,
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "jsonBody": {
+                "status": "PAID"
+            }
         }
     }
-}
+]

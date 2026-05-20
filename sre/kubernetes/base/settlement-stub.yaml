@@ -20,14 +20,34 @@ data:
         }
       }
     }
-  settlement-status.json: |
+  settlement-status-pending.json: |
     {
+      "scenarioName": "payment-settlement",
+      "requiredScenarioState": "Started",
+      "newScenarioState": "driver_paid",
       "request": {
         "method": "GET",
         "urlPathPattern": "/v1/settlement/.*"
       },
       "response": {
         "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "status": "PENDING"
+        }
+      }
+    }
+  settlement-status-paid.json: |
+    {
+      "scenarioName": "payment-settlement",
+      "requiredScenarioState": "driver_paid",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/v1/settlement/.*"
+      },
+      "response": {
+        "status": 200,
+        "fixedDelayMilliseconds": 2000,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": {
           "status": "PAID"
