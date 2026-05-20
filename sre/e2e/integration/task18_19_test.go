@@ -16,11 +16,10 @@ import (
 )
 
 func TestTask18_CancelFree(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T18"), "CAR")
+	ctx := testContext(t)
 
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Reserved: id=%s spot=%s", reservationID, spotID)
@@ -52,12 +51,11 @@ func TestTask18_CancelFree(t *testing.T) {
 }
 
 func TestTask19_CancelWithFee(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 	db := connectDB(t, "DATABASE_URL", "postgres://parkir:parkir@localhost:5433/reservation_db?sslmode=disable")
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T19"), "CAR")
+	ctx := testContext(t)
 
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Reserved: id=%s spot=%s", reservationID, spotID)

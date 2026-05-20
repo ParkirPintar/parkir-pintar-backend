@@ -568,9 +568,10 @@
         },
         {
             "name": "8. Checkout Payment",
+            "description": "Simulates driver scanning QR and paying. First poll returns PENDING (driver hasn't paid yet), second poll returns PAID (after 2s delay simulating payment processing).",
             "item": [
                 {
-                    "name": "8a. Get Checkout Payment Status",
+                    "name": "8a. Payment Status (expect PENDING — driver hasn't scanned QR yet)",
                     "event": [
                         {
                             "listen": "test",
@@ -584,8 +585,58 @@
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "if (pm.response.code === 200) {",
                                     "  const body = pm.response.json();",
-                                    "  pm.test('Valid status', () => pm.expect(body.status).to.be.oneOf(['PENDING', 'PAID', 'FAILED']));",
-                                    "  console.log('Payment status: ' + body.status);",
+                                    "  pm.test('Valid payment status (PENDING or PAID)', () => pm.expect(body.status).to.be.oneOf(['PENDING', 'PAID']));",
+                                    "  pm.environment.set('first_payment_status', body.status);",
+                                    "  console.log('Payment status (first poll): ' + body.status);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/v1/payments/{{payment_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "v1",
+                                "payments",
+                                "{{payment_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "8b. Payment Status (expect PAID — driver scanned QR and paid)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Simulate delay: driver takes ~3 seconds to scan QR and confirm payment",
+                                    "const delay = 3000;",
+                                    "const start = Date.now();",
+                                    "while (Date.now() - start < delay) { /* busy wait */ }"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const paymentId = pm.environment.get('payment_id');",
+                                    "if (!paymentId) {",
+                                    "  pm.test('Skipped (no payment_id)', () => true);",
+                                    "  return;",
+                                    "}",
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "if (pm.response.code === 200) {",
+                                    "  const body = pm.response.json();",
+                                    "  pm.test('Status is PAID (driver completed payment)', () => pm.expect(body.status).to.eql('PAID'));",
+                                    "  console.log('Payment status (after scan): ' + body.status);",
+                                    "  console.log('Payment confirmed — gate can open');",
                                     "}"
                                 ]
                             }

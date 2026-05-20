@@ -13,21 +13,20 @@ import (
 	"time"
 
 	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
-	searchpb "github.com/parkir-pintar/search/pkg/proto"
 	billingpb "github.com/parkir-pintar/billing/pkg/proto"
+	searchpb "github.com/parkir-pintar/search/pkg/proto"
 	"google.golang.org/grpc/status"
 )
 
 // ─── Task 12: Happy path — system-assigned ─────────────────────────
-// Login → Availability → Reserve → Check-in → Checkout → Payment
+// Availability → Reserve → Check-in → Checkout → Payment
 func TestTask12_HappyPathSystemAssigned(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	searchConn := dialGRPC(t, envOr("SEARCH_ADDR", "localhost:50055"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T12"), "CAR")
+	ctx := testContext(t)
 
 	// Step 1: Check availability
 	availResp := &searchpb.GetAvailabilityResponse{}
@@ -79,15 +78,14 @@ func TestTask12_HappyPathSystemAssigned(t *testing.T) {
 }
 
 // ─── Task 13: Happy path — user-selected ───────────────────────────
-// Login → Availability → Hold → Reserve → Check-in → Checkout → Payment
+// Availability → Hold → Reserve → Check-in → Checkout → Payment
 func TestTask13_HappyPathUserSelected(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	searchConn := dialGRPC(t, envOr("SEARCH_ADDR", "localhost:50055"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T13"), "CAR")
+	ctx := testContext(t)
 
 	// Step 1: Check availability on floor 2
 	availResp := &searchpb.GetAvailabilityResponse{}
@@ -137,22 +135,20 @@ func TestTask13_HappyPathUserSelected(t *testing.T) {
 }
 
 // ─── Task 14: Double-book prevention ───────────────────────────────
-// Two concurrent reservations on same spot → second gets 409
+// Two concurrent reservations on same spot → second gets rejected
 func TestTask14_DoubleBookPrevention(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 
-	ctxA := registerAndLogin(t, userConn, uniquePlate("T14A"), "CAR")
-	ctxB := registerAndLogin(t, userConn, uniquePlate("T14B"), "CAR")
+	ctx := testContext(t)
 
 	// Driver A reserves a spot
-	reservationID, spotID := createReservationAndWait(t, resConn, ctxA, rdb, "SYSTEM_ASSIGNED", "CAR", "")
+	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Driver A reserved: id=%s spot=%s", reservationID, spotID)
 
 	// Driver B tries to reserve the same spot (user-selected)
 	idemKey := uniquePlate("t14b")
-	err := resConn.Invoke(ctxB, "/reservation.ReservationService/CreateReservation",
+	err := resConn.Invoke(ctx, "/reservation.ReservationService/CreateReservation",
 		&reservationpb.CreateReservationRequest{
 			Mode: "USER_SELECTED", VehicleType: "CAR", SpotId: spotID, IdempotencyKey: idemKey,
 		}, &reservationpb.ReservationResponse{})
@@ -170,7 +166,7 @@ func TestTask14_DoubleBookPrevention(t *testing.T) {
 	} else {
 		// If it was processed, verify the reservation failed
 		resp := &reservationpb.ReservationResponse{}
-		resConn.Invoke(ctxB, "/reservation.ReservationService/GetReservation",
+		resConn.Invoke(ctx, "/reservation.ReservationService/GetReservation",
 			&reservationpb.GetReservationRequest{ReservationId: id}, resp)
 		if resp.SpotId == spotID {
 			t.Errorf("✗ Double-book: both drivers got spot %s", spotID)

@@ -11,11 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
-	userpb "github.com/parkir-pintar/user/pkg/proto"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 func envOr(key, def string) string {
@@ -52,32 +50,19 @@ func connectDB(t *testing.T, urlKey, def string) *pgx.Conn {
 	return conn
 }
 
-// registerAndLogin creates a driver and returns a context with JWT metadata.
-func registerAndLogin(t *testing.T, userConn *grpc.ClientConn, plate, vtype string) context.Context {
+// testContext returns a plain context (no auth — driver_id is passed in request fields).
+func testContext(t *testing.T) context.Context {
 	t.Helper()
-	ctx := context.Background()
-
-	regReq := &userpb.RegisterRequest{
-		LicensePlate: plate, VehicleType: vtype,
-		Password: "test1234", Name: "Test Driver",
-	}
-	regResp := &userpb.UserResponse{}
-	if err := userConn.Invoke(ctx, "/proto.UserService/Register", regReq, regResp); err != nil {
-		t.Logf("register: %v (may already exist)", err)
-	}
-
-	loginReq := &userpb.LoginRequest{LicensePlate: plate, VehicleType: vtype, Password: "test1234"}
-	loginResp := &userpb.LoginResponse{}
-	if err := userConn.Invoke(ctx, "/proto.UserService/Login", loginReq, loginResp); err != nil {
-		t.Fatalf("login failed: %v", err)
-	}
-
-	md := metadata.Pairs("authorization", "Bearer "+loginResp.AccessToken)
-	return metadata.NewOutgoingContext(ctx, md)
+	return context.Background()
 }
 
-// uniquePlate returns a unique license plate for test isolation.
+// uniquePlate returns a unique string for test isolation.
 func uniquePlate(prefix string) string {
+	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+}
+
+// uniqueDriverID returns a unique driver_id UUID-like string for test isolation.
+func uniqueDriverID(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
 }
 

@@ -11,20 +11,19 @@ import (
 	"testing"
 	"time"
 
-	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 	billingpb "github.com/parkir-pintar/billing/pkg/proto"
+	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 )
 
 // ─── Task 20: Extended stay — no overstay penalty ──────────────────
 // Long session → checkout → only standard hourly rate, no extra penalty
 func TestTask20_ExtendedStayNoPenalty(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	rdb := newRedis(t)
 	db := connectDB(t, "BILLING_DATABASE_URL", "postgres://parkir:parkir@localhost:5433/billing_db?sslmode=disable")
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T20"), "CAR")
+	ctx := testContext(t)
 
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Reserved: id=%s spot=%s", reservationID, spotID)
@@ -38,9 +37,9 @@ func TestTask20_ExtendedStayNoPenalty(t *testing.T) {
 
 	// Simulate 3-hour session by backdating session_start (same day, no midnight crossing)
 	_, err := db.Exec(context.Background(),
-		"UPDATE billing_sessions SET session_start = now() - interval '3 hours' WHERE reservation_id = $1", reservationID)
+		"UPDATE billing_records SET session_start = now() - interval '3 hours' WHERE reservation_id = $1", reservationID)
 	if err != nil {
-		t.Logf("  billing_sessions update: %v (may not exist yet, continuing)", err)
+		t.Logf("  billing_records update: %v (continuing)", err)
 	}
 
 	time.Sleep(500 * time.Millisecond)
@@ -68,13 +67,12 @@ func TestTask20_ExtendedStayNoPenalty(t *testing.T) {
 // ─── Task 21: Overnight fee ────────────────────────────────────────
 // Session crosses midnight → overnight_fee=20000 in invoice
 func TestTask21_OvernightFee(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	rdb := newRedis(t)
 	db := connectDB(t, "BILLING_DATABASE_URL", "postgres://parkir:parkir@localhost:5433/billing_db?sslmode=disable")
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T21"), "CAR")
+	ctx := testContext(t)
 
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Reserved: id=%s spot=%s", reservationID, spotID)
@@ -89,9 +87,9 @@ func TestTask21_OvernightFee(t *testing.T) {
 	// Simulate overnight: set session_start to yesterday 23:00
 	// This ensures the session crosses midnight
 	_, err := db.Exec(context.Background(),
-		`UPDATE billing_sessions SET session_start = (date_trunc('day', now()) - interval '1 hour') WHERE reservation_id = $1`, reservationID)
+		`UPDATE billing_records SET session_start = (date_trunc('day', now()) - interval '1 hour') WHERE reservation_id = $1`, reservationID)
 	if err != nil {
-		t.Logf("  billing_sessions update: %v (continuing)", err)
+		t.Logf("  billing_records update: %v (continuing)", err)
 	}
 
 	time.Sleep(500 * time.Millisecond)

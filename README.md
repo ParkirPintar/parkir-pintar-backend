@@ -66,6 +66,7 @@ Sistem ini dirancang sebagai **mini app di dalam super app** atau sebagai standa
 17. **No JWT/auth service**: Sistem ini tidak memiliki User Service atau JWT authentication — autentikasi di-handle oleh super app yang mengintegrasikan ParkirPintar sebagai mini app
 18. **Idempotency keys** di-pass via gRPC metadata headers
 19. **Payment gateway**: Menggunakan engine Pondo Ngopi untuk QRIS payment
+20. **Payment settlement** menggunakan WireMock stub dengan stateful scenario — poll pertama return `PENDING` (driver belum scan QR), poll kedua return `PAID` setelah delay 2 detik (simulate driver scan & bayar). Di production, ini akan diganti dengan real callback/webhook dari payment gateway
 
 ---
 
@@ -1528,32 +1529,32 @@ docker run -p 8080:8080 -e SWAGGER_JSON=/spec/swagger.yaml \
 
 ```bash
 npm install -g newman
+npm install -g newman-reporter-htmlextra  # for HTML reports
 ```
 
 ### Quick Run
 
 ```bash
-# Run full E2E suite against production
-newman run sre/e2e/parkir-pintar.postman_collection.json \
-  -e sre/e2e/parkir-pintar.postman_environment.json
-
-# Run against custom environment
+# Run full E2E suite (recommended: with 2s delay for async queue processing)
 newman run sre/e2e/parkir-pintar.postman_collection.json \
   -e sre/e2e/parkir-pintar.postman_environment.json \
-  --env-var base_url=http://localhost:8080
+  --delay-request 2000
 
 # Run with HTML report
-npm install -g newman-reporter-htmlextra
 newman run sre/e2e/parkir-pintar.postman_collection.json \
   -e sre/e2e/parkir-pintar.postman_environment.json \
+  --delay-request 2000 \
   --reporters cli,htmlextra \
-  --reporter-htmlextra-export sre/e2e/report.html
+  --reporter-htmlextra-export sre/e2e/e2e-report.html
 
-# Run specific folder only
+# Run against local environment
 newman run sre/e2e/parkir-pintar.postman_collection.json \
   -e sre/e2e/parkir-pintar.postman_environment.json \
-  --folder "1. Search"
+  --env-var base_url=http://localhost:8000 \
+  --delay-request 2000
 ```
+
+> **Note:** `--delay-request 2000` is recommended because reservations are processed asynchronously via RabbitMQ queue. The delay gives the queue worker time to process before the next request polls for the result.
 
 ### Architecture
 
@@ -1587,19 +1588,24 @@ Kong routes REST requests directly to each service's HTTP endpoint based on path
 
 The Postman collection runs sequentially — variables are chained between steps. It covers both USER_SELECTED and SYSTEM_ASSIGNED reservation modes.
 
+**Payment Settlement Simulation:**
+The settlement stub uses WireMock Scenarios to simulate realistic payment flow:
+- First `GET /v1/payments/{id}` → returns `PENDING` (driver hasn't scanned QR yet)
+- Second `GET /v1/payments/{id}` → returns `PAID` after 2s delay (simulates driver scanning QR and confirming payment)
+
 | # | Folder | Scenario | Assertions |
 |---|--------|----------|------------|
 | 1 | Search | Get availability per floor + first available spot | Status 200, spots array, total_available > 0 |
 | 2 | Hold Spot | Hold a spot (60s TTL) + double-hold conflict (409) | Status 200 + 409 |
-| 3 | Reservation (USER_SELECTED) | Hold → Create USER_SELECTED + idempotency check | Status 201, booking_fee=5000, same key → same result |
-| 4 | Booking Fee Payment | Get booking fee payment status (deposit) | Status 200, amount=5000, status ∈ {PENDING, PAID} |
+| 3 | Reservation (USER_SELECTED) | Hold → Create USER_SELECTED + idempotency + async poll | Status 201, booking_fee=5000, reservation_id resolved |
+| 4 | Booking Fee Payment | Get booking fee payment status (deposit) | Status 200, amount=5000 |
 | 5 | Check-in | Check-in at correct spot via Presence | Status 200, status=ACTIVE, wrong_spot=false |
 | 6 | Location | Update driver location | Status 200, event field present |
 | 7 | Checkout | Generate invoice + QRIS QR code (booking fee deducted as deposit) | invoice_id, payment_id, total ≥ 0, status=PENDING |
-| 8 | Checkout Payment | Get checkout payment status | status ∈ {PENDING, PAID, FAILED} |
+| 8 | Checkout Payment | Poll payment: PENDING → (3s delay) → PAID | First poll=PENDING, second poll=PAID |
 | 9 | Cancel | Create + cancel reservation (free within 2 min) | status=CANCELLED, cancellation_fee=0 |
 | 10 | Exit Gate | CheckOut (open gate) | status=CHECKOUT_INITIATED |
-| 11 | System-Assigned Flow | Reserve SYSTEM_ASSIGNED → Check-in → Checkout → Payment | Full happy path without hold step |
+| 11 | System-Assigned Flow | Reserve SYSTEM_ASSIGNED → Check-in → Checkout → Payment PAID | Full happy path without hold step |
 
 ### Postman Import
 

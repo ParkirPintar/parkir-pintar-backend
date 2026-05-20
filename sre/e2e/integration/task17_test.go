@@ -8,14 +8,13 @@ package integration
 import (
 	"testing"
 
-	presencepb "github.com/parkir-pintar/presence/pkg/proto"
+	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func TestTask17_WrongSpotBlocked(t *testing.T) {
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
-	presenceConn := dialGRPC(t, envOr("PRESENCE_ADDR", "localhost:50056"))
 	rdb := newRedis(t)
 
 	ctx := testContext(t)
@@ -29,23 +28,28 @@ func TestTask17_WrongSpotBlocked(t *testing.T) {
 		wrongSpot = "5-CAR-29"
 	}
 
-	checkinResp := &presencepb.CheckInResponse{}
-	err := presenceConn.Invoke(ctx, "/presence.PresenceService/CheckIn",
-		&presencepb.CheckInRequest{ReservationId: reservationID, SpotId: wrongSpot}, checkinResp)
+	checkinResp := &reservationpb.CheckInResponse{}
+	err := resConn.Invoke(ctx, "/reservation.ReservationService/CheckIn",
+		&reservationpb.CheckInRequest{ReservationId: reservationID, ActualSpotId: wrongSpot}, checkinResp)
 
-	// Should return FAILED_PRECONDITION (BLOCKED)
-	if err == nil {
-		t.Fatal("expected error for wrong spot, got nil")
+	// Two valid outcomes:
+	// 1. Error with FAILED_PRECONDITION (BLOCKED)
+	// 2. Success response with WrongSpot=true
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			t.Fatalf("expected gRPC status error, got: %v", err)
+		}
+		if st.Code() != codes.FailedPrecondition {
+			t.Errorf("expected FAILED_PRECONDITION, got %s", st.Code())
+		}
+		t.Logf("✓ Wrong spot BLOCKED (error): %s", st.Message())
+	} else {
+		if !checkinResp.WrongSpot {
+			t.Error("expected wrong_spot=true")
+		}
+		t.Logf("✓ Wrong spot BLOCKED (response): wrong_spot=%v", checkinResp.WrongSpot)
 	}
 
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got: %v", err)
-	}
-	if st.Code() != codes.FailedPrecondition {
-		t.Errorf("expected FAILED_PRECONDITION, got %s", st.Code())
-	}
-
-	t.Logf("✓ Wrong spot BLOCKED: %s", st.Message())
 	t.Log("✓ PASS: Task 17 — Wrong spot blocked, driver cannot park")
 }

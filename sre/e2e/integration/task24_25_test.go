@@ -11,18 +11,17 @@ import (
 	"testing"
 	"time"
 
-	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 	billingpb "github.com/parkir-pintar/billing/pkg/proto"
+	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 )
 
 // ─── Task 24: Idempotency — duplicate reservation ──────────────────
 // Same Idempotency-Key twice → same reservation_id returned
 func TestTask24_IdempotentReservation(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T24"), "CAR")
+	ctx := testContext(t)
 
 	idemKey := uniquePlate("idem-t24")
 
@@ -74,12 +73,11 @@ func TestTask24_IdempotentReservation(t *testing.T) {
 // ─── Task 25: Idempotency — duplicate checkout ─────────────────────
 // Same Idempotency-Key twice → same invoice_id returned
 func TestTask25_IdempotentCheckout(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T25"), "CAR")
+	ctx := testContext(t)
 
 	// Reserve + check-in
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")

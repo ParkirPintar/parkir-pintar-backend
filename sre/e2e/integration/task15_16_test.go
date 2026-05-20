@@ -19,26 +19,24 @@ import (
 // ─── Task 15: Spot contention / hold queue ─────────────────────────
 // Driver A holds spot → Driver B tries same spot → 409 SPOT_HELD
 func TestTask15_SpotContention(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 
-	ctxA := registerAndLogin(t, userConn, uniquePlate("T15A"), "CAR")
-	ctxB := registerAndLogin(t, userConn, uniquePlate("T15B"), "CAR")
+	ctx := testContext(t)
 
 	spotID := "1-CAR-01"
 	rdb.Del(context.Background(), "hold:"+spotID)
 
 	// Driver A holds the spot — should succeed
 	holdResp := &reservationpb.HoldSpotResponse{}
-	if err := resConn.Invoke(ctxA, "/reservation.ReservationService/HoldSpot",
+	if err := resConn.Invoke(ctx, "/reservation.ReservationService/HoldSpot",
 		&reservationpb.HoldSpotRequest{SpotId: spotID}, holdResp); err != nil {
 		t.Fatalf("Driver A hold failed: %v", err)
 	}
 	t.Logf("✓ Driver A hold OK: spot=%s held_until=%s", holdResp.SpotId, holdResp.HeldUntil)
 
 	// Driver B tries same spot — should fail with AlreadyExists
-	err := resConn.Invoke(ctxB, "/reservation.ReservationService/HoldSpot",
+	err := resConn.Invoke(ctx, "/reservation.ReservationService/HoldSpot",
 		&reservationpb.HoldSpotRequest{SpotId: spotID}, &reservationpb.HoldSpotResponse{})
 	if err == nil {
 		t.Fatal("✗ Driver B hold should have failed")
@@ -57,12 +55,11 @@ func TestTask15_SpotContention(t *testing.T) {
 // ─── Task 16: Reservation expiry (no-show) ─────────────────────────
 // Reserve → wait TTL → GET reservation → status=EXPIRED, spot released
 func TestTask16_ReservationExpiry(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	rdb := newRedis(t)
 	db := connectDB(t, "DATABASE_URL", "postgres://parkir:parkir@localhost:5433/reservation_db?sslmode=disable")
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T16"), "CAR")
+	ctx := testContext(t)
 
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
 	t.Logf("✓ Reservation created: id=%s spot=%s", reservationID, spotID)

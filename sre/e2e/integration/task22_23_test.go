@@ -10,21 +10,20 @@ import (
 	"testing"
 	"time"
 
-	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 	billingpb "github.com/parkir-pintar/billing/pkg/proto"
 	paymentpb "github.com/parkir-pintar/payment/pkg/proto"
+	reservationpb "github.com/parkir-pintar/reservation/pkg/proto"
 )
 
 // ─── Task 22: Payment success (QRIS) ──────────────────────────────
 // Checkout → poll payment → status=PAID → reservation=COMPLETED
 func TestTask22_PaymentSuccess(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	paymentConn := dialGRPC(t, envOr("PAYMENT_ADDR", "localhost:50054"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T22"), "CAR")
+	ctx := testContext(t)
 
 	// Reserve + check-in
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
@@ -48,7 +47,7 @@ func TestTask22_PaymentSuccess(t *testing.T) {
 		t.Fatal("expected non-empty payment_id")
 	}
 
-	// Poll payment status — settlement stub returns PAID
+	// Poll payment status — settlement stub returns PENDING first, then PAID
 	var finalStatus string
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
@@ -78,15 +77,14 @@ func TestTask22_PaymentSuccess(t *testing.T) {
 }
 
 // ─── Task 23: Payment failure + retry ──────────────────────────────
-// Checkout → poll payment → status=FAILED → retry → new QR code
+// Checkout → retry payment → new QR code generated
 func TestTask23_PaymentRetry(t *testing.T) {
-	userConn := dialGRPC(t, envOr("USER_ADDR", "localhost:50051"))
 	resConn := dialGRPC(t, envOr("RESERVATION_ADDR", "localhost:50052"))
 	billingConn := dialGRPC(t, envOr("BILLING_ADDR", "localhost:50053"))
 	paymentConn := dialGRPC(t, envOr("PAYMENT_ADDR", "localhost:50054"))
 	rdb := newRedis(t)
 
-	ctx := registerAndLogin(t, userConn, uniquePlate("T23"), "CAR")
+	ctx := testContext(t)
 
 	// Reserve + check-in
 	reservationID, spotID := createReservationAndWait(t, resConn, ctx, rdb, "SYSTEM_ASSIGNED", "CAR", "")
