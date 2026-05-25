@@ -167,7 +167,7 @@ metadata:
   namespace: monitoring
 type: Opaque
 stringData:
-  host: "parkirpintar-analytics.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com"
+  host: "parkirpintar-analytics.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   port: "5432"
   database: "analytics"
   username: "parkirpintar"

@@ -1,13 +1,13 @@
 resource "aws_elasticache_subnet_group" "parkirpintar" {
   name       = "parkirpintar"
-  subnet_ids = [aws_subnet.private_ap_southeast_1a.id, aws_subnet.private_ap_southeast_1b.id, aws_subnet.public_ap_southeast_1a.id, aws_subnet.public_ap_southeast_1b.id]
+  subnet_ids = [aws_subnet.private_ap_southeast_3a.id, aws_subnet.private_ap_southeast_3b.id, aws_subnet.public_ap_southeast_3a.id, aws_subnet.public_ap_southeast_3b.id]
 }
 
 resource "aws_elasticache_cluster" "parkirpintar" {
   cluster_id           = "parkirpintar"
   engine               = "redis"
   engine_version       = "7.0"
-  node_type            = "cache.t4g.small"
+  node_type            = "cache.t3.small"
   num_cache_nodes      = 1
   parameter_group_name = "default.redis7"
   port                 = 6379

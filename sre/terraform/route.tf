@@ -20,25 +20,22 @@ resource "aws_route_table" "public_parkirpintar" {
   }
 }
 
-resource "aws_route_table_association" "private_ap_southeast_1a_parkirpintar" {
-  subnet_id      = aws_subnet.private_ap_southeast_1a.id
+resource "aws_route_table_association" "private_ap_southeast_3a_parkirpintar" {
+  subnet_id      = aws_subnet.private_ap_southeast_3a.id
   route_table_id = aws_route_table.private_parkirpintar.id
 }
 
-resource "aws_route_table_association" "private_ap_southeast_1b_parkirpintar" {
-  subnet_id      = aws_subnet.private_ap_southeast_1b.id
+resource "aws_route_table_association" "private_ap_southeast_3b_parkirpintar" {
+  subnet_id      = aws_subnet.private_ap_southeast_3b.id
   route_table_id = aws_route_table.private_parkirpintar.id
 }
 
-resource "aws_route_table_association" "public_ap_southeast_1a_parkirpintar" {
-  subnet_id      = aws_subnet.public_ap_southeast_1a.id
+resource "aws_route_table_association" "public_ap_southeast_3a_parkirpintar" {
+  subnet_id      = aws_subnet.public_ap_southeast_3a.id
   route_table_id = aws_route_table.public_parkirpintar.id
 }
 
-resource "aws_route_table_association" "public_ap_southeast_1b_parkirpintar" {
-  subnet_id      = aws_subnet.public_ap_southeast_1b.id
+resource "aws_route_table_association" "public_ap_southeast_3b_parkirpintar" {
+  subnet_id      = aws_subnet.public_ap_southeast_3b.id
   route_table_id = aws_route_table.public_parkirpintar.id
 }
-
-
-

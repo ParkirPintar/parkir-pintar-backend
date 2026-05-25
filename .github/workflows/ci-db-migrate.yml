@@ -10,7 +10,7 @@ on:
 
 env:
   CLUSTER_NAME: parkirpintar
-  AWS_REGION: ap-southeast-1
+  AWS_REGION: ap-southeast-3
   NAMESPACE: parkir-pintar
 
 jobs:

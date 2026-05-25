@@ -1,7 +1,7 @@
 resource "aws_db_subnet_group" "parkirpintar" {
   name        = "parkirpintar"
   description = "parkirpintar private subnets"
-  subnet_ids  = [aws_subnet.private_ap_southeast_1a.id, aws_subnet.private_ap_southeast_1b.id]
+  subnet_ids  = [aws_subnet.private_ap_southeast_3a.id, aws_subnet.private_ap_southeast_3b.id]
 }
 
 # --- Reservation DB ---

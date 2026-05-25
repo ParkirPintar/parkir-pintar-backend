@@ -67,7 +67,7 @@ func EndDBSpan(span trace.Span, err error) {
 // Examples:
 //   - "parkirpintar-reservation.xxx.rds.amazonaws.com:5432" -> "reservation-db"
 //   - "parkirpintar.xxx.cache.amazonaws.com:6379" -> "redis"
-//   - "b-xxx.mq.ap-southeast-1.on.aws:5671" -> "rabbitmq"
+//   - "b-xxx.mq.ap-southeast-3.on.aws:5671" -> "rabbitmq"
 func PeerServiceFromDSN(host string, dbSystem string) string {
 	switch dbSystem {
 	case "postgresql":

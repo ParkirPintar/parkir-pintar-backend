@@ -87,10 +87,10 @@ resource "aws_eks_cluster" "parkirpintar" {
     endpoint_private_access = false
     endpoint_public_access  = true
     subnet_ids = [
-      aws_subnet.private_ap_southeast_1a.id,
-      aws_subnet.private_ap_southeast_1b.id,
-      aws_subnet.public_ap_southeast_1a.id,
-      aws_subnet.public_ap_southeast_1b.id
+      aws_subnet.private_ap_southeast_3a.id,
+      aws_subnet.private_ap_southeast_3b.id,
+      aws_subnet.public_ap_southeast_3a.id,
+      aws_subnet.public_ap_southeast_3b.id
     ]
   }
 

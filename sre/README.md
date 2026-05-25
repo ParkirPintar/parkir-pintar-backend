@@ -250,11 +250,11 @@ terraform destroy \
 # Cek resource yang masih nempel
 aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=<vpc-id>" \
   --query 'NetworkInterfaces[*].{ID:NetworkInterfaceId,Status:Status,Description:Description}' \
-  --profile terraform --region ap-southeast-1
+  --profile terraform --region ap-southeast-3
 
 # Force detach ENI yang orphan
-aws ec2 detach-network-interface --attachment-id <attachment-id> --force --profile terraform --region ap-southeast-1
-aws ec2 delete-network-interface --network-interface-id <eni-id> --profile terraform --region ap-southeast-1
+aws ec2 detach-network-interface --attachment-id <attachment-id> --force --profile terraform --region ap-southeast-3
+aws ec2 delete-network-interface --network-interface-id <eni-id> --profile terraform --region ap-southeast-3
 
 # Retry destroy
 terraform destroy -var="db_username=..." -var="db_password=..." ...
@@ -267,7 +267,7 @@ Setelah `terraform apply` selesai, jalankan langkah-langkah berikut secara berur
 ### 1. Update Kubeconfig
 
 ```bash
-aws eks --region ap-southeast-1 update-kubeconfig --name parkirpintar --profile terraform
+aws eks --region ap-southeast-3 update-kubeconfig --name parkirpintar --profile terraform
 
 # Verify koneksi ke cluster
 kubectl get nodes

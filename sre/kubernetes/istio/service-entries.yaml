@@ -1,12 +1,6 @@
 # ServiceEntry resources register external services (databases, caches, message queues)
 # in the Istio mesh so that traffic to them is tracked, measurable, and visible
 # in the service topology (Kiali, Grafana dashboards).
-#
-# This enables:
-# - Istio metrics (istio_requests_total, istio_tcp_*) for external service traffic
-# - Visibility in service graph / topology dashboards
-# - Circuit breaker and timeout policies via DestinationRule
-# - mTLS origination if needed
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
@@ -15,7 +9,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar-reservation.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+    - parkirpintar-reservation.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 5432
@@ -30,7 +24,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar-reservation-replica.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+    - parkirpintar-reservation-replica.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 5432
@@ -45,7 +39,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar-billing.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+    - parkirpintar-billing.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 5432
@@ -60,7 +54,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar-payment.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+    - parkirpintar-payment.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 5432
@@ -75,7 +69,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar-analytics.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com
+    - parkirpintar-analytics.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 5432
@@ -90,7 +84,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar.hpendq.0001.apse1.cache.amazonaws.com
+    - parkirpintar.habhke.0001.apse3.cache.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 6379
@@ -105,7 +99,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - b-51abc724-0dbf-41c6-9743-642b71dde938.mq.ap-southeast-1.on.aws
+    - b-4b6ce9b9-dadd-400e-88f3-5c9eee6a9e27.mq.ap-southeast-3.on.aws
   location: MESH_EXTERNAL
   ports:
     - number: 5671
@@ -113,14 +107,14 @@ spec:
       protocol: TCP
   resolution: DNS
 ---
-# DestinationRules for external services — enables connection pooling and outlier detection
+# DestinationRules for external services
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: postgres-rds
   namespace: parkir-pintar
 spec:
-  host: "*.cbw0ge6eg2a8.ap-southeast-1.rds.amazonaws.com"
+  host: "*.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   trafficPolicy:
     connectionPool:
       tcp:
@@ -137,7 +131,7 @@ metadata:
   name: redis-elasticache
   namespace: parkir-pintar
 spec:
-  host: parkirpintar.hpendq.0001.apse1.cache.amazonaws.com
+  host: parkirpintar.habhke.0001.apse3.cache.amazonaws.com
   trafficPolicy:
     connectionPool:
       tcp:
@@ -154,7 +148,7 @@ metadata:
   name: rabbitmq-amazonmq
   namespace: parkir-pintar
 spec:
-  host: b-51abc724-0dbf-41c6-9743-642b71dde938.mq.ap-southeast-1.on.aws
+  host: b-4b6ce9b9-dadd-400e-88f3-5c9eee6a9e27.mq.ap-southeast-3.on.aws
   trafficPolicy:
     connectionPool:
       tcp:

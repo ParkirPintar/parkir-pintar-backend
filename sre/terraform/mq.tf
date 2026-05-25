@@ -6,7 +6,7 @@ resource "aws_mq_broker" "parkirpintar" {
   publicly_accessible        = false
   auto_minor_version_upgrade = true
   deployment_mode            = "SINGLE_INSTANCE"
-  subnet_ids                 = [aws_subnet.private_ap_southeast_1a.id]
+  subnet_ids                 = [aws_subnet.private_ap_southeast_3a.id]
   security_groups            = [aws_security_group.parkirpintar.id]
 
   tags = { App = "parkirpintar" }

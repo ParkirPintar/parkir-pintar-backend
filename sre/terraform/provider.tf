@@ -1,5 +1,5 @@
 provider "aws" {
-  region  = "ap-southeast-1"
+  region  = "ap-southeast-3"
   profile = "terraform"
 }
 
@@ -9,7 +9,7 @@ provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", try(aws_eks_cluster.parkirpintar.name, "parkirpintar"), "--profile", "terraform"]
+    args        = ["eks", "get-token", "--cluster-name", try(aws_eks_cluster.parkirpintar.name, "parkirpintar"), "--region", "ap-southeast-3", "--profile", "terraform"]
   }
 }
 

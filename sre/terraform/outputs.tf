@@ -44,7 +44,7 @@ output "github_actions_role_arn" {
 
 output "ecr_registry" {
   description = "ECR registry URL (account-id.dkr.ecr.region.amazonaws.com)"
-  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.ap-southeast-1.amazonaws.com"
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.ap-southeast-3.amazonaws.com"
 }
 
 output "ecr_repository_urls" {

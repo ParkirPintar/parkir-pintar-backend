@@ -47,8 +47,8 @@ resource "aws_eks_node_group" "parkirpintar" {
   node_role_arn   = aws_iam_role.nodes_parkirpintar.arn
 
   subnet_ids = [
-    aws_subnet.private_ap_southeast_1a.id,
-    aws_subnet.private_ap_southeast_1b.id
+    aws_subnet.private_ap_southeast_3a.id,
+    aws_subnet.private_ap_southeast_3b.id
   ]
 
 

@@ -28,14 +28,14 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<RDS_RESERVATION_HOST>"
+  DB_HOST: "parkirpintar-reservation.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "reservation"
-  DB_USER: "<DB_USERNAME>"
-  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_USER: "parkirpintar"
+  DB_PASSWORD: "parkirpintar12345#"
   DB_SSLMODE: "require"
-  DB_REPLICA_HOST: "<RDS_RESERVATION_REPLICA_HOST>"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_RESERVATION_HOST>:5432/reservation?sslmode=require"
+  DB_REPLICA_HOST: "parkirpintar-reservation-replica.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
+  DATABASE_URL: "postgres://parkirpintar:parkirpintar12345%23@parkirpintar-reservation.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com:5432/reservation?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -44,13 +44,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<RDS_BILLING_HOST>"
+  DB_HOST: "parkirpintar-billing.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "billing"
-  DB_USER: "<DB_USERNAME>"
-  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_USER: "parkirpintar"
+  DB_PASSWORD: "parkirpintar12345#"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_BILLING_HOST>:5432/billing?sslmode=require"
+  DATABASE_URL: "postgres://parkirpintar:parkirpintar12345%23@parkirpintar-billing.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com:5432/billing?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -59,13 +59,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<RDS_PAYMENT_HOST>"
+  DB_HOST: "parkirpintar-payment.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "payment"
-  DB_USER: "<DB_USERNAME>"
-  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_USER: "parkirpintar"
+  DB_PASSWORD: "parkirpintar12345#"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_PAYMENT_HOST>:5432/payment?sslmode=require"
+  DATABASE_URL: "postgres://parkirpintar:parkirpintar12345%23@parkirpintar-payment.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com:5432/payment?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -74,13 +74,13 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  DB_HOST: "<RDS_ANALYTICS_HOST>"
+  DB_HOST: "parkirpintar-analytics.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "analytics"
-  DB_USER: "<DB_USERNAME>"
-  DB_PASSWORD: "<DB_PASSWORD>"
+  DB_USER: "parkirpintar"
+  DB_PASSWORD: "parkirpintar12345#"
   DB_SSLMODE: "require"
-  DATABASE_URL: "postgres://<DB_USERNAME>:<DB_PASSWORD_URLENCODED>@<RDS_ANALYTICS_HOST>:5432/analytics?sslmode=require"
+  DATABASE_URL: "postgres://parkirpintar:parkirpintar12345%23@parkirpintar-analytics.cjeuw4isav83.ap-southeast-3.rds.amazonaws.com:5432/analytics?sslmode=require"
 ---
 apiVersion: v1
 kind: Secret
@@ -89,7 +89,7 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  REDIS_HOST: "<ELASTICACHE_HOST>"
+  REDIS_HOST: "parkirpintar.habhke.0001.apse3.cache.amazonaws.com"
   REDIS_PORT: "6379"
 ---
 apiVersion: v1
@@ -99,4 +99,4 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  RABBITMQ_URL: "amqps://<MQ_USERNAME>:<MQ_PASSWORD_URLENCODED>@<AMAZON_MQ_HOST>:5671"
+  RABBITMQ_URL: "amqps://parkirpintar:parkirpintar12345%23@b-4b6ce9b9-dadd-400e-88f3-5c9eee6a9e27.mq.ap-southeast-3.on.aws:5671"
