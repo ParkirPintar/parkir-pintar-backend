@@ -1510,7 +1510,7 @@ Karena database per service, tidak ada foreign key lintas DB. Referensi antar se
 
 ## API Documentation (Swagger)
 
-📖 **Live API Docs**: [https://parkir-pintar.github.io/parkir-pintar/](https://parkir-pintar.github.io/parkir-pintar/) *(hosted via GitHub Pages)*
+📖 **Live API Docs**: [https://parkirpintar.github.io/parkir-pintar-backend/](https://parkirpintar.github.io/parkir-pintar-backend/) *(hosted via GitHub Pages)*
 
 OpenAPI 3.0 spec: [`sre/e2e/swagger.yaml`](./sre/e2e/swagger.yaml)
 
