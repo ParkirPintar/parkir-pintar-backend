@@ -538,7 +538,7 @@ terraform output github_actions_role_arn
 | `connection reset by peer` on RabbitMQ | Go code pakai `amqp.Dial()` tapi URL `amqps://` | Pakai `amqp.DialTLS()` untuk URL `amqps://` — sudah di-handle di code |
 | Liveness probe HTTP 500 | Istio sidecar rewrite gRPC probe ke HTTP, custom JSON codec break gRPC health check | Pakai HTTP health endpoint (`/healthz` on port 8081) instead of gRPC probe |
 | `GLIBC_2.39 not found` | Billing service pakai `gorules/zen-go` (CGO/Rust), builder glibc > runtime glibc | Billing Dockerfile pakai `debian:trixie-slim` sebagai runtime |
-| `relation "reservations" does not exist` | DB migration belum dijalankan | Jalankan migration SQL di setiap database |
+| `relation "reservations" does not exist` | DB migration belum dijalankan | Jalankan `kubectl apply -f kubernetes/base/db-migrate-job.yaml` — job akan auto-create databases lalu run migrations |
 | `no queue 'booking.queue.0'` | RabbitMQ queue/exchange belum di-declare | Service auto-declare on startup, atau declare manual via RabbitMQ Management UI |
 | Rollout timeout (120s) | Pod butuh beberapa restart untuk stabilize | Naikkan `--timeout` di workflow, atau tunggu pod stabilize sendiri |
 

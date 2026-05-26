@@ -1111,7 +1111,7 @@ sequenceDiagram
     Reservation-->>Presence: reservation (reserved spot_id)
 
     alt Driver at correct assigned spot
-        Presence->>Reservation: gRPC CheckIn(reservation_id, actual_spot_id)
+        Presence->>Reservation: gRPC CheckIn(reservation_id, spot_id)
         Reservation->>DB: UPDATE reservation SET status=ACTIVE, checkin_at=now()
         Reservation->>Redis: DEL lock:{spot_id} (release hold lock)
         Reservation-->>Presence: OK
@@ -1510,16 +1510,20 @@ Karena database per service, tidak ada foreign key lintas DB. Referensi antar se
 
 ## API Documentation (Swagger)
 
+📖 **Live API Docs**: [https://parkir-pintar.github.io/parkir-pintar/](https://parkir-pintar.github.io/parkir-pintar/) *(hosted via GitHub Pages)*
+
 OpenAPI 3.0 spec: [`sre/e2e/swagger.yaml`](./sre/e2e/swagger.yaml)
 
 ```bash
-# Preview with Redocly
+# Preview locally with Redocly
 npx @redocly/cli preview-docs sre/e2e/swagger.yaml
 
-# Preview with Swagger UI (Docker)
+# Preview locally with Swagger UI (Docker)
 docker run -p 8080:8080 -e SWAGGER_JSON=/spec/swagger.yaml \
   -v $(pwd)/sre/e2e:/spec swaggerapi/swagger-ui
 ```
+
+> **Note**: API docs are auto-deployed to GitHub Pages on push to `main` when `docs/api/` or `sre/e2e/swagger.yaml` changes. See [`.github/workflows/deploy-docs.yml`](./.github/workflows/deploy-docs.yml).
 
 ---
 

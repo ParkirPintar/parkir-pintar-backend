@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-05-26T00:00:00.000Z" agent="draw.io" version="24.0.0" type="device">
+  <diagram id="lld-infra" name="LLD - Infrastructure Detail">
+    <mxGraphModel dx="2200" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- Title -->
+        <mxCell id="title" value="ParkirPintar — Low Level Design (LLD)&#xa;AWS Infrastructure per Availability Zone" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="10" width="500" height="50" as="geometry" />
+        </mxCell>
+        <!-- AWS Region -->
+        <mxCell id="region" value="AWS Region: ap-southeast-3 (Jakarta)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#147EBA;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="2320" height="1700" as="geometry" />
+        </mxCell>
+        <!-- VPC -->
+        <mxCell id="vpc" value="VPC: parkirpintar — CIDR: 10.0.0.0/16 | DNS Support: enabled | DNS Hostnames: enabled" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="70" y="100" width="2260" height="1630" as="geometry" />
+        </mxCell>
+        <!-- ============================================ -->
+        <!-- AZ-A: ap-southeast-3a (LEFT) -->
+        <!-- ============================================ -->
+        <mxCell id="az-a" value="Availability Zone: ap-southeast-3a" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#545B64;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="900" height="1550" as="geometry" />
+        </mxCell>
+        <!-- Public Subnet 3a -->
+        <mxCell id="pub-3a" value="Public Subnet: public_ap_southeast_3a&#xa;CIDR: 10.0.64.0/19&#xa;Tags: kubernetes.io/role/elb=1, cluster/parkirpintar=owned" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#7AA116;fillColor=#E9F7EF;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="130" y="200" width="840" height="250" as="geometry" />
+        </mxCell>
+        <!-- IGW -->
+        <mxCell id="igw" value="Internet Gateway&#xa;parkirpintar" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="250" width="130" height="50" as="geometry" />
+        </mxCell>
+        <!-- NAT -->
+        <mxCell id="nat" value="NAT Gateway&#xa;+ Elastic IP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="250" width="110" height="50" as="geometry" />
+        </mxCell>
+        <!-- ALB -->
+        <mxCell id="alb" value="Application&#xa;Load Balancer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="250" width="120" height="50" as="geometry" />
+        </mxCell>
+        <!-- EC2 -->
+        <mxCell id="ec2" value="EC2: t3.medium&#xa;parkirpintar-observability&#xa;Public IP: Yes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="250" width="180" height="50" as="geometry" />
+        </mxCell>
+        <!-- EKS CP in public -->
+        <mxCell id="eks-cp-a" value="EKS Control Plane (public endpoint)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D86613;fontColor=#ffffff;strokeColor=#D86613;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-pub-a" value="Route: 0.0.0.0/0 → IGW" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="410" width="150" height="20" as="geometry" />
+        </mxCell>
+        <!-- Private Subnet 3a -->
+        <mxCell id="priv-3a" value="Private Subnet: private_ap_southeast_3a&#xa;CIDR: 10.0.0.0/19&#xa;Tags: kubernetes.io/role/internal-elb=1, cluster/parkirpintar=shared" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#147EBA;fillColor=#E6F2FF;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="130" y="480" width="840" height="1190" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-priv-a" value="Route: 0.0.0.0/0 → NAT Gateway" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="540" width="200" height="20" as="geometry" />
+        </mxCell>
+        <!-- EKS Node Group AZ-A -->
+        <mxCell id="ng-a" value="EKS Node Group (AZ-A nodes)&#xa;t3.medium | ON_DEMAND | Scaling: min=3, desired=4, max=7" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_ec2_instance_contents;strokeColor=#D86613;fillColor=#FFF4E6;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="160" y="570" width="780" height="400" as="geometry" />
+        </mxCell>
+        <!-- parkir-pintar namespace -->
+        <mxCell id="ns-a" value="Namespace: parkir-pintar (istio-injection=enabled)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="190" y="620" width="720" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="a-kong" value="Kong&#xa;:80/443" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="210" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-gw" value="Gateway&#xa;:8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="300" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-res" value="Reservation&#xa;:50052" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="390" y="650" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-bil" value="Billing&#xa;:50053" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="490" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-pay" value="Payment&#xa;:50054" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="580" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-search" value="Search&#xa;:50055" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="670" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-pres" value="Presence&#xa;:50056" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="a-notif" value="Notification :50057" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="210" y="710" width="100" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="a-analytics" value="Analytics :50058" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="330" y="710" width="100" height="35" as="geometry" />
+        </mxCell>
+        <!-- Istio -->
+        <mxCell id="istio-a" value="Istio: mTLS STRICT | LEAST_CONN | outlierDetection (5xx eject)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="190" y="790" width="500" height="25" as="geometry" />
+        </mxCell>
+        <!-- Monitoring -->
+        <mxCell id="mon-a" value="Namespace: monitoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="190" y="830" width="720" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="m-prom" value="Prometheus&#xa;:9090" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="210" y="860" width="70" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-graf" value="Grafana&#xa;:3000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="295" y="860" width="70" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-loki" value="Loki&#xa;:3100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="380" y="860" width="60" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-tempo" value="Tempo&#xa;:3200" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="455" y="860" width="60" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-otel" value="OTel Collector&#xa;:4317/:4318" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="530" y="860" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-promtail" value="Promtail&#xa;(DaemonSet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="635" y="860" width="80" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-beyla" value="Beyla&#xa;(eBPF)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="730" y="860" width="60" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="m-kiali" value="Kiali :20001 (istio-system)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="210" y="905" width="150" height="20" as="geometry" />
+        </mxCell>
+        <!-- RDS Primary in AZ-A -->
+        <mxCell id="rds-a-title" value="RDS Instances (Primary)" style="text;html=1;align=left;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1000" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="rds-res" value="parkirpintar-reservation&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1030" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rds-bil" value="parkirpintar-billing&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="360" y="1030" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rds-pay" value="parkirpintar-payment&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="1030" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rds-ana" value="parkirpintar-analytics&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="1030" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="db-sg" value="DB Subnet Group: private_3a + private_3b" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1100" width="280" height="20" as="geometry" />
+        </mxCell>
+        <!-- Amazon MQ -->
+        <mxCell id="mq" value="Amazon MQ: parkirpintar&#xa;RabbitMQ 3.13 | mq.m5.large&#xa;SINGLE_INSTANCE | Port: 5671 (AMQPS)&#xa;Consistent Hash Exchange (spot_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1140" width="280" height="70" as="geometry" />
+        </mxCell>
+        <!-- ElastiCache -->
+        <mxCell id="redis" value="ElastiCache: parkirpintar&#xa;Redis 7.0 | cache.t3.small | 1 node&#xa;Port: 6379&#xa;Use: SETNX Lock, Cache, Idempotency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1240" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ec-sg" value="ElastiCache Subnet: all 4 subnets" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="1315" width="250" height="20" as="geometry" />
+        </mxCell>
+        <!-- ============================================ -->
+        <!-- AZ-B: ap-southeast-3b (RIGHT) -->
+        <!-- ============================================ -->
+        <mxCell id="az-b" value="Availability Zone: ap-southeast-3b" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#545B64;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="150" width="820" height="1550" as="geometry" />
+        </mxCell>
+        <!-- Public Subnet 3b -->
+        <mxCell id="pub-3b" value="Public Subnet: public_ap_southeast_3b&#xa;CIDR: 10.0.96.0/19&#xa;Tags: kubernetes.io/role/elb=1, cluster/parkirpintar=owned" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#7AA116;fillColor=#E9F7EF;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="200" width="760" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="eks-cp-b" value="EKS Control Plane (multi-AZ span)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D86613;fontColor=#ffffff;strokeColor=#D86613;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="260" width="250" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="istio-elb" value="Istio Ingress Gateway&#xa;(AWS ELB — public facing)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="320" width="220" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-pub-b" value="Route: 0.0.0.0/0 → IGW" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="410" width="150" height="20" as="geometry" />
+        </mxCell>
+        <!-- Private Subnet 3b -->
+        <mxCell id="priv-3b" value="Private Subnet: private_ap_southeast_3b&#xa;CIDR: 10.0.32.0/19&#xa;Tags: kubernetes.io/role/internal-elb=1, cluster/parkirpintar=shared" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#147EBA;fillColor=#E6F2FF;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="480" width="760" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="rt-priv-b" value="Route: 0.0.0.0/0 → NAT Gateway (pub-3a)" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="540" width="250" height="20" as="geometry" />
+        </mxCell>
+        <!-- EKS Node Group AZ-B -->
+        <mxCell id="ng-b" value="EKS Node Group (AZ-B nodes)&#xa;t3.medium | ON_DEMAND (same group, distributed)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=9;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_ec2_instance_contents;strokeColor=#D86613;fillColor=#FFF4E6;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="570" width="700" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="ns-b" value="Namespace: parkir-pintar (replicas)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1590" y="620" width="640" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="b-res" value="Reservation&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1610" y="650" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b-bil" value="Billing&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1710" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b-pay" value="Payment&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1800" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b-search" value="Search&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1890" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b-pres" value="Presence&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1980" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="b-kong" value="Kong&#xa;(replica)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="2070" y="650" width="70" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="hpa-b" value="HPA: CPU &gt; 60% → scale (max 20/svc)" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1610" y="700" width="250" height="20" as="geometry" />
+        </mxCell>
+        <!-- RDS Read Replica in AZ-B -->
+        <mxCell id="rds-b-title" value="RDS Read Replica" style="text;html=1;align=left;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="850" width="200" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="rds-replica" value="parkirpintar-reservation-replica&#xa;PG 16.6 | db.t3.micro&#xa;Async Replication from primary&#xa;Used by: Search + Reservation reads" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="880" width="280" height="70" as="geometry" />
+        </mxCell>
+        <!-- Replication arrow -->
+        <mxCell id="repl" value="async replication" style="endArrow=block;dashed=1;fontSize=8;strokeColor=#6c8ebf;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" source="rds-res" target="rds-replica" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- ============================================ -->
+        <!-- CROSS-AZ / SHARED (CENTER) -->
+        <!-- ============================================ -->
+        <mxCell id="cross-az" value="Cross-AZ / Shared Resources" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_corporate_data_center;strokeColor=#9673a6;fillColor=none;verticalAlign=top;align=center;spacingTop=5;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="150" width="440" height="1550" as="geometry" />
+        </mxCell>
+        <!-- Security Group -->
+        <mxCell id="sg-title" value="Security Group: parkirpintar" style="text;html=1;align=center;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="200" width="340" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="sg" value="Ingress (CIDR: 10.0.0.0/16):&#xa;• 50051 (gRPC)&#xa;• 5671-5672 (AMQP/AMQPS)&#xa;• 15672 (RabbitMQ Mgmt)&#xa;• 6379 (Redis)&#xa;• 5432 (PostgreSQL)&#xa;• 4317-4318 (OTEL gRPC/HTTP)&#xa;• 9090 (Prometheus)&#xa;• 3000 (Grafana)&#xa;• 3100 (Loki)&#xa;&#xa;Egress: 0.0.0.0/0 (all)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=8;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="230" width="340" height="190" as="geometry" />
+        </mxCell>
+        <!-- IAM Roles -->
+        <mxCell id="iam-title" value="IAM Roles &amp; Policies" style="text;html=1;align=center;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="440" width="340" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="iam" value="• eks_cluster_parkirpintar&#xa;  → AmazonEKSClusterPolicy&#xa;&#xa;• nodes_parkirpintar&#xa;  → WorkerNode, CNI, ECR, EBS CSI, SSM&#xa;&#xa;• parkirpintar-ebs-csi-driver (IRSA)&#xa;  → AmazonEBSCSIDriverPolicy&#xa;&#xa;• parkir-pintar-github-actions (OIDC)&#xa;  → ECR push + EKS deploy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=8;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="470" width="340" height="180" as="geometry" />
+        </mxCell>
+        <!-- ECR -->
+        <mxCell id="ecr-title" value="ECR Repositories (7)" style="text;html=1;align=center;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="670" width="340" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="ecr" value="parkir-pintar/reservation-service&#xa;parkir-pintar/billing-service&#xa;parkir-pintar/payment-service&#xa;parkir-pintar/search-service&#xa;parkir-pintar/presence-service&#xa;parkir-pintar/notification-service&#xa;parkir-pintar/analytics-service&#xa;&#xa;Scan on push: enabled&#xa;Lifecycle: keep last 10 images&#xa;force_delete: true" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="700" width="340" height="170" as="geometry" />
+        </mxCell>
+        <!-- EBS CSI -->
+        <mxCell id="ebs" value="EKS Addon: aws-ebs-csi-driver&#xa;StorageClass: gp2 (default)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="900" width="340" height="40" as="geometry" />
+        </mxCell>
+        <!-- GitHub OIDC -->
+        <mxCell id="gh-oidc" value="GitHub Actions OIDC Provider&#xa;CI/CD: lint → test → build → ECR push → EKS deploy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="970" width="340" height="45" as="geometry" />
+        </mxCell>
+        <!-- EKS Cluster Config -->
+        <mxCell id="eks-config-title" value="EKS Cluster Config" style="text;html=1;align=center;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1040" width="340" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="eks-config" value="Name: parkirpintar&#xa;API: Public endpoint&#xa;Subnets: private-3a, private-3b,&#xa;         public-3a, public-3b&#xa;&#xa;Node Group:&#xa;  Subnets: private-3a, private-3b only&#xa;  Instance: t3.medium (ON_DEMAND)&#xa;  min=3, desired=4, max=7&#xa;  Labels: role=general&#xa;  max_unavailable=1 (rolling update)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E6;strokeColor=#D86613;fontSize=8;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1070" width="340" height="180" as="geometry" />
+        </mxCell>
+        <!-- External Services -->
+        <mxCell id="ext-title" value="External Services" style="text;html=1;align=center;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1280" width="340" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="ext" value="• Cloudflare (DNS + HTTPS + DDoS)&#xa;• Settlement Stub (Pondo Ngopi / WireMock)&#xa;• Notification Provider (stub)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1310" width="340" height="70" as="geometry" />
+        </mxCell>
+        <!-- DNS / Domain -->
+        <mxCell id="dns" value="Domain: parkir-pintar.pondongopi.biz.id&#xa;Cloudflare CNAME → ELB endpoint&#xa;SSL: Flexible/Full" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;align=left;spacingLeft=10;verticalAlign=top;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1400" width="340" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

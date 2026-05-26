@@ -86,3 +86,6 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+# SRE operational scripts (contain environment-specific URLs)
+sre/scripts/

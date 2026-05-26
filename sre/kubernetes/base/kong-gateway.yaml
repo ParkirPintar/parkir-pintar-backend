@@ -85,6 +85,28 @@ data:
         config:
           minute: 60
           policy: local
+      - name: cors
+        config:
+          origins:
+            - "https://parkir-pintar.github.io"
+            - "https://parkirpintar.github.io"
+          methods:
+            - GET
+            - POST
+            - DELETE
+            - PUT
+            - PATCH
+            - OPTIONS
+          headers:
+            - Content-Type
+            - Idempotency-Key
+            - Accept
+            - Origin
+          exposed_headers:
+            - X-Request-Id
+          credentials: false
+          max_age: 3600
+          preflight_continue: false
 
     services:
       # Search Service — availability queries
