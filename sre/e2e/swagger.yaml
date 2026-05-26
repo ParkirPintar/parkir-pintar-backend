@@ -20,10 +20,10 @@ info:
   version: "1.0.0"
 
 servers:
+  - url: https://parkir-pintar.pondongopi.biz.id
+    description: Production
   - url: http://localhost:8000
     description: Local (Kong Gateway)
-  - url: https://api.parkir-pintar.id
-    description: Production
 
 tags:
   - name: Search
