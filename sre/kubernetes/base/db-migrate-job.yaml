@@ -11,6 +11,60 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: create-databases
+          image: postgres:16-alpine
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "=== Creating databases if not exist ==="
+
+              for db in reservation billing payment analytics; do
+                case $db in
+                  reservation) HOST=$RESERVATION_DB_HOST ;;
+                  billing) HOST=$BILLING_DB_HOST ;;
+                  payment) HOST=$PAYMENT_DB_HOST ;;
+                  analytics) HOST=$ANALYTICS_DB_HOST ;;
+                esac
+
+                echo "Checking database: $db on $HOST"
+                PGPASSWORD=$DB_PASSWORD psql -h "$HOST" -U "$DB_USER" -d postgres -tc \
+                  "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 || \
+                  PGPASSWORD=$DB_PASSWORD psql -h "$HOST" -U "$DB_USER" -d postgres -c "CREATE DATABASE $db"
+                echo "Database $db: OK"
+              done
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_PASSWORD
+            - name: RESERVATION_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: reservation-db-secret
+                  key: DB_HOST
+            - name: BILLING_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: billing-db-secret
+                  key: DB_HOST
+            - name: PAYMENT_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: payment-db-secret
+                  key: DB_HOST
+            - name: ANALYTICS_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: analytics-db-secret
+                  key: DB_HOST
       containers:
         - name: migrate
           image: migrate/migrate:v4.18.3
