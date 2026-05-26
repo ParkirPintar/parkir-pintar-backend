@@ -130,7 +130,7 @@ k6 run --env BASE_URL=http://localhost:8000 e2e/k6/war-booking.js
 cd e2e/k6 && ./run-k6.sh http://localhost:8000
 
 # Target production
-cd e2e/k6 && ./run-k6.sh https://api.parkir-pintar.id
+cd e2e/k6 && ./run-k6.sh https://parkir-pintar.pondongopi.biz.id
 ```
 
 ### Skenario Test
