@@ -27,7 +27,7 @@ output "rds_analytics_endpoint" {
 }
 
 output "redis_endpoint" {
-  value = aws_elasticache_cluster.parkirpintar.cache_nodes[0].address
+  value = aws_elasticache_replication_group.parkirpintar.primary_endpoint_address
 }
 
 output "rabbitmq_endpoint" {

@@ -89,7 +89,7 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  REDIS_HOST: "parkirpintar.habhke.0001.apse3.cache.amazonaws.com"
+  REDIS_HOST: "parkirpintar.habhke.ng.0001.apse3.cache.amazonaws.com"
   REDIS_PORT: "6379"
 ---
 apiVersion: v1

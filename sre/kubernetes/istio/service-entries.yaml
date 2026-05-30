@@ -84,7 +84,7 @@ metadata:
   namespace: parkir-pintar
 spec:
   hosts:
-    - parkirpintar.habhke.0001.apse3.cache.amazonaws.com
+    - parkirpintar.habhke.ng.0001.apse3.cache.amazonaws.com
   location: MESH_EXTERNAL
   ports:
     - number: 6379
@@ -131,7 +131,7 @@ metadata:
   name: redis-elasticache
   namespace: parkir-pintar
 spec:
-  host: parkirpintar.habhke.0001.apse3.cache.amazonaws.com
+  host: parkirpintar.habhke.ng.0001.apse3.cache.amazonaws.com
   trafficPolicy:
     connectionPool:
       tcp:
