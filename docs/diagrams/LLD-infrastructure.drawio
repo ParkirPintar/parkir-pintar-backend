@@ -125,19 +125,19 @@
           <mxGeometry x="210" y="905" width="150" height="20" as="geometry" />
         </mxCell>
         <!-- RDS Primary in AZ-A -->
-        <mxCell id="rds-a-title" value="RDS Instances (Primary)" style="text;html=1;align=left;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+        <mxCell id="rds-a-title" value="RDS Instances (Primary — Multi-AZ, auto-failover)" style="text;html=1;align=left;fontSize=10;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="160" y="1000" width="200" height="25" as="geometry" />
         </mxCell>
-        <mxCell id="rds-res" value="parkirpintar-reservation&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="rds-res" value="parkirpintar-reservation&#xa;PG 16.6 | db.t3.micro | Multi-AZ&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="160" y="1030" width="170" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="rds-bil" value="parkirpintar-billing&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="rds-bil" value="parkirpintar-billing&#xa;PG 16.6 | db.t3.micro | Multi-AZ&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="360" y="1030" width="160" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="rds-pay" value="parkirpintar-payment&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="rds-pay" value="parkirpintar-payment&#xa;PG 16.6 | db.t3.micro | Multi-AZ&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="550" y="1030" width="160" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="rds-ana" value="parkirpintar-analytics&#xa;PG 16.6 | db.t3.micro&#xa;20GB gp3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="rds-ana" value="parkirpintar-analytics&#xa;PG 16.6 | db.t3.micro | Multi-AZ&#xa;20GB gp3 | Backup: 7d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="740" y="1030" width="160" height="60" as="geometry" />
         </mxCell>
         <mxCell id="db-sg" value="DB Subnet Group: private_3a + private_3b" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
@@ -148,10 +148,10 @@
           <mxGeometry x="160" y="1140" width="280" height="70" as="geometry" />
         </mxCell>
         <!-- ElastiCache -->
-        <mxCell id="redis" value="ElastiCache: parkirpintar&#xa;Redis 7.0 | cache.t3.small | 1 node&#xa;Port: 6379&#xa;Use: SETNX Lock, Cache, Idempotency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="redis" value="ElastiCache Replication Group: parkirpintar&#xa;Redis 7.0 | cache.t3.small | 2 nodes (Multi-AZ)&#xa;Primary (3a) + Replica (3b) | Auto-Failover&#xa;Port: 6379 | Encryption at rest&#xa;Use: SETNX Lock, Cache, Idempotency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="160" y="1240" width="280" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="ec-sg" value="ElastiCache Subnet: all 4 subnets" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+        <mxCell id="ec-sg" value="ElastiCache Subnet: private subnets (3a + 3b) | Multi-AZ failover enabled" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="160" y="1315" width="250" height="20" as="geometry" />
         </mxCell>
         <!-- ============================================ -->

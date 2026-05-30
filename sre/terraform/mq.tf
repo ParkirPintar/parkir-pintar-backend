@@ -2,7 +2,7 @@ resource "aws_mq_broker" "parkirpintar" {
   broker_name                = "parkirpintar"
   engine_type                = "RabbitMQ"
   engine_version             = "3.13"
-  host_instance_type         = "mq.m5.large"
+  host_instance_type         = "mq.t3.micro"
   publicly_accessible        = false
   auto_minor_version_upgrade = true
   deployment_mode            = "SINGLE_INSTANCE"
