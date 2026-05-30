@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>War Booking — Consistent Hash Exchange</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --card: #1e293b;
+  --border: #334155;
+  --red: #e11d48;
+  --green: #10b981;
+  --orange: #f97316;
+  --blue: #3b82f6;
+  --teal: #0d9488;
+  --purple: #8b5cf6;
+  --muted: #64748b;
+  --text: #e2e8f0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; background: var(--bg); color: var(--text); min-height:100vh; padding:2rem; }
+
+header { text-align:center; margin-bottom:2rem; }
+header h1 { font-size:1.6rem; color:var(--red); margin-bottom:0.3rem; }
+header p { color:var(--muted); font-size:0.85rem; }
+
+.scenes { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; max-width:1200px; margin:0 auto; }
+@media(max-width:900px) { .scenes { grid-template-columns:1fr; } }
+
+.scene { background:var(--card); border-radius:16px; overflow:hidden; border:1px solid var(--border); }
+.scene-header { padding:0.8rem 1.2rem; font-weight:700; font-size:0.85rem; text-align:center; }
+.scene.bad .scene-header { background:#2d0a0a; color:#fca5a5; }
+.scene.good .scene-header { background:#052e16; color:#86efac; }
+
+/* Pipeline visualization */
+.pipeline { display:flex; align-items:center; justify-content:center; gap:0; padding:0.8rem 1rem; background:#0f172a; }
+.pipe-node { display:flex; flex-direction:column; align-items:center; gap:0.2rem; }
+.pipe-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; }
+.pipe-label { font-size:0.55rem; color:var(--muted); text-align:center; max-width:55px; line-height:1.2; }
+.pipe-arrow { color:var(--border); font-size:0.8rem; margin:0 0.2rem; padding-bottom:1rem; }
+
+/* Animation canvas */
+.canvas { position:relative; height:260px; margin:0.8rem; background:#0f172a; border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+
+/* Fixed components inside canvas */
+.comp { position:absolute; border-radius:8px; font-size:0.55rem; font-weight:600; text-align:center; padding:0.3rem 0.4rem; line-height:1.3; }
+
+/* Animated dots */
+.dot { position:absolute; width:22px; height:22px; border-radius:50%; font-size:0.55rem; font-weight:700; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0); transition: left 0.7s ease, top 0.7s ease, opacity 0.4s, transform 0.4s, background 0.4s; }
+.dot.show { opacity:1; transform:scale(1); }
+.dot.fail { opacity:0.5; transform:scale(0.8); }
+
+/* Result badge */
+.result { padding:0.6rem 1rem; text-align:center; font-size:0.75rem; font-weight:600; opacity:0; transition:opacity 0.5s; }
+.result.show { opacity:1; }
+.scene.bad .result { background:#2d0a0a; color:#fca5a5; }
+.scene.good .result { background:#052e16; color:#86efac; }
+
+/* Controls */
+.controls { display:flex; gap:0.8rem; justify-content:center; margin-top:1.5rem; }
+.btn { padding:0.5rem 1.5rem; border-radius:8px; border:none; font-size:0.85rem; cursor:pointer; font-weight:600; transition:transform 0.1s; }
+.btn:active { transform:scale(0.95); }
+.btn-play { background:var(--red); color:#fff; }
+.btn-slow { background:var(--teal); color:#fff; }
+.btn-reset { background:var(--border); color:var(--muted); }
+
+/* Shake */
+@keyframes shake { 0%,100%{transform:translate(0)} 20%{transform:translate(-2px,1px)} 40%{transform:translate(2px,-1px)} 60%{transform:translate(-1px,-2px)} 80%{transform:translate(1px,2px)} }
+.shake { animation: shake 0.15s infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>War Booking — Consistent Hash Exchange</h1>
+  <p>Kiri: tanpa antrian (race condition) &nbsp;|&nbsp; Kanan: dengan RabbitMQ hash routing (serial per spot)</p>
+</header>
+
+<div class="scenes">
+<!-- BAD SCENE -->
+<div class="scene bad">
+  <div class="scene-header">❌ Tanpa RabbitMQ — Semua langsung hit Redis bersamaan</div>
+  <div class="pipeline">
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--blue);">👥</div><div class="pipe-label">10 Drivers</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--red);">⚡</div><div class="pipe-label">API</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:#dc2626;">🔒</div><div class="pipe-label">Redis SETNX<br>(langsung)</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--border);">💾</div><div class="pipe-label">DB</div></div>
+  </div>
+  <div class="canvas" id="bad-canvas">
+    <!-- Connection lines (SVG) -->
+    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;">
+      <!-- API → Redis -->
+      <line x1="60" y1="115" x2="200" y2="55" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+      <!-- Redis → DB -->
+      <line x1="290" y1="55" x2="380" y2="115" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+    </svg>
+    <!-- API -->
+    <div class="comp" style="left:10px;top:100px;width:50px;height:50px;background:#1e1030;border:2px solid var(--red);color:#fca5a5;z-index:1;">
+      ⚡<br>API
+    </div>
+    <!-- Redis -->
+    <div class="comp" id="bad-redis" style="left:200px;top:30px;width:90px;height:55px;background:#2d0a0a;border:2px solid #dc2626;color:#fca5a5;z-index:1;">
+      🔒 Redis<br>SETNX<br>lock:1-CAR-05
+    </div>
+    <!-- DB -->
+    <div class="comp" style="right:15px;top:100px;width:50px;height:50px;background:#1e293b;border:2px solid var(--border);color:var(--muted);z-index:1;">
+      💾<br>DB
+    </div>
+  </div>
+  <div class="result" id="bad-result">💥 9/10 GAGAL — Race condition! Semua hit Redis bersamaan → retry storm</div>
+</div>
+
+<!-- GOOD SCENE -->
+<div class="scene good">
+  <div class="scene-header">✅ Dengan RabbitMQ Hash — 9 req, 3 spots → 3 workers → 3 lolos, 6 reject</div>
+  <div class="pipeline">
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--blue);">👥</div><div class="pipe-label">10 Drivers</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--red);">⚡</div><div class="pipe-label">API</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--orange);">🐰</div><div class="pipe-label">RabbitMQ<br>Hash</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--teal);">⚙️</div><div class="pipe-label">Workers<br>(serial)</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--green);">🔒</div><div class="pipe-label">Redis<br>SETNX</div></div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node"><div class="pipe-icon" style="background:var(--border);">💾</div><div class="pipe-label">DB</div></div>
+  </div>
+  <div class="canvas" id="good-canvas">
+    <!-- Connection lines (SVG) — lines connect FROM RabbitMQ right edge TO each component -->
+    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;">
+      <!-- RabbitMQ right edge (x=130) center (y=130) → Worker A center (x=195, y=45) -->
+      <line x1="130" y1="115" x2="195" y2="45" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- RabbitMQ right edge → Worker B center (same height) -->
+      <line x1="130" y1="130" x2="195" y2="130" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- RabbitMQ right edge → Worker C center -->
+      <line x1="130" y1="145" x2="195" y2="215" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Worker A right edge (x=275) → Redis A (x=345, y=45) -->
+      <line x1="275" y1="45" x2="345" y2="45" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Worker B right edge → Redis B -->
+      <line x1="275" y1="130" x2="345" y2="130" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Worker C right edge → Redis C -->
+      <line x1="275" y1="215" x2="345" y2="215" stroke="#0d9488" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Redis A right edge (x=415) → DB (x=460, y=130) -->
+      <line x1="415" y1="45" x2="460" y2="118" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Redis B → DB -->
+      <line x1="415" y1="130" x2="460" y2="130" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <!-- Redis C → DB -->
+      <line x1="415" y1="215" x2="460" y2="142" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+    </svg>
+    <!-- RabbitMQ (left, vertically centered) -->
+    <div class="comp" style="left:55px;top:95px;width:75px;height:70px;background:#431407;border:2px solid var(--orange);color:#fdba74;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      🐰<br>RabbitMQ<br><span style="font-size:0.45rem;">hash(spot_id)</span>
+    </div>
+    <!-- Worker A (top row, aligned with line) -->
+    <div class="comp" style="left:195px;top:25px;width:80px;height:40px;background:#042f2e;border:2px solid var(--teal);color:#5eead4;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <span>⚙️ Worker A</span><span style="font-size:0.45rem;opacity:0.7;">1-CAR-05</span>
+    </div>
+    <!-- Worker B (mid row) -->
+    <div class="comp" style="left:195px;top:110px;width:80px;height:40px;background:#042f2e;border:2px solid var(--teal);color:#5eead4;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <span>⚙️ Worker B</span><span style="font-size:0.45rem;opacity:0.7;">2-MOTO-12</span>
+    </div>
+    <!-- Worker C (bot row) -->
+    <div class="comp" style="left:195px;top:195px;width:80px;height:40px;background:#042f2e;border:2px solid var(--teal);color:#5eead4;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <span>⚙️ Worker C</span><span style="font-size:0.45rem;opacity:0.7;">3-CAR-01</span>
+    </div>
+    <!-- Redis (3 rows, aligned with workers) -->
+    <div class="comp" style="left:345px;top:28px;width:70px;height:35px;background:#052e16;border:2px solid var(--green);color:#86efac;z-index:1;font-size:0.5rem;">🔒 SETNX</div>
+    <div class="comp" style="left:345px;top:113px;width:70px;height:35px;background:#052e16;border:2px solid var(--green);color:#86efac;z-index:1;font-size:0.5rem;">🔒 SETNX</div>
+    <div class="comp" style="left:345px;top:198px;width:70px;height:35px;background:#052e16;border:2px solid var(--green);color:#86efac;z-index:1;font-size:0.5rem;">🔒 SETNX</div>
+    <!-- DB (right, centered) -->
+    <div class="comp" style="left:460px;top:105px;width:50px;height:50px;background:#1e293b;border:2px solid var(--border);color:var(--muted);z-index:1;">
+      💾<br>DB
+    </div>
+  </div>
+  <div class="result" id="good-result">✅ 3 workers × 1 winner each = 3 lolos ke DB. 6 sisanya clean reject 409 (serial, no race)</div>
+</div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-play" onclick="play(1)">▶ Play</button>
+  <button class="btn btn-slow" onclick="play(2.5)">🐢 Slow</button>
+  <button class="btn btn-reset" onclick="reset()">↺ Reset</button>
+</div>
+
+<script>
+const N = 9; // 9 requests, 3 per worker
+const SPOT_COLORS = ['#60a5fa','#34d399','#fbbf24','#f472b6','#a78bfa','#fb923c','#22d3ee','#e879f9','#84cc16'];
+let timers = [];
+
+function makeDots(canvas, prefix) {
+  canvas.querySelectorAll('.dot').forEach(d => d.remove());
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = `${prefix}-${i}`;
+    d.style.background = SPOT_COLORS[i];
+    d.textContent = i + 1;
+    d.style.left = '-30px';
+    d.style.top = `${100 + (Math.random()-0.5)*60}px`;
+    canvas.appendChild(d);
+  }
+}
+
+function reset() {
+  timers.forEach(t => clearTimeout(t)); timers = [];
+  document.getElementById('bad-result').classList.remove('show');
+  document.getElementById('good-result').classList.remove('show');
+  document.getElementById('bad-redis').classList.remove('shake');
+  makeDots(document.getElementById('bad-canvas'), 'b');
+  makeDots(document.getElementById('good-canvas'), 'g');
+}
+
+function t(fn, ms) { timers.push(setTimeout(fn, ms)); }
+
+function play(speed = 1) {
+  reset();
+  const d = (ms) => ms * speed;
+
+  // Row Y positions for 3 workers (aligned with SVG lines)
+  const rows = [35, 120, 205];
+
+  // === BAD positions ===
+  const badPos = {
+    api:   (i) => ({ left: 30, top: 100 + i * 16 }),
+    redis: (i) => ({ left: 205 + (Math.random()-0.5)*25, top: 30 + Math.random()*25 }),
+    dbWin: ()  => ({ left: 400, top: 118 }),
+    fail:  (i) => ({ left: 70 + Math.random()*130, top: 155 + Math.random()*75 }),
+  };
+
+  // === GOOD positions (3 rows, aligned with lines) ===
+  // Messages hashed: i%3 determines worker row
+  // Workers: A=[0,3,6], B=[1,4,7], C=[2,5,8]
+  const goodPos = {
+    rabbitmq: (i) => ({ left: 68, top: 85 + i * 16 }),
+    worker:   (i) => {
+      const w = i % 3;
+      const pos = Math.floor(i / 3); // position in queue
+      return { left: 200 + pos * 24, top: rows[w] };
+    },
+    redis: (w) => ({ left: 358, top: rows[w] }),
+    db:    (w) => ({ left: 470, top: 110 + (w - 1) * 15 }),
+    reject:(i) => {
+      const w = i % 3;
+      const pos = Math.floor(i / 3);
+      return { left: 280 + pos * 22, top: rows[w] + 30 };
+    },
+  };
+
+  function moveDot(id, pos) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.left = pos.left + 'px';
+    el.style.top = pos.top + 'px';
+  }
+
+  // Phase 1: Dots appear
+  for (let i = 0; i < N; i++) {
+    t(() => {
+      document.getElementById(`b-${i}`).classList.add('show');
+      document.getElementById(`g-${i}`).classList.add('show');
+    }, d(200 + i * 80));
+  }
+
+  // Phase 2: Move to API (bad) / RabbitMQ (good)
+  for (let i = 0; i < N; i++) {
+    t(() => {
+      moveDot(`b-${i}`, badPos.api(i));
+      moveDot(`g-${i}`, goodPos.rabbitmq(i));
+      document.getElementById(`g-${i}`).style.background = '#f97316';
+    }, d(1400 + i * 60));
+  }
+
+  // Phase 3 BAD: All rush to Redis simultaneously
+  t(() => {
+    for (let i = 0; i < N; i++) moveDot(`b-${i}`, badPos.redis(i));
+  }, d(2800));
+
+  // Phase 3 GOOD: Route to workers by hash (follow lines)
+  t(() => {
+    const wColors = ['#5eead4', '#a78bfa', '#fbbf24'];
+    for (let i = 0; i < N; i++) {
+      document.getElementById(`g-${i}`).style.background = wColors[i % 3];
+      moveDot(`g-${i}`, goodPos.worker(i));
+    }
+  }, d(2800));
+
+  // Phase 4 BAD: Redis shakes
+  t(() => { document.getElementById('bad-redis').classList.add('shake'); }, d(3500));
+
+  // Phase 5 BAD: 1 wins, 8 fail
+  t(() => {
+    document.getElementById('bad-redis').classList.remove('shake');
+    document.getElementById('b-0').style.background = '#10b981';
+    moveDot('b-0', badPos.dbWin());
+    for (let i = 1; i < N; i++) {
+      const b = document.getElementById(`b-${i}`);
+      b.style.background = '#ef4444';
+      b.classList.add('fail');
+      moveDot(`b-${i}`, badPos.fail(i));
+    }
+  }, d(4500));
+
+  // Phase 5 GOOD: First per worker (0,1,2) → Redis (follow line)
+  t(() => {
+    [0, 1, 2].forEach(i => {
+      document.getElementById(`g-${i}`).style.background = '#10b981';
+      moveDot(`g-${i}`, goodPos.redis(i)); // i = worker index
+    });
+  }, d(4800));
+
+  // Phase 6 GOOD: Winners → DB (follow line)
+  t(() => {
+    [0, 1, 2].forEach(i => {
+      moveDot(`g-${i}`, goodPos.db(i));
+    });
+  }, d(5600));
+
+  // Phase 7 GOOD: Rest rejected one by one (serial per worker)
+  const rejects = [3, 4, 5, 6, 7, 8];
+  rejects.forEach((i, idx) => {
+    t(() => {
+      const g = document.getElementById(`g-${i}`);
+      g.style.background = '#ef4444';
+      g.classList.add('fail');
+      moveDot(`g-${i}`, goodPos.reject(i));
+    }, d(5800 + idx * 280));
+  });
+
+  // Phase 8: Results
+  t(() => {
+    document.getElementById('bad-result').classList.add('show');
+    document.getElementById('good-result').classList.add('show');
+  }, d(5800 + rejects.length * 280 + 500));
+}
+
+reset();
+</script>
+</body>
+</html>

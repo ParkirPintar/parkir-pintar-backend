@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkirPintar - Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; }
+        header { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 2rem 3rem; border-bottom: 3px solid #e11d48; position: sticky; top: 0; z-index: 100; }
+        header h1 { font-size: 1.8rem; color: #fff; }
+        header p { color: #94a3b8; font-size: 0.9rem; margin-top: 0.3rem; }
+        nav { background: #1e293b; padding: 1rem 2rem; border-bottom: 1px solid #334155; position: sticky; top: 80px; z-index: 99; display: flex; gap: 0.4rem; flex-wrap: wrap; overflow-x: auto; }
+        nav a { color: #94a3b8; text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; white-space: nowrap; border: 1px solid transparent; transition: all 0.2s; }
+        nav a:hover, nav a.active { background: #0f172a; color: #f472b6; border-color: #e11d48; }
+        main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
+        .section { margin-bottom: 2.5rem; background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+        .section h2 { padding: 1rem 1.5rem; background: #0f172a; color: #fff; font-size: 1.1rem; border-bottom: 2px solid #e11d48; }
+        .section-body { padding: 1.5rem; overflow-x: auto; }
+        .section-body.white-bg { background: #fff; }
+        .mermaid { background: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .drawio-embed { width: 100%; min-height: 600px; border: none; background: #fff; border-radius: 8px; }
+        .controls { padding: 0.6rem 1.5rem; background: #0f172a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .controls span { color: #64748b; font-size: 0.8rem; }
+        .btn { background: #e11d48; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; }
+        .btn:hover { background: #be123c; }
+        .btn-green { background: #059669; }
+        .btn-green:hover { background: #047857; }
+        .newman-panel { padding: 1.5rem; }
+        .newman-panel pre { background: #0f172a; padding: 1rem; border-radius: 8px; color: #a5f3fc; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .newman-panel .status { margin-top: 1rem; padding: 0.8rem; border-radius: 6px; font-size: 0.9rem; }
+        .newman-panel .status.running { background: #1e3a5f; color: #7dd3fc; }
+        .newman-panel .status.success { background: #064e3b; color: #6ee7b7; }
+        .newman-panel .status.error { background: #450a0a; color: #fca5a5; }
+        img.diagram-img { max-width: 100%; height: auto; border-radius: 8px; }
+        footer { text-align: center; padding: 2rem; color: #475569; font-size: 0.8rem; border-top: 1px solid #334155; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>🅿️ ParkirPintar — Architecture & Design Diagrams</h1>
+    <p>Smart Parking Marketplace — Drawio diagrams, ERD, Sequence Diagrams, and E2E Test Runner</p>
+</header>
+
+<nav>
+    <a href="#drawio-hld">HLD Infra</a>
+    <a href="#drawio-lld">LLD Infra</a>
+    <a href="#drawio-business">Business Flow</a>
+    <a href="#drawio-pricing">Pricing JDM</a>
+    <a href="#drawio-e2e">E2E Test Flow</a>
+    <a href="#drawio-perf">Performance</a>
+    <a href="#drawio-warbooking">War Booking Detail</a>
+    <a href="#war-booking-anim">⚡ War Booking Animation</a>
+    <a href="#seq-reservation-system">Seq: Reservation (System)</a>
+    <a href="#seq-reservation-user">Seq: Reservation (User)</a>
+    <a href="#seq-checkin">Seq: Check-in</a>
+    <a href="#seq-checkout">Seq: Checkout</a>
+    <a href="#seq-cancel">Seq: Cancel</a>
+    <a href="#seq-expiry">Seq: Expiry</a>
+    <a href="#erd-reservation">ERD: Reservation</a>
+    <a href="#erd-billing">ERD: Billing</a>
+    <a href="#erd-payment">ERD: Payment</a>
+    <a href="#erd-analytics">ERD: Analytics</a>
+    <a href="#hld-mermaid">HLD (Mermaid)</a>
+    <a href="#component">Component</a>
+    <a href="#newman">🧪 Newman E2E</a>
+</nav>
+
+<main>
+<!-- DRAWIO DIAGRAMS -->
+<section id="drawio-hld" class="section">
+    <h2>📐 HLD — Infrastructure (Drawio)</h2>
+    <div class="controls"><span>HLD-infrastructure.drawio</span><button class="btn" onclick="openInDrawio('HLD-infrastructure.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-hld-container" class="drawio-render"></div></div>
+</section>
+
+<section id="drawio-lld" class="section">
+    <h2>🔧 LLD — Infrastructure (Drawio)</h2>
+    <div class="controls"><span>LLD-infrastructure.drawio</span><button class="btn" onclick="openInDrawio('LLD-infrastructure.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-lld-container" class="drawio-render"></div></div>
+</section>
+
+<section id="drawio-business" class="section">
+    <h2>🔄 Business Flow (Drawio)</h2>
+    <div class="controls"><span>business-flow.drawio</span><button class="btn" onclick="openInDrawio('business-flow.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-business-container" class="drawio-render"></div></div>
+</section>
+
+<section id="drawio-pricing" class="section">
+    <h2>💰 Pricing Rules — JDM (Drawio)</h2>
+    <div class="controls"><span>pricing-rules-jdm.drawio</span><button class="btn" onclick="openInDrawio('pricing-rules-jdm.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-pricing-container" class="drawio-render"></div></div>
+</section>
+
+<section id="drawio-e2e" class="section">
+    <h2>🧪 E2E Test Flow (Drawio)</h2>
+    <div class="controls"><span>e2e-test-flow.drawio</span><button class="btn" onclick="openInDrawio('e2e-test-flow.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-e2e-container" class="drawio-render"></div></div>
+</section>
+
+<section id="drawio-perf" class="section">
+    <h2>📊 Performance Test Results (Drawio)</h2>
+    <div class="controls"><span>performance-test-results.drawio</span><button class="btn" onclick="openInDrawio('performance-test-results.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-perf-container" class="drawio-render"></div></div>
+</section>
+
+<!-- WAR BOOKING DRAWIO -->
+<section id="drawio-warbooking" class="section">
+    <h2>⚔️ War Booking — Consistent Hash Exchange Detail (Drawio)</h2>
+    <div class="controls"><span>war-booking-detail.drawio</span><button class="btn" onclick="openInDrawio('war-booking-detail.drawio')">Open in draw.io</button></div>
+    <div class="section-body white-bg"><div id="drawio-warbooking-container" class="drawio-render"></div></div>
+</section>
+
+<!-- WAR BOOKING ANIMATION (embedded iframe) -->
+<section id="war-booking-anim" class="section">
+    <h2>⚡ War Booking — Interactive Animation</h2>
+    <div class="controls">
+        <span>Consistent Hash Exchange vs Direct Redis — animated comparison</span>
+        <a href="war-booking-animation.html" target="_blank" class="btn" style="text-decoration:none;">Open Fullscreen ↗</a>
+    </div>
+    <div class="section-body" style="padding:0;">
+        <iframe src="war-booking-animation.html" style="width:100%;height:580px;border:none;border-radius:0 0 12px 12px;"></iframe>
+    </div>
+</section>
+
+<!-- SEQUENCE DIAGRAMS -->
+<section id="seq-reservation-system" class="section">
+    <h2>📋 Sequence: Reservation — System-assigned Mode</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    actor Driver
+    participant Kong as Kong Gateway
+    participant Search as Search Service
+    participant Reservation as Reservation Service
+    participant Redis as Redis Cluster
+    participant RMQ as RabbitMQ
+    participant Worker as Queue Worker
+    participant Billing as Billing Service
+    participant DB as PostgreSQL
+
+    Driver->>Kong: POST /v1/reservations (mode=system_assigned, type=CAR)
+    Kong->>Reservation: gRPC CreateReservation(SYSTEM_ASSIGNED, vehicle_type)
+    Reservation->>Redis: GET idempotency:{key}
+    alt Duplicate request
+        Redis-->>Reservation: existing reservation_id
+        Reservation-->>Kong: ReservationResponse (idempotent)
+        Kong-->>Driver: 200 existing reservation
+    else New request
+        Reservation->>Search: gRPC GetFirstAvailable(vehicle_type)
+        Search->>Redis: GET availability:{type} (cache)
+        alt Cache miss
+            Search->>DB: SELECT spot WHERE status=AVAILABLE LIMIT 1
+            DB-->>Search: spot_id
+        end
+        Search-->>Reservation: spot_id
+        Reservation->>RMQ: Publish booking.exchange routing_key=spot_id
+        RMQ->>Worker: Route by consistent hash
+        Worker->>Redis: SETNX lock:{spot_id} TTL 1h
+        alt Lock acquired
+            Worker->>DB: INSERT reservation (status=RESERVED)
+            Worker->>Billing: gRPC ChargeBookingFee(5000)
+            Billing-->>Worker: OK
+            Worker-->>Reservation: ReservationResponse
+            Reservation-->>Kong: spot_id + qr_code
+            Kong-->>Driver: 201 pay 5.000 IDR booking fee
+        else Lock failed
+            Worker->>Search: retry next available
+        end
+    end
+    </div></div>
+</section>
+<section id="seq-reservation-user" class="section">
+    <h2>📋 Sequence: Reservation — User-selected Mode</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    actor Driver
+    participant Kong as Kong Gateway
+    participant Search as Search Service
+    participant Reservation as Reservation Service
+    participant Redis as Redis Cluster
+    participant RMQ as RabbitMQ
+    participant Worker as Queue Worker
+    participant Billing as Billing Service
+    participant DB as PostgreSQL
+
+    Driver->>Kong: GET /v1/availability?floor=1&type=CAR
+    Kong->>Search: gRPC GetAvailability(floor, type)
+    Search-->>Kong: AvailabilityResponse
+    Kong-->>Driver: 200 spots list
+
+    Driver->>Kong: POST /v1/spots/{spot_id}/hold
+    Kong->>Reservation: gRPC HoldSpot(spot_id, driver_id)
+    Reservation->>Redis: SETNX hold:{spot_id} TTL 60s
+    alt Hold acquired
+        Reservation-->>Kong: HoldResponse OK
+        Kong-->>Driver: 200 spot held for 60s
+    else Already held
+        Reservation-->>Kong: SPOT_HELD error
+        Kong-->>Driver: 409 spot held, try another
+    end
+
+    Driver->>Kong: POST /v1/reservations (mode=user_selected, spot_id)
+    Kong->>Reservation: gRPC CreateReservation(USER_SELECTED, spot_id)
+    Reservation->>Redis: GET hold:{spot_id}
+    alt Hold valid
+        Reservation->>RMQ: Publish booking.exchange routing_key=spot_id
+        RMQ->>Worker: Route by consistent hash
+        Worker->>Redis: SETNX lock:{spot_id} TTL 1h
+        alt Lock acquired
+            Worker->>Redis: DEL hold:{spot_id}
+            Worker->>DB: INSERT reservation (status=RESERVED)
+            Worker->>Billing: gRPC ChargeBookingFee(5000)
+            Worker-->>Reservation: ReservationResponse
+            Reservation-->>Kong: parking lot ID + qr_code
+            Kong-->>Driver: 201 pay 5.000 IDR
+        else Lock failed
+            Worker-->>Reservation: SPOT_TAKEN
+            Kong-->>Driver: 409 Spot taken
+        end
+    else Hold expired
+        Reservation-->>Kong: HOLD_EXPIRED
+        Kong-->>Driver: 409 re-select spot
+    end
+    </div></div>
+</section>
+<section id="seq-checkin" class="section">
+    <h2>📋 Sequence: Check-in via Presence Service</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    actor Driver
+    participant Kong as Kong Gateway
+    participant Presence as Presence Service
+    participant Reservation as Reservation Service
+    participant Billing as Billing Service
+    participant DB as PostgreSQL
+    participant Redis as Redis Cluster
+
+    Driver->>Kong: POST /v1/checkin (reservation_id, spot_id)
+    Kong->>Presence: gRPC CheckIn(reservation_id, spot_id)
+    Presence->>Reservation: gRPC GetReservation(reservation_id)
+    Reservation-->>Presence: reservation (reserved spot_id)
+
+    alt Correct spot
+        Presence->>Reservation: gRPC CheckIn(reservation_id, spot_id)
+        Reservation->>DB: UPDATE reservation SET status=ACTIVE
+        Reservation->>Redis: DEL lock:{spot_id}
+        Reservation-->>Presence: OK
+        Presence->>Billing: gRPC StartBillingSession(reservation_id)
+        Billing->>DB: UPDATE billing SET session_start=now()
+        Billing-->>Presence: OK
+        Presence-->>Kong: CheckInResponse (status=ACTIVE)
+        Kong-->>Driver: 200 check-in confirmed, billing started
+    else Wrong spot
+        Presence-->>Kong: BLOCKED
+        Kong-->>Driver: 409 must park at assigned spot
+    end
+    </div></div>
+</section>
+
+<section id="seq-checkout" class="section">
+    <h2>📋 Sequence: Billing & Checkout — Pay Before Exit</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    actor Driver
+    participant Kong as Kong Gateway
+    participant Billing as Billing Service
+    participant Payment as Payment Service
+    participant DB as PostgreSQL
+
+    Driver->>Kong: POST /v1/checkout (idempotency-key: uuid)
+    Kong->>Billing: gRPC Checkout(reservation_id, idempotency_key)
+    Billing->>DB: SELECT billing WHERE reservation_id=?
+    DB-->>Billing: session_start, session_end=now()
+    Billing->>Billing: Calculate hourly fee (ceil hours * 5000)
+    Billing->>Billing: Count midnight crossings (crossings * 20000)
+    Billing->>Billing: total = max(0, hourly + overnight - booking_fee)
+    Billing->>DB: INSERT invoice (total, status=PENDING)
+    Billing->>Payment: gRPC CreatePayment(invoice_id, amount, QRIS)
+    Payment->>Payment: Generate QR code (Pondo Ngopi)
+    Payment-->>Billing: PaymentResponse (qr_code, status=PENDING)
+    Billing-->>Kong: InvoiceResponse (qr_code)
+    Kong-->>Driver: 200 QR code — scan to pay
+
+    Note over Payment: Driver scans QR and pays
+    alt Settlement PAID
+        Payment->>DB: UPDATE payment SET status=PAID
+        Note right of Driver: Gate opens — driver exits
+    else Settlement FAILED
+        Payment->>DB: UPDATE payment SET status=FAILED
+        Note right of Driver: Gate closed — retry payment
+    end
+    </div></div>
+</section>
+<section id="seq-cancel" class="section">
+    <h2>📋 Sequence: Cancellation Flow</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    actor Driver
+    participant Kong as Kong Gateway
+    participant Reservation as Reservation Service
+    participant Billing as Billing Service
+    participant Redis as Redis Cluster
+    participant DB as PostgreSQL
+
+    Driver->>Kong: DELETE /v1/reservations/{id}
+    Kong->>Reservation: gRPC CancelReservation(reservation_id)
+    Reservation->>DB: SELECT reservation WHERE id=? AND status=RESERVED
+    DB-->>Reservation: reservation (confirmed_at)
+    Reservation->>Reservation: Calculate elapsed since confirmed_at
+
+    alt elapsed lte 2 minutes
+        Reservation->>Billing: gRPC ApplyCancellationFee(0)
+    else elapsed gt 2 minutes
+        Reservation->>Billing: gRPC ApplyCancellationFee(5000)
+    end
+
+    Billing->>DB: UPDATE billing_record (cancellation_fee)
+    Billing-->>Reservation: OK
+    Reservation->>DB: UPDATE reservation SET status=CANCELLED
+    Reservation->>Redis: DEL lock:{spot_id}
+    Reservation-->>Kong: CancelResponse
+    Kong-->>Driver: 200 cancelled
+    </div></div>
+</section>
+
+<section id="seq-expiry" class="section">
+    <h2>📋 Sequence: Reservation Expiry (No-show)</h2>
+    <div class="section-body"><div class="mermaid">
+sequenceDiagram
+    participant Worker as Expiry Worker
+    participant Redis as Redis Cluster
+    participant DB as PostgreSQL
+    participant Notif as Notification Service
+
+    Note over Worker: Background worker polls every 30s
+    Worker->>DB: SELECT reservations WHERE status=RESERVED AND expires_at lt now()
+    DB-->>Worker: expired reservation records
+
+    alt status still RESERVED (no check-in within 1 hour)
+        Worker->>DB: UPDATE reservation SET status=EXPIRED
+        Note right of Worker: No additional penalty - driver forfeits booking fee only
+        Worker->>Redis: DEL lock:{spot_id}
+        Worker->>Notif: publish reservation.expired
+        Note right of Worker: Spot released back to inventory
+    else already ACTIVE or COMPLETED
+        Worker->>Worker: skip, no action needed
+    end
+    </div></div>
+</section>
+<!-- ERD DIAGRAMS -->
+<section id="erd-reservation" class="section">
+    <h2>🗄️ ERD: Reservation DB</h2>
+    <div class="section-body"><div class="mermaid">
+erDiagram
+    spots {
+        varchar spot_id PK
+        int floor
+        varchar vehicle_type
+        varchar status
+    }
+
+    reservations {
+        uuid id PK
+        uuid driver_id
+        varchar spot_id FK
+        varchar mode
+        varchar status
+        bigint booking_fee
+        timestamp confirmed_at
+        timestamp expires_at
+        timestamp checkin_at
+        varchar idempotency_key
+        timestamp created_at
+    }
+
+    spots ||--o{ reservations : "assigned to"
+    </div></div>
+</section>
+
+<section id="erd-billing" class="section">
+    <h2>🗄️ ERD: Billing DB</h2>
+    <div class="section-body"><div class="mermaid">
+erDiagram
+    billing_records {
+        uuid id PK
+        uuid reservation_id
+        bigint booking_fee
+        bigint hourly_fee
+        bigint overnight_fee
+        bigint penalty
+        bigint noshow_fee
+        bigint cancellation_fee
+        bigint total
+        varchar status
+        timestamp session_start
+        timestamp session_end
+        varchar idempotency_key
+        uuid payment_id
+        text qr_code
+        timestamp created_at
+    }
+
+    pricing_rules {
+        uuid id PK
+        int version
+        varchar name
+        jsonb content
+        boolean is_active
+        timestamp created_at
+    }
+    </div></div>
+</section>
+
+<section id="erd-payment" class="section">
+    <h2>🗄️ ERD: Payment DB</h2>
+    <div class="section-body"><div class="mermaid">
+erDiagram
+    payments {
+        uuid id PK
+        uuid invoice_id
+        varchar method
+        bigint amount
+        varchar status
+        text qr_code
+        varchar idempotency_key
+        timestamp created_at
+        timestamp updated_at
+    }
+    </div></div>
+</section>
+
+<section id="erd-analytics" class="section">
+    <h2>🗄️ ERD: Analytics DB</h2>
+    <div class="section-body"><div class="mermaid">
+erDiagram
+    transaction_events {
+        uuid id PK
+        varchar event_type
+        uuid reservation_id
+        uuid driver_id
+        varchar spot_id
+        varchar vehicle_type
+        bigint amount
+        jsonb payload
+        timestamp event_at
+    }
+    </div></div>
+</section>
+<!-- HLD MERMAID -->
+<section id="hld-mermaid" class="section">
+    <h2>📐 HLD — System Architecture (Mermaid)</h2>
+    <div class="section-body"><div class="mermaid">
+graph TD
+    Client["Mobile App / Super App"]
+
+    subgraph Edge
+        CF["Cloudflare"]
+        ALB["AWS ALB"]
+        KONG["Kong Gateway"]
+        IGW["Istio Ingress Gateway"]
+    end
+
+    subgraph Istio Mesh
+        SVC_SEARCH["Search Service"]
+        SVC_RESERVATION["Reservation Service"]
+        SVC_BILLING["Billing Service"]
+        SVC_PAYMENT["Payment Service"]
+        SVC_PRESENCE["Presence Service"]
+        SVC_NOTIF["Notification Service"]
+        SVC_ANALYTICS["Analytics Service"]
+    end
+
+    subgraph Storage
+        PG_RES[("PostgreSQL Reservation")]
+        PG_BIL[("PostgreSQL Billing")]
+        PG_PAY[("PostgreSQL Payment")]
+        PG_REP[("Read Replica")]
+        REDIS[("Redis Cluster")]
+        PG_AN[("PostgreSQL Analytics")]
+    end
+
+    subgraph Messaging
+        RMQ["RabbitMQ"]
+    end
+
+    Client -->|HTTPS| CF
+    CF --> ALB
+    ALB --> KONG
+    KONG --> IGW
+    IGW --> SVC_SEARCH
+    IGW --> SVC_RESERVATION
+    IGW --> SVC_BILLING
+    IGW --> SVC_PRESENCE
+
+    SVC_RESERVATION --> SVC_BILLING
+    SVC_BILLING --> SVC_PAYMENT
+    SVC_PRESENCE --> SVC_RESERVATION
+    SVC_PRESENCE --> SVC_BILLING
+
+    SVC_RESERVATION --> REDIS
+    SVC_RESERVATION --> PG_RES
+    SVC_RESERVATION --> RMQ
+    SVC_BILLING --> PG_BIL
+    SVC_PAYMENT --> PG_PAY
+    SVC_SEARCH --> PG_REP
+    SVC_SEARCH --> REDIS
+    RMQ --> SVC_NOTIF
+    RMQ --> SVC_ANALYTICS
+    SVC_ANALYTICS --> PG_AN
+    PG_RES -.-> PG_REP
+    </div></div>
+</section>
+
+<!-- COMPONENT DIAGRAM -->
+<section id="component" class="section">
+    <h2>🧩 Component Diagram</h2>
+    <div class="section-body"><div class="mermaid">
+graph TD
+    subgraph Driver Facing
+        APP["Mobile App"]
+        CF["Cloudflare"]
+        ALB["AWS ALB"]
+        KONG["Kong Gateway"]
+    end
+
+    subgraph Core Services
+        SEARCH["Search Service"]
+        RESERVATION["Reservation Service"]
+        BILLING["Billing + Pricing Engine"]
+        PAYMENT["Payment + gobreaker"]
+        PRESENCE["Presence Service"]
+    end
+
+    subgraph Non-Core
+        NOTIF["Notification Service"]
+        ANALYTICS["Analytics Service"]
+    end
+
+    subgraph Storage
+        PG_RES[("Reservation DB")]
+        PG_BIL[("Billing DB")]
+        PG_PAY[("Payment DB")]
+        PG_R[("Read Replica")]
+        REDIS[("Redis Cluster")]
+        RMQ["RabbitMQ"]
+    end
+
+    APP --> CF --> ALB --> KONG
+    KONG --> SEARCH
+    KONG --> RESERVATION
+    KONG --> BILLING
+    KONG --> PRESENCE
+    RESERVATION --> RMQ
+    RESERVATION --> REDIS
+    RESERVATION --> PG_RES
+    BILLING --> PG_BIL
+    PAYMENT --> PG_PAY
+    SEARCH --> PG_R
+    SEARCH --> REDIS
+    PRESENCE --> RESERVATION
+    PRESENCE --> BILLING
+    BILLING --> PAYMENT
+    RMQ --> NOTIF
+    RMQ --> ANALYTICS
+    </div></div>
+</section>
+<!-- NEWMAN E2E TEST RUNNER -->
+<section id="newman" class="section">
+    <h2>🧪 Newman E2E Test Runner</h2>
+    <div class="controls">
+        <span>Run Postman/Newman E2E tests from browser</span>
+    </div>
+    <div class="newman-panel">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <button class="btn btn-green" onclick="runNewman('')" id="btn-run">▶ Run Full Suite</button>
+            <button class="btn" onclick="runNewman('1. Search')">Search</button>
+            <button class="btn" onclick="runNewman('2. Hold Spot')">Hold Spot</button>
+            <button class="btn" onclick="runNewman('3. Reservation')">Reservation</button>
+            <button class="btn" onclick="runNewman('4. Check-in')">Check-in</button>
+            <button class="btn" onclick="runNewman('5. Location')">Location</button>
+            <button class="btn" onclick="runNewman('6. Checkout')">Checkout</button>
+            <button class="btn" onclick="runNewman('7. Payment')">Payment</button>
+            <button class="btn" onclick="runNewman('8. Cancel')">Cancel</button>
+            <button class="btn" onclick="runNewman('9. Exit Gate')">Exit Gate</button>
+            <button class="btn" style="background:#dc2626;" onclick="stopNewman()">⏹ Stop</button>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.85rem; color:#94a3b8;">Base URL: </label>
+            <input id="newman-base-url" type="text" value="https://parkir-pintar.pondongopi.biz.id" style="background:#0f172a; border:1px solid #334155; color:#e2e8f0; padding:0.4rem 0.8rem; border-radius:4px; width:350px; font-size:0.85rem;">
+            <span style="font-size:0.75rem; color:#64748b; margin-left:0.5rem;">⚠️ Requires: node docs/diagrams/server.js</span>
+        </div>
+        <div id="newman-status" class="status" style="display:none;"></div>
+        <pre id="newman-output" style="min-height:200px;"># Click a button above to run Newman E2E tests
+# Output will stream here in real-time
+#
+# Prerequisites:
+#   npm install -g newman
+#   node docs/diagrams/server.js
+#
+# Then open http://localhost:3000</pre>
+        <h3 style="font-size:0.9rem; color:#94a3b8; margin:1rem 0 0.5rem;">API Endpoints Reference:</h3>
+        <pre style="background:#0f172a; padding:1rem; border-radius:8px; color:#a5f3fc; font-size:0.8rem;">
+GET  /v1/availability?floor=&vehicle_type=     → Search.GetAvailability
+GET  /v1/availability/first?vehicle_type=      → Search.GetFirstAvailable
+POST /v1/spots/{spot_id}/hold                  → Reservation.HoldSpot
+POST /v1/reservations                          → Reservation.CreateReservation
+GET  /v1/reservations/{id}                     → Reservation.GetReservation
+DELETE /v1/reservations/{id}                   → Reservation.CancelReservation
+POST /v1/checkin                               → Presence.CheckIn
+POST /v1/presence/location                     → Presence.UpdateLocation
+POST /v1/checkout                              → Billing.Checkout
+POST /v1/checkout/gate                         → Presence.CheckOut
+GET  /v1/payments/{id}                         → Payment.GetPaymentStatus
+POST /v1/payments/{id}/retry                   → Payment.RetryPayment</pre>
+    </div>
+</section>
+
+<!-- EXTRA IMAGE -->
+<section class="section">
+    <h2>🖼️ Additional Diagram (image.png)</h2>
+    <div class="section-body white-bg" style="text-align:center;">
+        <img src="image.png" alt="Additional diagram" class="diagram-img" />
+    </div>
+</section>
+
+</main>
+
+<footer>
+    ParkirPintar — Smart Parking Marketplace | Architecture Documentation Viewer
+</footer>
+<script>
+    // Initialize Mermaid
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        sequence: { actorMargin: 50, messageMargin: 40 },
+        er: { useMaxWidth: true },
+        flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+
+    // Load and render drawio files using GraphViewer
+    const drawioFiles = [
+        { file: 'HLD-infrastructure.drawio', container: 'drawio-hld-container' },
+        { file: 'LLD-infrastructure.drawio', container: 'drawio-lld-container' },
+        { file: 'business-flow.drawio', container: 'drawio-business-container' },
+        { file: 'pricing-rules-jdm.drawio', container: 'drawio-pricing-container' },
+        { file: 'e2e-test-flow.drawio', container: 'drawio-e2e-container' },
+        { file: 'performance-test-results.drawio', container: 'drawio-perf-container' },
+        { file: 'war-booking-detail.drawio', container: 'drawio-warbooking-container' },
+    ];
+
+    async function loadDrawioFiles() {
+        for (const item of drawioFiles) {
+            const container = document.getElementById(item.container);
+            try {
+                const response = await fetch(item.file);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const xml = await response.text();
+
+                // Create a div with mxgraph config for GraphViewer
+                const div = document.createElement('div');
+                div.className = 'mxgraph';
+                div.setAttribute('data-mxgraph', JSON.stringify({
+                    highlight: '#0000ff',
+                    nav: true,
+                    resize: true,
+                    toolbar: 'zoom layers lightbox',
+                    edit: '_blank',
+                    xml: xml
+                }));
+                div.style.maxWidth = '100%';
+                div.style.overflow = 'auto';
+                container.appendChild(div);
+            } catch (e) {
+                container.innerHTML = `
+                    <div style="padding:2rem; text-align:center; color:#666;">
+                        <p style="font-size:1.2rem;">📂 ${item.file}</p>
+                        <p style="margin-top:0.5rem;">Click button below to view in draw.io editor</p>
+                        <button class="btn" onclick="openInDrawio('${item.file}')" style="margin-top:1rem;">Open in draw.io</button>
+                        <p style="margin-top:1rem; font-size:0.8rem; color:#999;">Or open the .drawio file directly in VS Code with the Draw.io extension</p>
+                    </div>`;
+            }
+        }
+
+        // Load GraphViewer script after setting up all containers
+        const script = document.createElement('script');
+        script.src = 'https://viewer.diagrams.net/js/viewer-static.min.js';
+        script.onload = () => console.log('GraphViewer loaded');
+        script.onerror = () => {
+            console.warn('GraphViewer failed to load - showing fallback');
+            document.querySelectorAll('.drawio-render').forEach(el => {
+                if (!el.innerHTML.includes('Click button')) {
+                    el.innerHTML = `<div style="padding:2rem; text-align:center; color:#666;">
+                        <p>⚠️ Could not load draw.io viewer (requires internet)</p>
+                        <p style="margin-top:0.5rem; font-size:0.85rem;">Open .drawio files directly in VS Code with Draw.io extension</p>
+                    </div>`;
+                }
+            });
+        };
+        document.body.appendChild(script);
+    }
+
+    function openInDrawio(filename) {
+        // Open in draw.io web editor
+        window.open(`https://app.diagrams.net/#U${encodeURIComponent(window.location.href.replace('index.html', filename))}`, '_blank');
+    }
+
+    let newmanEventSource = null;
+
+    function runNewman(folder) {
+        const baseUrl = document.getElementById('newman-base-url').value;
+        const statusEl = document.getElementById('newman-status');
+        const outputEl = document.getElementById('newman-output');
+
+        // Stop any existing run
+        if (newmanEventSource) {
+            newmanEventSource.close();
+            newmanEventSource = null;
+        }
+
+        outputEl.textContent = '';
+        statusEl.style.display = 'block';
+        statusEl.className = 'status running';
+        statusEl.textContent = `🔄 Running Newman${folder ? ` (folder: ${folder})` : ' (full suite)'}...`;
+
+        const params = new URLSearchParams({ baseUrl });
+        if (folder) params.set('folder', folder);
+
+        newmanEventSource = new EventSource(`/api/newman?${params.toString()}`);
+
+        newmanEventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'stdout' || data.type === 'info') {
+                outputEl.textContent += data.text + '\n';
+            } else if (data.type === 'stderr') {
+                outputEl.textContent += `⚠️ ${data.text}\n`;
+            } else if (data.type === 'done') {
+                statusEl.className = data.code === 0 ? 'status success' : 'status error';
+                statusEl.textContent = data.text;
+                newmanEventSource.close();
+                newmanEventSource = null;
+            } else if (data.type === 'error') {
+                statusEl.className = 'status error';
+                statusEl.textContent = data.text;
+                newmanEventSource.close();
+                newmanEventSource = null;
+            }
+
+            // Auto-scroll
+            outputEl.scrollTop = outputEl.scrollHeight;
+        };
+
+        newmanEventSource.onerror = () => {
+            if (newmanEventSource) {
+                statusEl.className = 'status error';
+                statusEl.textContent = '❌ Connection lost. Make sure server.js is running: node docs/diagrams/server.js';
+                newmanEventSource.close();
+                newmanEventSource = null;
+            }
+        };
+    }
+
+    function stopNewman() {
+        if (newmanEventSource) {
+            newmanEventSource.close();
+            newmanEventSource = null;
+            const statusEl = document.getElementById('newman-status');
+            statusEl.className = 'status error';
+            statusEl.textContent = '⏹ Stopped by user';
+        }
+    }
+
+    // Nav active state
+    document.querySelectorAll('nav a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+            e.target.classList.add('active');
+        });
+    });
+
+    // Highlight nav on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id;
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.toggle('active', l.getAttribute('href') === `#${id}`);
+                });
+            }
+        });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+
+    // Load drawio files on page load
+    document.addEventListener('DOMContentLoaded', loadDrawioFiles);
+</script>
+</body>
+</html>

@@ -1,222 +1,285 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<mxfile host="app.diagrams.net" modified="2026-05-26T00:00:00.000Z" agent="draw.io" version="24.0.0" type="device">
+<mxfile host="app.diagrams.net" agent="draw.io">
   <diagram id="hld-infra" name="HLD - Infrastructure and Data Flow">
-    <mxGraphModel dx="2000" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1600" math="0" shadow="0">
+    <mxGraphModel dx="1458" dy="954" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1600" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" parent="1" value="ParkirPintar - High Level Design (HLD)&#10;AWS Infrastructure and Data Flow" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontStyle=1;" vertex="1">
-          <mxGeometry x="500" y="10" width="600" height="50" as="geometry" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontStyle=1;" value="ParkirPintar - High Level Design (HLD)&#xa;AWS Infrastructure and Data Flow" vertex="1">
+          <mxGeometry height="50" width="600" x="500" y="10" as="geometry" />
         </mxCell>
-        <mxCell id="legend" parent="1" value="LEGEND&#10;&#10;--- Blue: HTTPS/TLS (external)&#10;--- Red: gRPC + mTLS (Istio)&#10;--- Green: TCP/TLS (DB/Cache)&#10;--- Purple: AMQP (RabbitMQ)&#10;--- Orange: HTTP (external stub)&#10;- - - Dashed: Async replication" style="text;html=1;align=left;verticalAlign=top;fontSize=9;strokeColor=#999999;fillColor=#FAFAFA;rounded=1;spacingLeft=8;spacingTop=4;whiteSpace=wrap;" vertex="1">
-          <mxGeometry x="1520" y="80" width="240" height="160" as="geometry" />
+        <mxCell id="legend" parent="1" style="text;html=1;align=left;verticalAlign=top;fontSize=9;strokeColor=#999999;fillColor=#FAFAFA;rounded=1;spacingLeft=8;spacingTop=4;whiteSpace=wrap;" value="LEGEND&#xa;&#xa;--- Blue: HTTPS/TLS (external)&#xa;--- Red: gRPC + mTLS (Istio)&#xa;--- Green: TCP/TLS (DB/Cache)&#xa;--- Purple: AMQP (RabbitMQ)&#xa;--- Orange: HTTP (external stub)&#xa;- - - Dashed: Async replication" vertex="1">
+          <mxGeometry height="160" width="240" x="1520" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="client" parent="1" value="Mobile App&#10;(Driver)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;fontSize=11;fontStyle=1;shadow=1;" vertex="1">
-          <mxGeometry x="760" y="80" width="120" height="50" as="geometry" />
+        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#333333;fontSize=11;fontStyle=1;shadow=1;" value="Mobile App&#xa;(Driver)" vertex="1">
+          <mxGeometry height="50" width="120" x="760" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="cf" parent="1" value="Cloudflare&#10;DNS + HTTPS + WAF + DDoS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;fontStyle=1;" vertex="1">
-          <mxGeometry x="720" y="180" width="200" height="45" as="geometry" />
+        <mxCell id="cf" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=10;fontStyle=1;" value="Cloudflare&#xa;DNS + HTTPS + WAF + DDoS" vertex="1">
+          <mxGeometry height="45" width="200" x="720" y="180" as="geometry" />
         </mxCell>
-        <mxCell id="aws" parent="1" value="AWS Cloud (ap-southeast-3 Jakarta)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=13;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1">
-          <mxGeometry x="100" y="270" width="1400" height="1280" as="geometry" />
+        <mxCell id="aws" parent="1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=13;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" value="AWS Cloud (ap-southeast-3 Jakarta)" vertex="1">
+          <mxGeometry height="1280" width="1400" x="100" y="270" as="geometry" />
         </mxCell>
-        <mxCell id="vpc" parent="1" value="VPC: 10.0.0.0/16" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" vertex="1">
-          <mxGeometry x="130" y="310" width="1340" height="1210" as="geometry" />
+        <mxCell id="vpc" parent="1" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=11;fontStyle=1;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;spacingTop=5;dashed=0;" value="VPC: 10.0.0.0/16" vertex="1">
+          <mxGeometry height="1210" width="1340" x="130" y="310" as="geometry" />
         </mxCell>
-        <mxCell id="pubsub" parent="1" value="Public Subnets (10.0.64.0/19, 10.0.96.0/19)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" vertex="1">
-          <mxGeometry x="160" y="350" width="700" height="180" as="geometry" />
+        <mxCell id="pubsub" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" value="Public Subnets (10.0.64.0/19, 10.0.96.0/19)" vertex="1">
+          <mxGeometry height="180" width="700" x="160" y="350" as="geometry" />
         </mxCell>
-        <mxCell id="igw" parent="1" value="Internet Gateway&#10;(Inbound from Internet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="190" y="400" width="150" height="50" as="geometry" />
+        <mxCell id="igw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="Internet Gateway&#xa;(Inbound from Internet)" vertex="1">
+          <mxGeometry height="50" width="150" x="190" y="400" as="geometry" />
         </mxCell>
-        <mxCell id="alb" parent="1" value="AWS ALB&#10;(L7 Load Balancer&#10;HTTPS termination)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="400" y="400" width="150" height="50" as="geometry" />
+        <mxCell id="alb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="AWS ALB&#xa;(L7 Load Balancer&#xa;HTTPS termination)" vertex="1">
+          <mxGeometry height="50" width="150" x="420" y="400" as="geometry" />
         </mxCell>
-        <mxCell id="nat" parent="1" value="NAT Gateway&#10;(Outbound for private&#10;subnets to Internet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="610" y="400" width="150" height="50" as="geometry" />
+        <mxCell id="nat" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="NAT Gateway&#xa;(Outbound for private&#xa;subnets to Internet)" vertex="1">
+          <mxGeometry height="50" width="150" x="610" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="pub-note" parent="1" value="Flow: Internet -&gt; IGW -&gt; ALB -&gt; EKS&#10;NAT: EKS private -&gt; Internet (outbound only)" style="text;html=1;align=left;verticalAlign=middle;fontSize=8;strokeColor=none;fillColor=none;fontColor=#666666;fontStyle=2;" vertex="1">
-          <mxGeometry x="190" y="460" width="350" height="30" as="geometry" />
+        <mxCell id="pub-note" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=8;strokeColor=none;fillColor=none;fontColor=#666666;fontStyle=2;" value="Flow: Internet -&gt; IGW -&gt; ALB -&gt; EKS&#xa;NAT: EKS private -&gt; Internet (outbound only)" vertex="1">
+          <mxGeometry height="30" width="350" x="190" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="privsub" parent="1" value="Private Subnets (10.0.0.0/19, 10.0.32.0/19)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" vertex="1">
-          <mxGeometry x="160" y="560" width="1280" height="930" as="geometry" />
+        <mxCell id="privsub" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" value="Private Subnets (10.0.0.0/19, 10.0.32.0/19)" vertex="1">
+          <mxGeometry height="930" width="1280" x="160" y="560" as="geometry" />
         </mxCell>
-        <mxCell id="eks" parent="1" value="EKS Cluster: parkirpintar&#10;(Kubernetes 1.29 + Istio Service Mesh)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" vertex="1">
-          <mxGeometry x="190" y="600" width="780" height="560" as="geometry" />
+        <mxCell id="eks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=10;" value="EKS Cluster: parkirpintar&#xa;(Kubernetes 1.29 + Istio Service Mesh)" vertex="1">
+          <mxGeometry height="560" width="780" x="190" y="600" as="geometry" />
         </mxCell>
-        <mxCell id="nodegroup" parent="1" value="Node Group: t3.medium (3-7 nodes ON_DEMAND) | HPA: min=3 max=20/svc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=9;" vertex="1">
-          <mxGeometry x="210" y="650" width="730" height="25" as="geometry" />
+        <mxCell id="nodegroup" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=9;" value="Node Group: t3.medium (3-7 nodes ON_DEMAND) | HPA: min=3 max=20/svc" vertex="1">
+          <mxGeometry height="25" width="730" x="210" y="650" as="geometry" />
         </mxCell>
-        <mxCell id="istio-igw" parent="1" value="Istio Ingress&#10;Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="220" y="700" width="120" height="45" as="geometry" />
+        <mxCell id="istio-igw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;" value="Istio Ingress&#xa;Gateway" vertex="1">
+          <mxGeometry height="45" width="120" x="220" y="680" as="geometry" />
         </mxCell>
-        <mxCell id="kong" parent="1" value="Kong Gateway&#10;Rate Limit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="390" y="700" width="120" height="45" as="geometry" />
+        <mxCell id="kong" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Kong Gateway&#xa;Rate Limit" vertex="1">
+          <mxGeometry height="45" width="120" x="390" y="680" as="geometry" />
         </mxCell>
-        <mxCell id="gateway" parent="1" value="Gateway Svc&#10;REST-&gt;gRPC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="560" y="700" width="120" height="45" as="geometry" />
+        <mxCell id="gateway" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Gateway Svc&#xa;REST-&gt;gRPC" vertex="1">
+          <mxGeometry height="45" width="120" x="570" y="700" as="geometry" />
         </mxCell>
-        <mxCell id="svc-search" parent="1" value="Search&#10;:50055" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="210" y="790" width="90" height="50" as="geometry" />
+        <mxCell id="svc-search" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Search&#xa;:50055" vertex="1">
+          <mxGeometry height="50" width="90" x="210" y="790" as="geometry" />
         </mxCell>
-        <mxCell id="svc-reservation" parent="1" value="Reservation&#10;:50052" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="330" y="790" width="100" height="50" as="geometry" />
+        <mxCell id="svc-reservation" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Reservation&#xa;:50052" vertex="1">
+          <mxGeometry height="50" width="100" x="330" y="790" as="geometry" />
         </mxCell>
-        <mxCell id="svc-billing" parent="1" value="Billing&#10;:50053" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="460" y="790" width="90" height="50" as="geometry" />
+        <mxCell id="svc-billing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Billing&#xa;:50053" vertex="1">
+          <mxGeometry height="50" width="90" x="460" y="790" as="geometry" />
         </mxCell>
-        <mxCell id="svc-payment" parent="1" value="Payment&#10;:50054" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="580" y="790" width="90" height="50" as="geometry" />
+        <mxCell id="svc-payment" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Payment&#xa;:50054" vertex="1">
+          <mxGeometry height="50" width="90" x="580" y="900" as="geometry" />
         </mxCell>
-        <mxCell id="svc-presence" parent="1" value="Presence&#10;:50056" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="700" y="790" width="90" height="50" as="geometry" />
+        <mxCell id="svc-presence" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=9;fontStyle=1;" value="Presence&#xa;:50056" vertex="1">
+          <mxGeometry height="50" width="90" x="700" y="900" as="geometry" />
         </mxCell>
-        <mxCell id="svc-notification" parent="1" value="Notification&#10;:50057" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCEDC8;strokeColor=#558B2F;fontSize=9;" vertex="1">
-          <mxGeometry x="330" y="880" width="100" height="50" as="geometry" />
+        <mxCell id="svc-notification" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCEDC8;strokeColor=#558B2F;fontSize=9;" value="Notification&#xa;:50057" vertex="1">
+          <mxGeometry height="50" width="100" x="330" y="930" as="geometry" />
         </mxCell>
-        <mxCell id="svc-analytics" parent="1" value="Analytics&#10;:50058" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCEDC8;strokeColor=#558B2F;fontSize=9;" vertex="1">
-          <mxGeometry x="460" y="880" width="100" height="50" as="geometry" />
+        <mxCell id="svc-analytics" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCEDC8;strokeColor=#558B2F;fontSize=9;" value="Analytics&#xa;:50058" vertex="1">
+          <mxGeometry height="50" width="100" x="460" y="930" as="geometry" />
         </mxCell>
-        <mxCell id="istio-mesh" parent="1" value="Istio: mTLS STRICT | LEAST_CONN LB | Retry 3x/2s | Timeout 5s | outlierDetection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=8;" vertex="1">
-          <mxGeometry x="210" y="960" width="730" height="25" as="geometry" />
+        <mxCell id="istio-mesh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=8;" value="Istio: mTLS STRICT | LEAST_CONN LB | Retry 3x/2s | Timeout 5s | outlierDetection" vertex="1">
+          <mxGeometry height="25" width="730" x="210" y="1015" as="geometry" />
         </mxCell>
-        <mxCell id="monitoring" parent="1" value="Monitoring: Prometheus | Grafana | Loki | Tempo | OTel Collector | Kiali" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=8;fontStyle=1;" vertex="1">
-          <mxGeometry x="210" y="1000" width="730" height="25" as="geometry" />
+        <mxCell id="monitoring" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=8;fontStyle=1;" value="Monitoring: Prometheus | Grafana | Loki | Tempo | OTel Collector | Kiali" vertex="1">
+          <mxGeometry height="25" width="730" x="210" y="1055" as="geometry" />
         </mxCell>
-        <mxCell id="obs-ec2" parent="1" value="EC2 (t3.medium)&#10;Grafana + Loki + Tempo&#10;Dashboards UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="210" y="1060" width="170" height="55" as="geometry" />
+        <mxCell id="obs-ec2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=9;fontStyle=1;" value="EC2 (t3.medium)&#xa;Grafana + Loki + Tempo&#xa;Dashboards UI" vertex="1">
+          <mxGeometry height="55" width="170" x="220" y="1080" as="geometry" />
         </mxCell>
-        <mxCell id="data-label" parent="1" value="Data Layer (Managed Services)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1">
-          <mxGeometry x="1020" y="580" width="250" height="25" as="geometry" />
+        <mxCell id="data-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;strokeColor=none;fillColor=none;" value="Data Layer (Managed Services)" vertex="1">
+          <mxGeometry height="25" width="250" x="1020" y="580" as="geometry" />
         </mxCell>
-        <mxCell id="rds-res" parent="1" value="RDS PostgreSQL 16&#10;reservation_db&#10;(db.t3.micro)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="620" width="155" height="55" as="geometry" />
+        <mxCell id="rds-res" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="RDS PostgreSQL 16&#xa;reservation_db&#xa;(db.t3.micro)" vertex="1">
+          <mxGeometry height="55" width="155" x="1040" y="620" as="geometry" />
         </mxCell>
-        <mxCell id="rds-replica" parent="1" value="Read Replica&#10;reservation_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=8;dashed=1;" vertex="1">
-          <mxGeometry x="1240" y="620" width="130" height="55" as="geometry" />
+        <mxCell id="rds-replica" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=8;dashed=1;" value="Read Replica&#xa;reservation_db" vertex="1">
+          <mxGeometry height="55" width="130" x="1240" y="620" as="geometry" />
         </mxCell>
-        <mxCell id="rds-bil" parent="1" value="RDS PostgreSQL 16&#10;billing_db&#10;(db.t3.micro)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="700" width="155" height="55" as="geometry" />
+        <mxCell id="rds-bil" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="RDS PostgreSQL 16&#xa;billing_db&#xa;(db.t3.micro)" vertex="1">
+          <mxGeometry height="55" width="155" x="1040" y="680" as="geometry" />
         </mxCell>
-        <mxCell id="rds-pay" parent="1" value="RDS PostgreSQL 16&#10;payment_db&#10;(db.t3.micro)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1240" y="700" width="130" height="55" as="geometry" />
+        <mxCell id="rds-pay" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="RDS PostgreSQL 16&#xa;payment_db&#xa;(db.t3.micro)" vertex="1">
+          <mxGeometry height="55" width="130" x="1240" y="700" as="geometry" />
         </mxCell>
-        <mxCell id="rds-ana" parent="1" value="RDS PostgreSQL 16&#10;analytics_db&#10;(db.t3.micro)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="780" width="155" height="55" as="geometry" />
+        <mxCell id="rds-ana" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="RDS PostgreSQL 16&#xa;analytics_db&#xa;(db.t3.micro)" vertex="1">
+          <mxGeometry height="55" width="155" x="1255" y="810" as="geometry" />
         </mxCell>
-        <mxCell id="redis" parent="1" value="ElastiCache Redis 7.0&#10;cache.t3.small&#10;(Inventory Lock | Cache | Idempotency)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="870" width="240" height="55" as="geometry" />
+        <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;" value="ElastiCache Redis 7.0&#xa;cache.t3.small&#xa;(Inventory Lock | Cache | Idempotency)" vertex="1">
+          <mxGeometry height="55" width="240" x="1200" y="980" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" value="Amazon MQ (RabbitMQ 3.13)&#10;mq.m5.large&#10;Consistent Hash Exchange (spot_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="960" width="240" height="55" as="geometry" />
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontSize=9;fontStyle=1;" value="Amazon MQ (RabbitMQ 3.13)&#xa;mq.m5.large&#xa;Consistent Hash Exchange (spot_id)" vertex="1">
+          <mxGeometry height="55" width="240" x="1070" y="1100" as="geometry" />
         </mxCell>
-        <mxCell id="ecr" parent="1" value="ECR&#10;8 Repos&#10;(scan on push)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="1050" width="110" height="50" as="geometry" />
+        <mxCell id="ecr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="ECR&#xa;8 Repos&#xa;(scan on push)" vertex="1">
+          <mxGeometry height="50" width="110" x="1070" y="1190" as="geometry" />
         </mxCell>
-        <mxCell id="ext-label" parent="1" value="External Services" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1">
-          <mxGeometry x="1040" y="1130" width="200" height="25" as="geometry" />
+        <mxCell id="ext-label" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;strokeColor=none;fillColor=none;" value="External Services" vertex="1">
+          <mxGeometry height="25" width="200" x="1070" y="1270" as="geometry" />
         </mxCell>
-        <mxCell id="settlement" parent="1" value="Pondo Ngopi&#10;Settlement Stub&#10;(WireMock HTTP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#616161;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1040" y="1160" width="150" height="55" as="geometry" />
+        <mxCell id="settlement" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#616161;fontSize=9;fontStyle=1;" value="Pondo Ngopi&#xa;Settlement Stub&#xa;(WireMock HTTP)" vertex="1">
+          <mxGeometry height="55" width="150" x="1070" y="1300" as="geometry" />
         </mxCell>
-        <mxCell id="notif-ext" parent="1" value="Notification&#10;Provider Stub&#10;(Push/SMS HTTP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#616161;fontSize=9;fontStyle=1;" vertex="1">
-          <mxGeometry x="1240" y="1160" width="140" height="55" as="geometry" />
+        <mxCell id="notif-ext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#616161;fontSize=9;fontStyle=1;" value="Notification&#xa;Provider Stub&#xa;(Push/SMS HTTP)" vertex="1">
+          <mxGeometry height="55" width="140" x="1270" y="1300" as="geometry" />
         </mxCell>
-        <mxCell id="e01" parent="1" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" edge="1" source="client" target="cf">
+        <mxCell id="e01" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" target="cf" value="HTTPS">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e02" parent="1" value="HTTPS proxied" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" edge="1" source="cf" target="igw">
+        <mxCell id="e02" edge="1" parent="1" source="cf" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" target="igw" value="HTTPS proxied">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e03" parent="1" value="forwards to" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" edge="1" source="igw" target="alb">
+        <mxCell id="e03" edge="1" parent="1" source="igw" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" target="alb" value="forwards to">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e04" parent="1" value="HTTPS -&gt; EKS" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" edge="1" source="alb" target="istio-igw">
+        <mxCell id="e04" edge="1" parent="1" source="alb" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1565C0;strokeWidth=2;fontSize=8;fontStyle=1;fontColor=#1565C0;" target="istio-igw" value="HTTPS -&gt; EKS">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="640" />
+              <mxPoint x="280" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e05" edge="1" parent="1" source="nat" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;dashed=1;" target="igw" value="outbound&#xa;(private-&gt;internet)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e05" parent="1" value="outbound&#10;(private-&gt;internet)" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;dashed=1;" edge="1" source="nat" target="igw">
+        <mxCell id="e10" edge="1" parent="1" source="istio-igw" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=2;fontSize=8;fontColor=#CC0000;" target="kong" value="gRPC+mTLS">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e10" parent="1" value="gRPC+mTLS" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=2;fontSize=8;fontColor=#CC0000;" edge="1" source="istio-igw" target="kong">
+        <mxCell id="e11" edge="1" parent="1" source="kong" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=2;fontSize=8;fontColor=#CC0000;" target="gateway" value="gRPC+mTLS">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e11" parent="1" value="gRPC+mTLS" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=2;fontSize=8;fontColor=#CC0000;" edge="1" source="kong" target="gateway">
+        <mxCell id="e20" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-search" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e20" parent="1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="gateway" target="svc-search">
+        <mxCell id="e21" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-reservation" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e21" parent="1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="gateway" target="svc-reservation">
+        <mxCell id="e22" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-billing" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e22" parent="1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="gateway" target="svc-billing">
+        <mxCell id="e23" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-payment" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e23" parent="1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="gateway" target="svc-payment">
+        <mxCell id="e24" edge="1" parent="1" source="gateway" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-presence" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e24" parent="1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="gateway" target="svc-presence">
+        <mxCell id="e30" edge="1" parent="1" source="svc-reservation" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-billing" value="ChargeBookingFee">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e30" parent="1" value="ChargeBookingFee" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="svc-reservation" target="svc-billing">
+        <mxCell id="e31" edge="1" parent="1" source="svc-billing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-payment" value="CreatePayment">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e31" parent="1" value="CreatePayment" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="svc-billing" target="svc-payment">
+        <mxCell id="e32" edge="1" parent="1" source="svc-presence" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-reservation" value="CheckIn/Out">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e32" parent="1" value="CheckIn/Out" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="svc-presence" target="svc-reservation">
+        <mxCell id="e33" edge="1" parent="1" source="svc-presence" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" target="svc-billing" value="StartBilling">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e33" parent="1" value="StartBilling" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#CC0000;strokeWidth=1;fontSize=7;fontColor=#CC0000;" edge="1" source="svc-presence" target="svc-billing">
+        <mxCell id="e40" edge="1" parent="1" source="svc-reservation" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="rds-res" value="pgx TCP/5432">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1118" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e41" edge="1" parent="1" source="svc-billing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="rds-bil" value="pgx TCP/5432">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="505" y="860" />
+              <mxPoint x="1118" y="860" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e42" edge="1" parent="1" source="svc-payment" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="rds-pay" value="pgx TCP/5432">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="625" y="850" />
+              <mxPoint x="1305" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e43" edge="1" parent="1" source="svc-analytics" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="rds-ana" value="pgx TCP/5432">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e40" parent="1" value="pgx TCP/5432" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-reservation" target="rds-res">
+        <mxCell id="e44" edge="1" parent="1" source="svc-search" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;dashed=1;" target="rds-replica" value="read TCP/5432">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="255" y="780" />
+              <mxPoint x="1305" y="780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e45" edge="1" parent="1" source="rds-res" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#666666;strokeWidth=1;fontSize=7;fontColor=#666666;dashed=1;" target="rds-replica" value="async repl">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e41" parent="1" value="pgx TCP/5432" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-billing" target="rds-bil">
+        <mxCell id="e50" edge="1" parent="1" source="svc-reservation" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="redis" value="SETNX lock">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="770" />
+              <mxPoint x="1160" y="770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e51" edge="1" parent="1" source="svc-search" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="redis" value="cache GET/SET">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="255" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e52" edge="1" parent="1" source="svc-billing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" target="redis" value="idempotency">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="505" y="870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e60" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=2;fontSize=7;fontColor=#6A1B9A;" value="AMQP publish&#xa;(spot_id hash)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="760" />
+              <mxPoint x="1160" y="760" />
+            </Array>
+            <mxPoint x="379.9973684210527" y="769.95" as="sourcePoint" />
+            <mxPoint x="1160.1026315789475" y="939.95" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e61" edge="1" parent="1" source="svc-billing" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" target="rabbitmq" value="AMQP publish&#xa;(billing events)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="505" y="880" />
+              <mxPoint x="1160" y="880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e62" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" target="svc-notification" value="AMQP consume">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e42" parent="1" value="pgx TCP/5432" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-payment" target="rds-pay">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e63" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" target="svc-analytics" value="AMQP consume">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1190" y="1000" />
+              <mxPoint x="510" y="1000" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e43" parent="1" value="pgx TCP/5432" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-analytics" target="rds-ana">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e70" edge="1" parent="1" source="svc-payment" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=2;fontSize=7;fontColor=#E65100;" target="settlement" value="HTTP + gobreaker&#xa;(circuit breaker)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="625" y="750" />
+              <mxPoint x="1115" y="750" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e44" parent="1" value="read TCP/5432" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;dashed=1;" edge="1" source="svc-search" target="rds-replica">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e71" edge="1" parent="1" source="svc-notification" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=2;fontSize=7;fontColor=#E65100;" target="notif-ext" value="HTTP stub">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="990" />
+              <mxPoint x="1310" y="990" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="e45" parent="1" value="async repl" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#666666;strokeWidth=1;fontSize=7;fontColor=#666666;dashed=1;" edge="1" source="rds-res" target="rds-replica">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e50" parent="1" value="SETNX lock" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-reservation" target="redis">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e51" parent="1" value="cache GET/SET" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-search" target="redis">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e52" parent="1" value="idempotency" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2E7D32;strokeWidth=1;fontSize=7;fontColor=#2E7D32;" edge="1" source="svc-billing" target="redis">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e60" parent="1" value="AMQP publish&#10;(spot_id hash)" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=2;fontSize=7;fontColor=#6A1B9A;" edge="1" source="svc-reservation" target="rabbitmq">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e61" parent="1" value="AMQP publish&#10;(billing events)" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" edge="1" source="svc-billing" target="rabbitmq">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e62" parent="1" value="AMQP consume" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" edge="1" source="rabbitmq" target="svc-notification">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e63" parent="1" value="AMQP consume" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6A1B9A;strokeWidth=1;fontSize=7;fontColor=#6A1B9A;" edge="1" source="rabbitmq" target="svc-analytics">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e70" parent="1" value="HTTP + gobreaker&#10;(circuit breaker)" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=2;fontSize=7;fontColor=#E65100;" edge="1" source="svc-payment" target="settlement">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e71" parent="1" value="HTTP stub" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=2;fontSize=7;fontColor=#E65100;" edge="1" source="svc-notification" target="notif-ext">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="summary" parent="1" value="DATA FLOW PATH:&#10;&#10;1. INBOUND: Driver -&gt; Cloudflare -&gt; Internet GW -&gt; ALB -&gt; Istio Ingress -&gt; Kong -&gt; Gateway -&gt; Services&#10;2. OUTBOUND: Services in private subnet -&gt; NAT Gateway -&gt; Internet (for external API calls)&#10;3. INTER-SERVICE: All gRPC with Istio mTLS, L7 load balanced (LEAST_CONN)&#10;4. ASYNC EVENTS: Reservation/Billing -&gt; RabbitMQ (consistent hash by spot_id) -&gt; Notification + Analytics&#10;5. DATA: Each service owns its DB (no cross-service FK). Search uses Read Replica + Redis cache&#10;6. PAYMENT: Payment -&gt; Settlement stub via HTTP with sony/gobreaker circuit breaker&#10;&#10;PUBLIC SUBNET ROLES:&#10;- Internet Gateway: Entry point for inbound traffic from internet&#10;- ALB: L7 load balancer, HTTPS termination, routes to EKS&#10;- NAT Gateway: Allows private subnet resources to reach internet (outbound only, no inbound)" style="text;html=1;align=left;verticalAlign=top;fontSize=9;strokeColor=#999999;fillColor=#FAFAFA;rounded=1;spacingLeft=8;spacingTop=4;whiteSpace=wrap;" vertex="1">
-          <mxGeometry x="160" y="1260" width="900" height="200" as="geometry" />
+        <mxCell id="summary" parent="1" style="text;html=1;align=left;verticalAlign=top;fontSize=9;strokeColor=#999999;fillColor=#FAFAFA;rounded=1;spacingLeft=8;spacingTop=4;whiteSpace=wrap;" value="DATA FLOW PATH:&#xa;&#xa;1. INBOUND: Driver -&gt; Cloudflare -&gt; Internet GW -&gt; ALB -&gt; Istio Ingress -&gt; Kong -&gt; Gateway -&gt; Services&#xa;2. OUTBOUND: Services in private subnet -&gt; NAT Gateway -&gt; Internet (for external API calls)&#xa;3. INTER-SERVICE: All gRPC with Istio mTLS, L7 load balanced (LEAST_CONN)&#xa;4. ASYNC EVENTS: Reservation/Billing -&gt; RabbitMQ (consistent hash by spot_id) -&gt; Notification + Analytics&#xa;5. DATA: Each service owns its DB (no cross-service FK). Search uses Read Replica + Redis cache&#xa;6. PAYMENT: Payment -&gt; Settlement stub via HTTP with sony/gobreaker circuit breaker&#xa;&#xa;PUBLIC SUBNET ROLES:&#xa;- Internet Gateway: Entry point for inbound traffic from internet&#xa;- ALB: L7 load balancer, HTTPS termination, routes to EKS&#xa;- NAT Gateway: Allows private subnet resources to reach internet (outbound only, no inbound)" vertex="1">
+          <mxGeometry height="200" width="900" x="160" y="1260" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

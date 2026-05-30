@@ -1,0 +1,352 @@
+<mxfile host="app.diagrams.net" agent="draw.io">
+  <diagram id="war-booking-detail" name="War Booking — Consistent Hash Exchange Detail">
+    <mxGraphModel dx="1555" dy="1017" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;fillColor=#E4002B;fontColor=#FFFFFF;rounded=1;arcSize=10;strokeColor=none;" value="War Booking — Consistent Hash Exchange &amp; Queue Worker Detail" vertex="1">
+          <mxGeometry height="40" width="1200" x="200" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="sec1-title" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="1. Architecture Overview — Single Process, Multiple Goroutines" vertex="1">
+          <mxGeometry height="30" width="600" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="pod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;dashed=1;dashPattern=5 5;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="280" width="700" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="pod-label" parent="1" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=top;fillColor=none;fontColor=#666666;" value="Reservation Service Pod (1 container)" vertex="1">
+          <mxGeometry height="20" width="300" x="50" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="grpc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#B00020;" value="gRPC Server&#xa;:50052&#xa;(main goroutine)" vertex="1">
+          <mxGeometry height="60" width="130" x="60" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="http" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#007BFF;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#0056b3;" value="HTTP REST&#xa;:8080 (Gin)&#xa;(goroutine)" vertex="1">
+          <mxGeometry height="60" width="130" x="60" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="health" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#28A745;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#1e7e34;" value="Health&#xa;:8081&#xa;(goroutine)" vertex="1">
+          <mxGeometry height="50" width="130" x="60" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="qworker" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0D9488;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#047857;arcSize=10;" value="Queue Worker&#xa;(goroutine)&#xa;&#xa;consume from:&#xa;booking.queue.0&#xa;&#xa;auto-ack: false&#xa;manual ACK/NACK" vertex="1">
+          <mxGeometry height="120" width="160" x="250" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="eworker" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF8C00;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#cc7000;arcSize=10;" value="Expiry Worker&#xa;(goroutine)&#xa;&#xa;poll DB every 30s&#xa;expire no-show" vertex="1">
+          <mxGeometry height="80" width="160" x="250" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="deps" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1E293B;fontColor=#E2E8F0;fontSize=8;align=left;verticalAlign=top;spacingLeft=8;spacingTop=5;strokeColor=#334155;" value="Shared Dependencies:&#xa;• pgxpool (DB connection pool)&#xa;• go-redis client&#xa;• AMQP channel&#xa;• gRPC clients (Search, Billing)" vertex="1">
+          <mxGeometry height="100" width="260" x="460" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="qworker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;fontSize=8;" target="deps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="eworker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;fontSize=8;" target="deps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="scale-note" parent="1" style="text;html=1;fontSize=9;align=left;verticalAlign=top;fillColor=#FFF3E0;fontColor=#333333;rounded=1;strokeColor=#FF8C00;spacingLeft=8;spacingTop=5;" value="⚡ Scaling: HPA scales entire pod (3→20 replicas)&#xa;Each pod has its own Queue Worker goroutine&#xa;All pods consume from same queue — RabbitMQ distributes" vertex="1">
+          <mxGeometry height="60" width="270" x="460" y="275" as="geometry" />
+        </mxCell>
+        <mxCell id="sec2-title" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="2. RabbitMQ Consistent Hash Exchange — Message Routing" vertex="1">
+          <mxGeometry height="30" width="600" x="40" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="api-pub" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=9;fontStyle=0;strokeColor=#B00020;align=left;spacingLeft=8;" value="Reservation API&#xa;&#xa;PublishBooking(&#xa;  exchange: booking.exchange&#xa;  routingKey: spot_id&#xa;  payload: BookingMessage&#xa;)" vertex="1">
+          <mxGeometry height="110" width="200" x="40" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="exchange" parent="1" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fillColor=#F97316;fontColor=#FFFFFF;fontSize=9;fontStyle=1;strokeColor=#cc6600;size=0.15;" value="booking.exchange&#xa;type: x-consistent-hash&#xa;durable: true" vertex="1">
+          <mxGeometry height="80" width="200" x="320" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="api-pub" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#F97316;fontSize=8;fontColor=#F97316;fontStyle=2;" target="exchange" value="publish(spot_id, payload)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="q0" parent="1" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#042F2E;fontColor=#5EEAD4;fontSize=8;fontStyle=1;strokeColor=#0D9488;" value="booking.queue.0&#xa;(Pod 0 consumes)" vertex="1">
+          <mxGeometry height="40" width="140" x="600" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="q1" parent="1" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#042F2E;fontColor=#5EEAD4;fontSize=8;fontStyle=1;strokeColor=#0D9488;" value="booking.queue.1&#xa;(Pod 1 consumes)" vertex="1">
+          <mxGeometry height="40" width="140" x="600" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="q2" parent="1" style="shape=mxgraph.flowchart.document;whiteSpace=wrap;html=1;fillColor=#042F2E;fontColor=#5EEAD4;fontSize=8;fontStyle=1;strokeColor=#0D9488;" value="booking.queue.2&#xa;(Pod 2 consumes)" vertex="1">
+          <mxGeometry height="40" width="140" x="600" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="exchange" style="rounded=1;strokeColor=#0D9488;fontSize=7;fontColor=#0D9488;fontStyle=2;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="q0" value="hash(&quot;1-CAR-05&quot;) mod 3 = 0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="exchange" style="rounded=1;strokeColor=#0D9488;fontSize=7;fontColor=#0D9488;fontStyle=2;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="q1" value="hash(&quot;2-MOTO-12&quot;) mod 3 = 1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="exchange" style="rounded=1;strokeColor=#0D9488;fontSize=7;fontColor=#0D9488;fontStyle=2;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="q2" value="hash(&quot;3-CAR-01&quot;) mod 3 = 2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="guarantee" parent="1" style="text;html=1;fontSize=9;align=left;verticalAlign=top;fillColor=#E8F5E9;fontColor=#1B5E20;rounded=1;strokeColor=#28A745;spacingLeft=8;spacingTop=5;" value="🔑 GUARANTEE:&#xa;Same spot_id → always same queue → serial processing&#xa;Different spot_id → can go to different queues → parallel" vertex="1">
+          <mxGeometry height="45" width="420" x="320" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="sec2b-title" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="2b. How x-consistent-hash Works Internally (Hash Ring)" vertex="1">
+          <mxGeometry height="30" width="500" x="1110" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="ring" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;strokeWidth=2;dashed=1;" value="" vertex="1">
+          <mxGeometry height="180" width="180" x="1150" y="665" as="geometry" />
+        </mxCell>
+        <mxCell id="ring-label" parent="1" style="text;html=1;fontSize=8;align=center;verticalAlign=middle;fillColor=none;fontColor=#666666;" value="Hash Ring&#xa;(30 points total)" vertex="1">
+          <mxGeometry height="30" width="90" x="1195" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="seg0" parent="1" style="text;html=1;fontSize=7;fontStyle=1;align=center;verticalAlign=middle;fillColor=#3B82F6;fontColor=#FFFFFF;rounded=1;strokeColor=none;" value="queue.0&#xa;points 0-9" vertex="1">
+          <mxGeometry height="25" width="70" x="1205" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="seg1" parent="1" style="text;html=1;fontSize=7;fontStyle=1;align=center;verticalAlign=middle;fillColor=#8B5CF6;fontColor=#FFFFFF;rounded=1;strokeColor=none;" value="queue.1&#xa;points 10-19" vertex="1">
+          <mxGeometry height="25" width="70" x="1320" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="seg2" parent="1" style="text;html=1;fontSize=7;fontStyle=1;align=center;verticalAlign=middle;fillColor=#F97316;fontColor=#FFFFFF;rounded=1;strokeColor=none;" value="queue.2&#xa;points 20-29" vertex="1">
+          <mxGeometry height="25" width="70" x="1130" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="ring-explain" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#1E293B;fontColor=#A5F3FC;rounded=1;strokeColor=#334155;spacingLeft=10;spacingTop=8;" value="How the Hash Ring Works:&#xa;&#xa;1. Each queue gets N points on the ring&#xa;   (N = weight from QueueBind routing key)&#xa;   Weight &quot;10&quot; = 10 points per queue&#xa;   3 queues × 10 = 30 total ring points&#xa;&#xa;2. On publish, RabbitMQ:&#xa;   a) Takes routing key: &quot;1-CAR-05&quot;&#xa;   b) Computes: hash(&quot;1-CAR-05&quot;) = 738291&#xa;   c) Finds position: 738291 mod 30 = 21&#xa;   d) Point 21 → belongs to queue.2&#xa;   e) Message delivered to queue.2&#xa;&#xa;3. Same routing key = same hash = same queue&#xa;   ALWAYS. Deterministic." vertex="1">
+          <mxGeometry height="210" width="280" x="820" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="examples-title" parent="1" style="text;html=1;fontSize=9;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="Concrete Examples:" vertex="1">
+          <mxGeometry height="20" width="200" x="900" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="ex-table" parent="1" style="shape=table;startSize=0;container=1;collapsible=0;childLayout=tableLayout;fontSize=8;fillColor=#F5F5F5;strokeColor=#CCCCCC;" value="" vertex="1">
+          <mxGeometry height="125" width="490" x="900" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="tr0" parent="ex-table" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;fillColor=#E4002B;fontColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="25" width="490" as="geometry" />
+        </mxCell>
+        <mxCell id="th1" parent="tr0" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="Routing Key (spot_id)" vertex="1">
+          <mxGeometry height="25" width="130" as="geometry">
+            <mxRectangle height="25" width="130" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="th2" parent="tr0" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="Hash Value" vertex="1">
+          <mxGeometry height="25" width="100" x="130" as="geometry">
+            <mxRectangle height="25" width="100" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="th3" parent="tr0" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="mod 30" vertex="1">
+          <mxGeometry height="25" width="60" x="230" as="geometry">
+            <mxRectangle height="25" width="60" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="th4" parent="tr0" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="→ Queue" vertex="1">
+          <mxGeometry height="25" width="80" x="290" as="geometry">
+            <mxRectangle height="25" width="80" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="th5" parent="tr0" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fillColor=#E4002B;fontColor=#FFFFFF;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="Consistent?" vertex="1">
+          <mxGeometry height="25" width="120" x="370" as="geometry">
+            <mxRectangle height="25" width="120" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tr1" parent="ex-table" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;fillColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="25" width="490" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="td1a" parent="tr1" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="1-CAR-05" vertex="1">
+          <mxGeometry height="25" width="130" as="geometry">
+            <mxRectangle height="25" width="130" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td1b" parent="tr1" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="738291" vertex="1">
+          <mxGeometry height="25" width="100" x="130" as="geometry">
+            <mxRectangle height="25" width="100" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td1c" parent="tr1" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="= 21" vertex="1">
+          <mxGeometry height="25" width="60" x="230" as="geometry">
+            <mxRectangle height="25" width="60" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td1d" parent="tr1" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;fontColor=#F97316;top=0;left=0;bottom=0;right=0;" value="queue.2" vertex="1">
+          <mxGeometry height="25" width="80" x="290" as="geometry">
+            <mxRectangle height="25" width="80" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td1e" parent="tr1" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontColor=#28A745;top=0;left=0;bottom=0;right=0;" value="✅ Always queue.2" vertex="1">
+          <mxGeometry height="25" width="120" x="370" as="geometry">
+            <mxRectangle height="25" width="120" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tr2" parent="ex-table" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;fillColor=#F5F5F5;" value="" vertex="1">
+          <mxGeometry height="20" width="490" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="td2a" parent="tr2" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="2-MOTO-12" vertex="1">
+          <mxGeometry height="20" width="130" as="geometry">
+            <mxRectangle height="20" width="130" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td2b" parent="tr2" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="412087" vertex="1">
+          <mxGeometry height="20" width="100" x="130" as="geometry">
+            <mxRectangle height="20" width="100" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td2c" parent="tr2" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="= 7" vertex="1">
+          <mxGeometry height="20" width="60" x="230" as="geometry">
+            <mxRectangle height="20" width="60" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td2d" parent="tr2" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;fontColor=#3B82F6;top=0;left=0;bottom=0;right=0;" value="queue.0" vertex="1">
+          <mxGeometry height="20" width="80" x="290" as="geometry">
+            <mxRectangle height="20" width="80" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td2e" parent="tr2" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontColor=#28A745;top=0;left=0;bottom=0;right=0;" value="✅ Always queue.0" vertex="1">
+          <mxGeometry height="20" width="120" x="370" as="geometry">
+            <mxRectangle height="20" width="120" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tr3" parent="ex-table" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;fillColor=#FFFFFF;" value="" vertex="1">
+          <mxGeometry height="25" width="490" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="td3a" parent="tr3" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="3-CAR-01" vertex="1">
+          <mxGeometry height="25" width="130" as="geometry">
+            <mxRectangle height="25" width="130" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td3b" parent="tr3" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="951634" vertex="1">
+          <mxGeometry height="25" width="100" x="130" as="geometry">
+            <mxRectangle height="25" width="100" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td3c" parent="tr3" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="= 14" vertex="1">
+          <mxGeometry height="25" width="60" x="230" as="geometry">
+            <mxRectangle height="25" width="60" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td3d" parent="tr3" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;fontColor=#8B5CF6;top=0;left=0;bottom=0;right=0;" value="queue.1" vertex="1">
+          <mxGeometry height="25" width="80" x="290" as="geometry">
+            <mxRectangle height="25" width="80" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td3e" parent="tr3" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontColor=#28A745;top=0;left=0;bottom=0;right=0;" value="✅ Always queue.1" vertex="1">
+          <mxGeometry height="25" width="120" x="370" as="geometry">
+            <mxRectangle height="25" width="120" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tr4" parent="ex-table" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;top=0;left=0;bottom=0;right=0;fillColor=#F5F5F5;" value="" vertex="1">
+          <mxGeometry height="30" width="490" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="td4a" parent="tr4" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=2;top=0;left=0;bottom=0;right=0;" value="1-CAR-05 (again!)" vertex="1">
+          <mxGeometry height="30" width="130" as="geometry">
+            <mxRectangle height="30" width="130" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td4b" parent="tr4" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;top=0;left=0;bottom=0;right=0;" value="738291" vertex="1">
+          <mxGeometry height="30" width="100" x="130" as="geometry">
+            <mxRectangle height="30" width="100" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td4c" parent="tr4" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;top=0;left=0;bottom=0;right=0;" value="= 21" vertex="1">
+          <mxGeometry height="30" width="60" x="230" as="geometry">
+            <mxRectangle height="30" width="60" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td4d" parent="tr4" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;fontColor=#F97316;top=0;left=0;bottom=0;right=0;" value="queue.2" vertex="1">
+          <mxGeometry height="30" width="80" x="290" as="geometry">
+            <mxRectangle height="30" width="80" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="td4e" parent="tr4" style="shape=partialRectangle;html=1;whiteSpace=wrap;connectable=0;overflow=hidden;fontSize=7;fontStyle=1;fontColor=#28A745;top=0;left=0;bottom=0;right=0;" value="✅ SAME as row 1!&#xa;(deterministic)" vertex="1">
+          <mxGeometry height="30" width="120" x="370" as="geometry">
+            <mxRectangle height="30" width="120" as="alternateBounds" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="weight-box" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#FFF3E0;fontColor=#333333;rounded=1;strokeColor=#FF8C00;spacingLeft=10;spacingTop=8;fontFamily=monospace;" value="QueueBind Weight Explained:&#xa;&#xa;QueueBind(&quot;booking.queue.0&quot;, &quot;10&quot;, &quot;booking.exchange&quot;)&#xa;                                    ↑&#xa;                          routing_key = WEIGHT (not pattern!)&#xa;&#xa;• Weight &quot;10&quot; = queue gets 10 points on hash ring&#xa;• 3 queues × weight 10 = 30 total ring points&#xa;• Equal weight = equal distribution (~33% each)&#xa;• Weight &quot;20&quot; = 2× more messages than weight &quot;10&quot;&#xa;&#xa;Why &quot;Consistent&quot;?&#xa;• Add queue.3 → only ~25% messages redistribute&#xa;• Remove queue.1 → only its messages move&#xa;• NOT like simple mod N (which reshuffles everything)" vertex="1">
+          <mxGeometry height="185" width="490" x="900" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="sec3-title" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="3. Queue Worker — Serial Processing per Message" vertex="1">
+          <mxGeometry height="30" width="600" x="40" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#1d4ed8;" value="① Dequeue&#xa;&#xa;msg := &lt;-msgs&#xa;(blocks until&#xa;message available)" vertex="1">
+          <mxGeometry height="80" width="130" x="40" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#6d28d9;" value="② Idempotency Check&#xa;&#xa;Redis GET&#xa;idempotency:{key}&#xa;→ duplicate? ACK &amp; skip" vertex="1">
+          <mxGeometry height="80" width="150" x="200" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC2626;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#991b1b;" value="③ Redis SETNX&#xa;&#xa;lock:{spot_id} TTL 1h&#xa;→ OK: continue&#xa;→ FAIL: NACK (reject)" vertex="1">
+          <mxGeometry height="80" width="150" x="380" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#336791;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#1d4e6e;" value="④ INSERT Reservation&#xa;&#xa;status = RESERVED&#xa;booking_fee = 5000&#xa;expires_at = now+1h" vertex="1">
+          <mxGeometry height="80" width="150" x="560" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#28A745;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#1e7e34;" value="⑤ gRPC Billing&#xa;&#xa;ChargeBookingFee()&#xa;→ returns QR code&#xa;for QRIS payment" vertex="1">
+          <mxGeometry height="80" width="150" x="740" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0D9488;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#047857;" value="⑥ ACK Message&#xa;&#xa;msg.Ack(false)&#xa;→ removed from queue&#xa;→ next msg processed" vertex="1">
+          <mxGeometry height="80" width="150" x="920" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="es1" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="es2" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="es3" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="es4" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;" target="s5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="es5" edge="1" parent="1" source="s5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666666;" target="s6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nack" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;fontColor=#DC2626;fontSize=8;fontStyle=1;strokeColor=#DC2626;" value="NACK&#xa;(spot taken)" vertex="1">
+          <mxGeometry height="35" width="110" x="400" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="enack" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#DC2626;fontSize=7;fontColor=#DC2626;fontStyle=2;dashed=1;" target="nack" value="lock failed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sec4-title" parent="1" style="text;html=1;fontSize=14;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="4. Why Zero Double-Booking?" vertex="1">
+          <mxGeometry height="30" width="400" x="40" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="why1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F97316;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#cc6600;" value="① Consistent Hash&#xa;Same spot_id → same queue&#xa;(no two workers process&#xa;same spot simultaneously)" vertex="1">
+          <mxGeometry height="70" width="180" x="40" y="910" as="geometry" />
+        </mxCell>
+        <mxCell id="why2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0D9488;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#047857;" value="② Serial Consumer&#xa;1 message at a time per queue&#xa;(auto-ack=false, manual ACK&#xa;after DB write succeeds)" vertex="1">
+          <mxGeometry height="70" width="180" x="240" y="910" as="geometry" />
+        </mxCell>
+        <mxCell id="why3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DC2626;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#991b1b;" value="③ Redis SETNX&#xa;Atomic lock — only 1 can&#xa;acquire per spot_id&#xa;(TTL 1h auto-release)" vertex="1">
+          <mxGeometry height="70" width="180" x="440" y="910" as="geometry" />
+        </mxCell>
+        <mxCell id="why4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;fontColor=#FFFFFF;fontSize=8;fontStyle=1;strokeColor=#6d28d9;" value="④ Idempotency Key&#xa;Duplicate requests return&#xa;same result (no re-processing)&#xa;Stored in Redis TTL 24h" vertex="1">
+          <mxGeometry height="70" width="180" x="640" y="910" as="geometry" />
+        </mxCell>
+        <mxCell id="result" parent="1" style="text;html=1;fontSize=10;fontStyle=1;align=center;verticalAlign=middle;fillColor=#052E16;fontColor=#86EFAC;rounded=1;strokeColor=#16A34A;" value="RESULT: 120 VUs × 6237 iterations × 0 double-bookings (proven via k6 load test)" vertex="1">
+          <mxGeometry height="30" width="780" x="40" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="code-title" parent="1" style="text;html=1;fontSize=12;fontStyle=1;align=left;verticalAlign=middle;fillColor=none;fontColor=#333333;" value="Code References" vertex="1">
+          <mxGeometry height="25" width="200" x="850" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="code1" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#1E293B;fontColor=#A5F3FC;rounded=1;strokeColor=#334155;fontFamily=monospace;spacingLeft=8;spacingTop=5;" value="adapter/publisher.go&#xa;&#xa;ExchangeDeclare(&#xa;  &quot;booking.exchange&quot;,&#xa;  &quot;x-consistent-hash&quot;,&#xa;  durable: true&#xa;)&#xa;&#xa;PublishWithContext(&#xa;  exchange: bookingExchange,&#xa;  routingKey: spotID,  // ← hash key&#xa;  body: payload&#xa;)" vertex="1">
+          <mxGeometry height="180" width="230" x="850" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="code2" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#1E293B;fontColor=#A5F3FC;rounded=1;strokeColor=#334155;fontFamily=monospace;spacingLeft=8;spacingTop=5;" value="usecase/queue_worker.go&#xa;&#xa;QueueDeclare(queueName, durable)&#xa;QueueBind(queueName, &quot;10&quot;,&#xa;  &quot;booking.exchange&quot;)&#xa;&#xa;msgs := ch.Consume(&#xa;  queue, autoAck: false&#xa;)&#xa;&#xa;for msg := range msgs {&#xa;  processMessage(ctx, msg)&#xa;  // serial: next msg waits&#xa;  // until ACK/NACK&#xa;}" vertex="1">
+          <mxGeometry height="200" width="230" x="1110" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="code3" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#1E293B;fontColor=#A5F3FC;rounded=1;strokeColor=#334155;fontFamily=monospace;spacingLeft=8;spacingTop=5;" value="cmd/main.go&#xa;&#xa;// All in same process:&#xa;go grpcServer.Serve(lis)&#xa;go httpRouter.Run(&quot;:8080&quot;)&#xa;go queueWorker.Start(ctx)&#xa;go expiryWorker.Start(ctx)&#xa;&#xa;// Scale via K8s HPA:&#xa;// minReplicas: 3&#xa;// maxReplicas: 20&#xa;// metric: CPU 60%" vertex="1">
+          <mxGeometry height="170" width="230" x="1110" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="bind-note" parent="1" style="text;html=1;fontSize=8;align=left;verticalAlign=top;fillColor=#FFF3E0;fontColor=#333333;rounded=1;strokeColor=#FF8C00;spacingLeft=8;spacingTop=5;" value="QueueBind weight &quot;10&quot;:&#xa;Consistent hash uses weight to&#xa;determine how many hash ring&#xa;points this queue occupies.&#xa;&quot;10&quot; = equal distribution across&#xa;all bound queues." vertex="1">
+          <mxGeometry height="90" width="230" x="1410" y="890" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
