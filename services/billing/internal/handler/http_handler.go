@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/parkir-pintar/billing/internal/dto"
 	"github.com/parkir-pintar/billing/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -24,21 +25,15 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 }
 
 func (h *HTTPHandler) checkout(c *gin.Context) {
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
-		return
-	}
-
-	reservationID := strField(body, "reservation_id")
-	if reservationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "reservation_id is required"})
+	var req dto.CheckoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
 	idempotencyKey := c.GetHeader("Idempotency-Key")
 
-	b, err := h.uc.Checkout(c.Request.Context(), reservationID, idempotencyKey)
+	b, err := h.uc.Checkout(c.Request.Context(), req.ReservationID, idempotencyKey)
 	if err != nil {
 		log.Error().Err(err).Msg("checkout failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
@@ -59,16 +54,4 @@ func (h *HTTPHandler) checkout(c *gin.Context) {
 		"qr_code":          b.QRCode,
 		"payment_id":       b.PaymentID,
 	})
-}
-
-// --- Helpers ---
-
-func strField(m map[string]interface{}, key string) string {
-	if m == nil {
-		return ""
-	}
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
 }

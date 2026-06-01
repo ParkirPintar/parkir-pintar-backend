@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/parkir-pintar/presence/internal/dto"
 	"github.com/parkir-pintar/presence/internal/model"
 	"github.com/parkir-pintar/presence/internal/usecase"
 	"github.com/rs/zerolog/log"
@@ -27,24 +28,13 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 }
 
 func (h *HTTPHandler) checkIn(c *gin.Context) {
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
+	var req dto.CheckInRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
-	reservationID := strField(body, "reservation_id")
-	if reservationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "reservation_id is required"})
-		return
-	}
-	spotID := strField(body, "spot_id")
-	if spotID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "spot_id is required"})
-		return
-	}
-
-	result, err := h.uc.CheckIn(c.Request.Context(), reservationID, spotID)
+	result, err := h.uc.CheckIn(c.Request.Context(), req.ReservationID, req.SpotID)
 	if err != nil {
 		if result != nil && result.WrongSpot {
 			c.JSON(http.StatusConflict, gin.H{"message": "BLOCKED: must park at assigned spot"})
@@ -64,25 +54,16 @@ func (h *HTTPHandler) checkIn(c *gin.Context) {
 }
 
 func (h *HTTPHandler) updateLocation(c *gin.Context) {
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
+	var req dto.UpdateLocationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-
-	reservationID := strField(body, "reservation_id")
-	if reservationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "reservation_id is required"})
-		return
-	}
-
-	lat, _ := body["latitude"].(float64)
-	lng, _ := body["longitude"].(float64)
 
 	event, err := h.uc.ProcessLocation(c.Request.Context(), model.LocationUpdate{
-		ReservationID: reservationID,
-		Latitude:      lat,
-		Longitude:     lng,
+		ReservationID: req.ReservationID,
+		Latitude:      req.Latitude,
+		Longitude:     req.Longitude,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("process location failed")
@@ -91,7 +72,7 @@ func (h *HTTPHandler) updateLocation(c *gin.Context) {
 	}
 
 	resp := gin.H{
-		"reservation_id": reservationID,
+		"reservation_id": req.ReservationID,
 		"event":          "NONE",
 	}
 	if event != nil {
@@ -105,38 +86,20 @@ func (h *HTTPHandler) updateLocation(c *gin.Context) {
 }
 
 func (h *HTTPHandler) checkOut(c *gin.Context) {
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
+	var req dto.CheckOutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
-	reservationID := strField(body, "reservation_id")
-	if reservationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "reservation_id is required"})
-		return
-	}
-
-	if err := h.uc.CheckOut(c.Request.Context(), reservationID); err != nil {
+	if err := h.uc.CheckOut(c.Request.Context(), req.ReservationID); err != nil {
 		log.Error().Err(err).Msg("check-out failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"reservation_id": reservationID,
+		"reservation_id": req.ReservationID,
 		"status":         "CHECKOUT_INITIATED",
 	})
-}
-
-// --- Helpers ---
-
-func strField(m map[string]interface{}, key string) string {
-	if m == nil {
-		return ""
-	}
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
 }

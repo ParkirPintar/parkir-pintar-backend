@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/parkir-pintar/payment/internal/dto"
 	"github.com/parkir-pintar/payment/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -61,11 +62,9 @@ func (h *HTTPHandler) retryPayment(c *gin.Context) {
 	idempotencyKey := c.GetHeader("Idempotency-Key")
 
 	// Try to read body for additional params (optional)
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err == nil && body != nil {
-		if key := strField(body, "idempotency_key"); key != "" {
-			idempotencyKey = key
-		}
+	var req dto.RetryPaymentRequest
+	if err := c.ShouldBindJSON(&req); err == nil && req.IdempotencyKey != "" {
+		idempotencyKey = req.IdempotencyKey
 	}
 
 	p, err := h.uc.RetryPayment(c.Request.Context(), id, idempotencyKey)
@@ -83,16 +82,4 @@ func (h *HTTPHandler) retryPayment(c *gin.Context) {
 		"method":     p.Method,
 		"qr_code":    p.QRCode,
 	})
-}
-
-// --- Helpers ---
-
-func strField(m map[string]interface{}, key string) string {
-	if m == nil {
-		return ""
-	}
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
 }

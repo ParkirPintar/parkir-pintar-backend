@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/parkir-pintar/reservation/internal/dto"
 	"github.com/parkir-pintar/reservation/internal/usecase"
 	"github.com/rs/zerolog/log"
 )
@@ -29,44 +30,20 @@ func (h *HTTPHandler) Register(r *gin.Engine) {
 }
 
 func (h *HTTPHandler) createReservation(c *gin.Context) {
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
+	var req dto.CreateReservationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
-	driverID := strField(body, "driver_id")
-	if driverID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "driver_id is required"})
-		return
-	}
-	mode := strField(body, "mode")
-	if mode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "mode is required (SYSTEM_ASSIGNED or USER_SELECTED)"})
-		return
-	}
-	if mode != "SYSTEM_ASSIGNED" && mode != "USER_SELECTED" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "mode must be SYSTEM_ASSIGNED or USER_SELECTED"})
-		return
-	}
-	vehicleType := strField(body, "vehicle_type")
-	if vehicleType == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type is required"})
-		return
-	}
-	if vehicleType != "CAR" && vehicleType != "MOTORCYCLE" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "vehicle_type must be CAR or MOTORCYCLE"})
-		return
-	}
-	spotID := strField(body, "spot_id")
-	if mode == "USER_SELECTED" && spotID == "" {
+	if req.Mode == "USER_SELECTED" && req.SpotID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "spot_id is required for USER_SELECTED mode"})
 		return
 	}
 
 	idempotencyKey := c.GetHeader("Idempotency-Key")
 
-	res, err := h.uc.CreateReservation(c.Request.Context(), driverID, mode, vehicleType, spotID, idempotencyKey)
+	res, err := h.uc.CreateReservation(c.Request.Context(), req.DriverID, req.Mode, req.VehicleType, req.SpotID, idempotencyKey)
 	if err != nil {
 		if isFailedPreconditionHTTP(err) {
 			c.JSON(http.StatusConflict, gin.H{"message": err.Error()})
@@ -146,19 +123,13 @@ func (h *HTTPHandler) holdSpot(c *gin.Context) {
 		return
 	}
 
-	var body map[string]interface{}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body"})
+	var req dto.HoldSpotRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 
-	driverID := strField(body, "driver_id")
-	if driverID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "driver_id is required"})
-		return
-	}
-
-	heldUntil, err := h.uc.HoldSpot(c.Request.Context(), spotID, driverID)
+	heldUntil, err := h.uc.HoldSpot(c.Request.Context(), spotID, req.DriverID)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"message": err.Error()})
 		return
@@ -171,16 +142,6 @@ func (h *HTTPHandler) holdSpot(c *gin.Context) {
 }
 
 // --- Helpers ---
-
-func strField(m map[string]interface{}, key string) string {
-	if m == nil {
-		return ""
-	}
-	if v, ok := m[key].(string); ok {
-		return v
-	}
-	return ""
-}
 
 func formatTime(t time.Time) string {
 	if t.IsZero() {
