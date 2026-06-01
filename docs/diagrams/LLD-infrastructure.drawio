@@ -143,8 +143,8 @@
         <mxCell id="db-sg" value="DB Subnet Group: private_3a + private_3b" style="text;html=1;align=left;fontSize=8;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="160" y="1100" width="280" height="20" as="geometry" />
         </mxCell>
-        <!-- Amazon MQ -->
-        <mxCell id="mq" value="Amazon MQ: parkirpintar&#xa;RabbitMQ 3.13 | mq.m5.large&#xa;SINGLE_INSTANCE | Port: 5671 (AMQPS)&#xa;Consistent Hash Exchange (spot_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <!-- Self-managed RabbitMQ on EC2 -->
+        <mxCell id="mq" value="Self-managed RabbitMQ 3.13&#xa;EC2 t3.small | Port: 5672 (AMQP)&#xa;Consistent Hash Exchange (spot_id)&#xa;Management UI: :15672" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="160" y="1140" width="280" height="70" as="geometry" />
         </mxCell>
         <!-- ElastiCache -->

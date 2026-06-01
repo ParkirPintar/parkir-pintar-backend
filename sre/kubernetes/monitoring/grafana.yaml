@@ -44,6 +44,14 @@ data:
             enabled: true
           lokiSearch:
             datasourceUid: loki
+      - name: CloudWatch
+        type: cloudwatch
+        uid: cloudwatch
+        access: proxy
+        editable: false
+        jsonData:
+          authType: default
+          defaultRegion: ap-southeast-3
       - name: Analytics DB
         type: postgres
         uid: analytics-db
@@ -126,7 +134,17 @@ spec:
             - name: dashboard-provider
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
-              mountPath: /var/lib/grafana/dashboards
+              mountPath: /var/lib/grafana/dashboards/overview.json
+              subPath: overview.json
+            - name: dashboards-traces
+              mountPath: /var/lib/grafana/dashboards/traces.json
+              subPath: traces.json
+            - name: dashboards-topology
+              mountPath: /var/lib/grafana/dashboards/istio-network-topology.json
+              subPath: istio-network-topology.json
+            - name: dashboards-infra
+              mountPath: /var/lib/grafana/dashboards/infra.json
+              subPath: infra.json
             - name: data
               mountPath: /var/lib/grafana
               subPath: grafana-data
@@ -147,6 +165,15 @@ spec:
         - name: dashboards
           configMap:
             name: grafana-dashboards
+        - name: dashboards-traces
+          configMap:
+            name: grafana-dashboard-traces
+        - name: dashboards-topology
+          configMap:
+            name: grafana-dashboard-topology
+        - name: dashboards-infra
+          configMap:
+            name: grafana-dashboard-infra
         - name: data
           emptyDir: {}
 ---

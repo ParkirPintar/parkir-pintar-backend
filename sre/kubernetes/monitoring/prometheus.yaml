@@ -126,6 +126,16 @@ data:
           - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
             action: keep
             regex: "true"
+
+      # RabbitMQ runs on EC2 (10.0.25.196) — rabbitmq_prometheus plugin on port 15692
+      - job_name: "rabbitmq"
+        scheme: http
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["10.0.25.196:15692"]
+            labels:
+              app: rabbitmq
+              instance: parkirpintar-rabbitmq
 ---
 apiVersion: apps/v1
 kind: Deployment

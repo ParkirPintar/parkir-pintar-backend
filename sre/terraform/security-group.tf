@@ -16,7 +16,7 @@ resource "aws_security_group" "parkirpintar" {
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }
-  # RabbitMQ AMQPS (TLS — Amazon MQ)
+  # RabbitMQ AMQPS (TLS — legacy, kept for backward compatibility)
   ingress {
     from_port   = 5671
     to_port     = 5671
@@ -27,6 +27,13 @@ resource "aws_security_group" "parkirpintar" {
   ingress {
     from_port   = 15672
     to_port     = 15672
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+  # RabbitMQ Prometheus metrics (rabbitmq_prometheus plugin)
+  ingress {
+    from_port   = 15692
+    to_port     = 15692
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }

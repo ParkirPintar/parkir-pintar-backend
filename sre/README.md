@@ -440,10 +440,10 @@ Default credentials ada di `secrets.yaml` (`grafana-secret` → `admin-password`
 | Komponen | Port | Fungsi |
 |---|---|---|
 | OTel Collector | 4317 (gRPC), 4318 (HTTP) | Receiver traces + metrics dari semua service |
-| Prometheus | 9090 | Scrape metrics dari OTel Collector (`:8889`) + pod annotations |
+| Prometheus | 9090 | Scrape metrics dari OTel Collector (`:8889`) + pod annotations + RabbitMQ (`:15692`) |
 | Loki | 3100 | Aggregasi logs dari Promtail |
 | Tempo | 3200, 4317, 4318 | Penyimpanan traces dari OTel Collector |
-| Grafana | 3000 | Dashboard — datasource: Prometheus, Loki, Tempo, Analytics DB (PostgreSQL) |
+| Grafana | 3000 | Dashboard — datasource: Prometheus, Loki, Tempo, CloudWatch, Analytics DB (PostgreSQL) |
 | Promtail | DaemonSet | Collect logs dari semua pod, kirim ke Loki |
 | Beyla | DaemonSet | eBPF-based auto-instrumentation (zero-code tracing) |
 | Kiali | 20001 | Service mesh topology, traffic visualization, Istio config validation (deployed in `istio-system`) |
@@ -456,6 +456,9 @@ Service (zerolog + OTel SDK, HTTP/protobuf)
   ├── traces  → OTel Collector :4318 (HTTP) → Tempo
   ├── metrics → OTel Collector :4318 (HTTP) → Prometheus (via :8889)
   └── logs    → stdout → Promtail → Loki
+
+RabbitMQ (rabbitmq_prometheus plugin)
+  └── metrics → Prometheus :15692 (direct scrape)
                                         │
                                     Grafana (unified dashboard)
 ```
@@ -534,8 +537,8 @@ terraform output github_actions_role_arn
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `failed to connect to RabbitMQ` | Amazon MQ pakai `amqps://` (TLS, port 5671), security group cuma allow 5672 | Tambah port 5671 di security group (`security-group.tf`) |
-| `connection reset by peer` on RabbitMQ | Go code pakai `amqp.Dial()` tapi URL `amqps://` | Pakai `amqp.DialTLS()` untuk URL `amqps://` — sudah di-handle di code |
+| `failed to connect to RabbitMQ` | Self-managed RabbitMQ on EC2 pakai `amqp://` (plain, port 5672), pastikan security group allow port 5672 | Verify security group rule di `security-group.tf` allow inbound 5672 dari VPC CIDR |
+| `connection reset by peer` on RabbitMQ | EC2 instance belum selesai provisioning atau RabbitMQ service belum start | SSH ke instance, cek `systemctl status rabbitmq-server`. Pastikan user_data script selesai |
 | Liveness probe HTTP 500 | Istio sidecar rewrite gRPC probe ke HTTP, custom JSON codec break gRPC health check | Pakai HTTP health endpoint (`/healthz` on port 8081) instead of gRPC probe |
 | `GLIBC_2.39 not found` | Billing service pakai `gorules/zen-go` (CGO/Rust), builder glibc > runtime glibc | Billing Dockerfile pakai `debian:trixie-slim` sebagai runtime |
 | `relation "reservations" does not exist` | DB migration belum dijalankan | Jalankan `kubectl apply -f kubernetes/base/db-migrate-job.yaml` — job akan auto-create databases lalu run migrations |

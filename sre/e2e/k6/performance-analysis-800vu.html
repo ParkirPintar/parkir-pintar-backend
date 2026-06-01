@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ParkirPintar — 800 VU Performance Analysis</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #f8fafc; }
+    h2 { font-size: 1.4rem; margin: 2rem 0 1rem; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+    h3 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: #cbd5e1; }
+    .subtitle { color: #64748b; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; }
+    .card-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.25rem; }
+    .card-value { font-size: 2rem; font-weight: 700; color: #f8fafc; }
+    .card-value.green { color: #4ade80; }
+    .card-value.yellow { color: #fbbf24; }
+    .card-value.red { color: #f87171; }
+    .card-sub { font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #334155; }
+    th { background: #1e293b; color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { color: #e2e8f0; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pass { background: #064e3b; color: #6ee7b7; }
+    .badge-warn { background: #78350f; color: #fde68a; }
+    .progress-bar { background: #334155; border-radius: 4px; height: 10px; overflow: hidden; margin-top: 0.5rem; }
+    .progress-fill { height: 100%; border-radius: 4px; }
+    .progress-fill.green { background: #4ade80; }
+    .progress-fill.yellow { background: #fbbf24; }
+    .progress-fill.red { background: #f87171; }
+    .section { background: #1e293b; border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; margin: 1rem 0; }
+    .tag { display: inline-block; background: #334155; color: #94a3b8; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.25rem; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #334155; color: #64748b; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>🅿️ ParkirPintar — 800 VU Performance Analysis</h1>
+  <p class="subtitle">Date: 1 June 2026 &nbsp;|&nbsp; Duration: 2m 30s &nbsp;|&nbsp; Max VUs: 800 &nbsp;|&nbsp; 400 parking spots (150 CAR + 250 MOTO)</p>
+
+  <!-- Summary -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Throughput</div>
+      <div class="card-value green">629 req/s</div>
+      <div class="card-sub">93,852 total requests</div>
+    </div>
+    <div class="card">
+      <div class="card-label">P95 Latency</div>
+      <div class="card-value green">627 ms</div>
+      <div class="card-sub">Threshold: &lt; 3,000 ms ✓</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Checkout P95</div>
+      <div class="card-value green">325 ms</div>
+      <div class="card-sub">Threshold: &lt; 2,000 ms ✓</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Iterations</div>
+      <div class="card-value">45,086</div>
+      <div class="card-sub">302 iter/s</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Peak Node CPU</div>
+      <div class="card-value yellow">62%</div>
+      <div class="card-sub">Headroom to 80% threshold</div>
+    </div>
+  </div>
+
+  <!-- Node CPU -->
+  <h2>🖥️ EKS Node CPU — During 800 VU Load Test</h2>
+  <table>
+    <thead>
+      <tr><th>Node</th><th>Peak Avg CPU</th><th>Peak Max CPU</th><th>Utilization</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Node 1 (i-0efe)</td><td>13.8%</td><td>21.5%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:21.5%"></div></div></td>
+        <td><span class="badge badge-pass">LIGHT</span></td></tr>
+      <tr><td>Node 2 (i-0af1)</td><td>48.2%</td><td>62.0%</td>
+        <td><div class="progress-bar"><div class="progress-fill yellow" style="width:62%"></div></div></td>
+        <td><span class="badge badge-warn">MODERATE</span></td></tr>
+      <tr><td>Node 3 (i-0e91)</td><td>48.7%</td><td>54.0%</td>
+        <td><div class="progress-bar"><div class="progress-fill yellow" style="width:54%"></div></div></td>
+        <td><span class="badge badge-warn">MODERATE</span></td></tr>
+      <tr><td>Node 4 (i-0d47)</td><td>37.2%</td><td>40.2%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:40.2%"></div></div></td>
+        <td><span class="badge badge-pass">OK</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- RDS -->
+  <h2>🐘 RDS Read Replica</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">Peak CPU</div>
+      <div class="card-value green">6.5%</div>
+      <div class="card-sub">db.t3.micro — not a bottleneck</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Verdict</div>
+      <div class="card-value green">No upgrade needed</div>
+      <div class="card-sub">Redis cache absorbs read load</div>
+    </div>
+  </div>
+
+  <!-- Pod Memory -->
+  <h2>📦 Pod Memory — Peak During Load</h2>
+  <table>
+    <thead>
+      <tr><th>Service</th><th>Peak Memory</th><th>Limit</th><th>Utilization</th><th>Bar</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Search</td><td>42.1 MB</td><td>256 Mi</td><td>16%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:16%"></div></div></td></tr>
+      <tr><td>Reservation</td><td>37.9 MB</td><td>256 Mi</td><td>15%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:15%"></div></div></td></tr>
+      <tr><td>Presence</td><td>38.3 MB</td><td>256 Mi</td><td>15%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:15%"></div></div></td></tr>
+      <tr><td>Payment</td><td>37.9 MB</td><td>256 Mi</td><td>15%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:15%"></div></div></td></tr>
+      <tr><td>Billing</td><td>37.4 MB</td><td>256 Mi</td><td>15%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:15%"></div></div></td></tr>
+      <tr><td>Notification</td><td>37.7 MB</td><td>128 Mi</td><td>29%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:29%"></div></div></td></tr>
+      <tr><td>Kong Gateway</td><td>37.8 MB</td><td>512 Mi</td><td>7%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:7%"></div></div></td></tr>
+      <tr><td>Analytics</td><td>32.6 MB</td><td>256 Mi</td><td>13%</td>
+        <td><div class="progress-bar"><div class="progress-fill green" style="width:13%"></div></div></td></tr>
+    </tbody>
+  </table>
+
+  <!-- Comparison -->
+  <h2>📈 Scale Comparison: 120 VU vs 800 VU</h2>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>120 VUs</th><th>800 VUs</th><th>Scale Factor</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Throughput</td><td>103 req/s</td><td>629 req/s</td><td>6.1x</td></tr>
+      <tr><td>Node Peak CPU</td><td>14.3%</td><td>62.0%</td><td>4.3x</td></tr>
+      <tr><td>RDS CPU</td><td>6.7%</td><td>6.5%</td><td>Same</td></tr>
+      <tr><td>Pod Memory</td><td>42.8 MB</td><td>42.1 MB</td><td>Same (no leak)</td></tr>
+      <tr><td>P95 Latency</td><td>515 ms</td><td>627 ms</td><td>+22%</td></tr>
+      <tr><td>Checkout P95</td><td>375 ms</td><td>325 ms</td><td>-13% (faster)</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Scenario Results -->
+  <h2>📊 Scenario Results (800 VU)</h2>
+  <table>
+    <thead>
+      <tr><th>Scenario</th><th>VUs</th><th>Key Metrics</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Happy Path (System-Assigned)</td><td>50</td><td>Reserve 14%, Checkin 97%, Checkout 94%</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Happy Path (User-Selected)</td><td>30</td><td>Hold 14%, Reserve 64%, Checkin 100%</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>War Booking (400 spots)</td><td>700</td><td>3,504 holds won, 33,644 correctly rejected</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Cancel Free</td><td>20 (shared)</td><td>100% pass</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Cancel With Fee</td><td>20 (shared)</td><td>90% pass</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Overnight Fee</td><td>20 (shared)</td><td>100% checkout + field present</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Payment Retry</td><td>20 (shared)</td><td>100% pass</td><td><span class="badge badge-pass">PASS</span></td></tr>
+      <tr><td>Reservation Expiry</td><td>20 (shared)</td><td>100% pass</td><td><span class="badge badge-pass">PASS</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- Infrastructure -->
+  <h2>🏗️ Infrastructure (Terraform)</h2>
+  <table>
+    <thead>
+      <tr><th>Resource</th><th>Spec</th><th>Monthly Cost</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>EKS Cluster</td><td>1 cluster, 4× t3.medium (2 vCPU, 4 GiB)</td><td>~$175</td></tr>
+      <tr><td>RDS PostgreSQL</td><td>4× db.t3.micro Multi-AZ + 1 read replica</td><td>~$126</td></tr>
+      <tr><td>ElastiCache Redis</td><td>cache.t3.small × 2 (Multi-AZ)</td><td>~$50</td></tr>
+      <tr><td>RabbitMQ (EC2)</td><td>t3.small — self-managed</td><td>~$19</td></tr>
+      <tr><td>NAT Gateway</td><td>1×</td><td>~$35</td></tr>
+      <tr><td>EC2 Observability</td><td>t3.medium</td><td>~$38</td></tr>
+      <tr><td>ELB (Istio Ingress)</td><td>Classic LB</td><td>~$18</td></tr>
+      <tr><td><strong>Total</strong></td><td></td><td><strong>~$461/mo</strong></td></tr>
+    </tbody>
+  </table>
+
+  <!-- Conclusions -->
+  <h2>✅ Conclusions</h2>
+  <div class="section">
+    <ul style="list-style:none;padding:0;">
+      <li style="margin-bottom:0.75rem;">✅ <strong>System handles 800 concurrent users at 629 req/s</strong> with P95 latency 627ms</li>
+      <li style="margin-bottom:0.75rem;">✅ <strong>Linear scaling</strong> — 6.7x VUs → 6.1x throughput, only 4.3x CPU increase</li>
+      <li style="margin-bottom:0.75rem;">✅ <strong>No memory leaks</strong> — pod memory flat at ~38-42 MB regardless of load</li>
+      <li style="margin-bottom:0.75rem;">✅ <strong>RDS not a bottleneck</strong> — 6.5% CPU at 800 VUs (Redis cache effective)</li>
+      <li style="margin-bottom:0.75rem;">✅ <strong>Double-booking prevention works at scale</strong> — 33,644 concurrent attempts correctly rejected</li>
+      <li style="margin-bottom:0.75rem;">✅ <strong>Headroom remaining</strong> — can push to ~1,000-1,200 VUs before HPA triggers at 80% CPU</li>
+      <li style="margin-bottom:0.75rem;">💰 <strong>Cost: $461/mo</strong> for 800 concurrent user capacity (400 parking spots)</li>
+    </ul>
+  </div>
+
+  <footer>
+    ParkirPintar Performance Analysis — 1 June 2026 &nbsp;|&nbsp; k6 v0.51 &nbsp;|&nbsp; 800 VUs, 400 spots, 2m30s &nbsp;|&nbsp; ap-southeast-3 (Jakarta)
+  </footer>
+
+</div>
+</body>
+</html>

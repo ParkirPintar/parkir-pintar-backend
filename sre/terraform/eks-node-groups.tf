@@ -40,6 +40,11 @@ resource "aws_iam_role_policy_attachment" "amazon_ssm_managed_instance_core" {
   role       = aws_iam_role.nodes_parkirpintar.name
 }
 
+resource "aws_iam_role_policy_attachment" "nodes_cloudwatch_read_only" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
+  role       = aws_iam_role.nodes_parkirpintar.name
+}
+
 
 resource "aws_eks_node_group" "parkirpintar" {
   cluster_name    = aws_eks_cluster.parkirpintar.name

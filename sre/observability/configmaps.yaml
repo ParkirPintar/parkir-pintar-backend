@@ -50,6 +50,10 @@ data:
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
+      - job_name: 'rabbitmq'
+        static_configs:
+          - targets: ['10.0.25.196:15692']
+        metrics_path: /metrics
 ---
 apiVersion: v1
 kind: ConfigMap

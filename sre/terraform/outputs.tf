@@ -31,7 +31,7 @@ output "redis_endpoint" {
 }
 
 output "rabbitmq_endpoint" {
-  value = aws_mq_broker.parkirpintar.instances[0].endpoints
+  value = "amqp://${aws_instance.rabbitmq.private_ip}:5672"
 }
 
 # ---------------------------------------------------------------------------

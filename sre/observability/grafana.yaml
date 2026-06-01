@@ -72,6 +72,14 @@ data:
             enabled: true
           lokiSearch:
             datasourceUid: loki
+      - name: CloudWatch
+        type: cloudwatch
+        uid: cloudwatch
+        access: proxy
+        editable: false
+        jsonData:
+          authType: default
+          defaultRegion: ap-southeast-3
       - name: Analytics DB
         type: postgres
         uid: analytics-db

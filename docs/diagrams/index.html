@@ -65,6 +65,7 @@
     <a href="#hld-mermaid">HLD (Mermaid)</a>
     <a href="#component">Component</a>
     <a href="#newman">🧪 Newman E2E</a>
+    <a href="#loadtest">📊 Load Test Reports</a>
 </nav>
 
 <main>
@@ -621,6 +622,49 @@ POST /v1/payments/{id}/retry                   → Payment.RetryPayment</pre>
     <h2>🖼️ Additional Diagram (image.png)</h2>
     <div class="section-body white-bg" style="text-align:center;">
         <img src="image.png" alt="Additional diagram" class="diagram-img" />
+    </div>
+</section>
+
+<!-- LOAD TEST REPORTS -->
+<section id="loadtest" class="section">
+    <h2>📊 Load Test Reports (k6)</h2>
+    <div class="controls">
+        <span>Performance & stress test results — 800 concurrent users, 400 parking spots</span>
+    </div>
+    <div class="newman-panel">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem; margin-bottom:1rem;">
+            <a href="../../sre/e2e/k6/k6-dashboard-800vu.html" target="_blank" style="text-decoration:none; display:block; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:1.5rem; transition:border-color 0.2s;">
+                <div style="font-size:1.2rem; margin-bottom:0.5rem;">📈 k6 Dashboard — 800 VU</div>
+                <div style="color:#94a3b8; font-size:0.85rem;">Interactive k6 native dashboard with timeline charts, throughput graphs, and latency distribution. 629 req/s peak.</div>
+                <div style="margin-top:0.75rem; color:#4ade80; font-size:0.8rem;">↗ Open Report</div>
+            </a>
+            <a href="../../sre/e2e/k6/performance-analysis-800vu.html" target="_blank" style="text-decoration:none; display:block; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:1.5rem; transition:border-color 0.2s;">
+                <div style="font-size:1.2rem; margin-bottom:0.5rem;">🏗️ Performance Analysis — 800 VU</div>
+                <div style="color:#94a3b8; font-size:0.85rem;">CPU & memory analysis per node and pod. EKS node peak 62%, pod memory flat at ~40MB. Infrastructure cost breakdown.</div>
+                <div style="margin-top:0.75rem; color:#4ade80; font-size:0.8rem;">↗ Open Report</div>
+            </a>
+            <a href="../../sre/e2e/k6/smoke-test-report.html" target="_blank" style="text-decoration:none; display:block; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:1.5rem; transition:border-color 0.2s;">
+                <div style="font-size:1.2rem; margin-bottom:0.5rem;">🔥 Smoke Test</div>
+                <div style="color:#94a3b8; font-size:0.85rem;">1 VU, 1 iteration — sanity check all endpoints respond correctly before load testing.</div>
+                <div style="margin-top:0.75rem; color:#4ade80; font-size:0.8rem;">↗ Open Report</div>
+            </a>
+            <a href="../../sre/e2e/k6/war-booking-report.html" target="_blank" style="text-decoration:none; display:block; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:1.5rem; transition:border-color 0.2s;">
+                <div style="font-size:1.2rem; margin-bottom:0.5rem;">⚔️ War Booking Stress Test</div>
+                <div style="color:#94a3b8; font-size:0.85rem;">100 VUs racing for same spots — validates Redis SETNX lock and RabbitMQ consistent hash exchange.</div>
+                <div style="margin-top:0.75rem; color:#4ade80; font-size:0.8rem;">↗ Open Report</div>
+            </a>
+        </div>
+        <div style="background:#0f172a; border-radius:8px; padding:1rem; margin-top:1rem;">
+            <h3 style="font-size:0.9rem; color:#94a3b8; margin-bottom:0.5rem;">Quick Summary (800 VU Test)</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:0.75rem; color:#e2e8f0; font-size:0.85rem;">
+                <div><span style="color:#4ade80; font-weight:700;">629 req/s</span><br><span style="color:#64748b;">Throughput</span></div>
+                <div><span style="color:#4ade80; font-weight:700;">627 ms</span><br><span style="color:#64748b;">P95 Latency</span></div>
+                <div><span style="color:#fbbf24; font-weight:700;">62%</span><br><span style="color:#64748b;">Peak Node CPU</span></div>
+                <div><span style="color:#4ade80; font-weight:700;">~40 MB</span><br><span style="color:#64748b;">Pod Memory (flat)</span></div>
+                <div><span style="color:#4ade80; font-weight:700;">6.5%</span><br><span style="color:#64748b;">RDS CPU</span></div>
+                <div><span style="color:#4ade80; font-weight:700;">$461/mo</span><br><span style="color:#64748b;">Infra Cost</span></div>
+            </div>
+        </div>
     </div>
 </section>
 

@@ -106,7 +106,7 @@
         <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCDD2;strokeColor=#C62828;fontSize=9;fontStyle=1;" value="ElastiCache Redis 7.0&#xa;cache.t3.small&#xa;(Inventory Lock | Cache | Idempotency)" vertex="1">
           <mxGeometry height="55" width="240" x="1200" y="980" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontSize=9;fontStyle=1;" value="Amazon MQ (RabbitMQ 3.13)&#xa;mq.t3.micro&#xa;Consistent Hash Exchange (spot_id)" vertex="1">
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#6A1B9A;fontSize=9;fontStyle=1;" value="Self-managed RabbitMQ 3.13&#xa;EC2 t3.small&#xa;Consistent Hash Exchange (spot_id)" vertex="1">
           <mxGeometry height="55" width="240" x="1070" y="1100" as="geometry" />
         </mxCell>
         <mxCell id="ecr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=9;fontStyle=1;" value="ECR&#xa;8 Repos&#xa;(scan on push)" vertex="1">

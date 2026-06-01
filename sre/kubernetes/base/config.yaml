@@ -99,4 +99,4 @@ metadata:
   namespace: parkir-pintar
 type: Opaque
 stringData:
-  RABBITMQ_URL: "amqps://parkirpintar:parkirpintar12345%23@b-4b6ce9b9-dadd-400e-88f3-5c9eee6a9e27.mq.ap-southeast-3.on.aws:5671"
+  RABBITMQ_URL: "amqp://parkirpintar:parkirpintar12345%23@10.0.25.196:5672"

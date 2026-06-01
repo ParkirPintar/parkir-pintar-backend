@@ -1,0 +1,456 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-infra
+  namespace: monitoring
+data:
+  infra.json: |
+    {
+      "uid": "parkir-infra",
+      "title": "Parkir Pintar - Infrastructure",
+      "description": "CPU, Memory, RabbitMQ, Redis, PostgreSQL metrics per service and pod",
+      "tags": ["parkir-pintar", "infra", "resources"],
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "custom",
+            "query": "parkir-pintar,monitoring",
+            "current": { "text": "parkir-pintar", "value": "parkir-pintar" }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "🖥️ Pod Memory Usage (Envoy Sidecar)",
+          "description": "Memory allocated by Istio sidecar proxy per pod",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "envoy_server_memory_allocated{namespace=\"$namespace\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 2,
+          "title": "⚡ Pod CPU Usage (Istio Agent)",
+          "description": "CPU seconds consumed by Istio agent per pod",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(istio_agent_process_cpu_seconds_total{namespace=\"$namespace\"}[5m])",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "percentunit", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 3,
+          "title": "📊 Request Rate per Service",
+          "description": "Requests/sec per destination service from Istio metrics",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(istio_requests_total{destination_service_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+              "legendFormat": "{{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 15 } }
+          }
+        },
+        {
+          "id": 4,
+          "title": "⏱️ Request Latency P95 per Service",
+          "description": "95th percentile request duration per service",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_service_namespace=\"parkir-pintar\"}[5m])) by (le, destination_service_name))",
+              "legendFormat": "P95 {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 5,
+          "title": "🔌 Active Connections per Pod",
+          "description": "Total active connections tracked by Envoy per pod",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "envoy_server_total_connections{namespace=\"$namespace\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 6,
+          "title": "❌ Error Rate per Service (5xx)",
+          "description": "Rate of 5xx responses per service",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(istio_requests_total{destination_service_namespace=\"parkir-pintar\",response_code=~\"5.*\"}[5m])) by (destination_service_name)",
+              "legendFormat": "5xx {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 20 }, "color": { "mode": "palette-classic" } }
+          }
+        },
+        {
+          "id": 7,
+          "title": "🐘 PostgreSQL Query Duration (from traces)",
+          "description": "DB client operation duration from OpenTelemetry span metrics",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(traces_db_client_operation_duration_seconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P95 {{span_name}}"
+            },
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(traces_db_client_operation_duration_seconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P50 {{span_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 8,
+          "title": "📨 RabbitMQ Message Processing Duration (from traces)",
+          "description": "Time to process messages from RabbitMQ queues",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(traces_messaging_process_duration_seconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P95 {{span_name}}"
+            },
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(traces_messaging_process_duration_seconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P50 {{span_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 9,
+          "title": "🐰 RabbitMQ — Queued Messages",
+          "description": "Messages ready to be delivered in RabbitMQ queues",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rabbitmq_queue_messages_ready",
+              "legendFormat": "{{queue}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 50 } }
+          }
+        },
+        {
+          "id": 10,
+          "title": "🐰 RabbitMQ — Publish/Deliver Rate",
+          "description": "Message publish and deliver rates",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(rabbitmq_queue_messages_published_total[5m])",
+              "legendFormat": "publish {{queue}}"
+            },
+            {
+              "expr": "rate(rabbitmq_queue_messages_delivered_total[5m])",
+              "legendFormat": "deliver {{queue}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 15 } }
+          }
+        },
+        {
+          "id": 11,
+          "title": "🐰 RabbitMQ — Connections & Channels",
+          "description": "Active connections and channels to RabbitMQ",
+          "type": "stat",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rabbitmq_connections",
+              "legendFormat": "Connections"
+            },
+            {
+              "expr": "rabbitmq_channels",
+              "legendFormat": "Channels"
+            },
+            {
+              "expr": "rabbitmq_queues",
+              "legendFormat": "Queues"
+            }
+          ],
+          "options": { "graphMode": "area", "textMode": "auto" }
+        },
+        {
+          "id": 12,
+          "title": "🔄 gRPC Request Rate per Operation",
+          "description": "RPC server request rate from span metrics",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(traces_rpc_server_duration_seconds_count[5m])) by (span_name)",
+              "legendFormat": "{{span_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 13,
+          "title": "🔄 gRPC Latency P95 per Operation",
+          "description": "RPC server duration P95 from span metrics",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(traces_rpc_server_duration_seconds_bucket[5m])) by (le, span_name))",
+              "legendFormat": "P95 {{span_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 14,
+          "title": "📈 Upstream Request Retries",
+          "description": "Envoy upstream request retries — indicates service instability",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(envoy_cluster_upstream_rq_retry{namespace=\"$namespace\"}[5m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 15 } }
+          }
+        },
+        {
+          "id": 15,
+          "title": "🌐 Network I/O per Pod",
+          "description": "Network bytes received and transmitted per pod",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(istio_tcp_received_bytes_total{destination_service_namespace=\"parkir-pintar\"}[5m])) by (destination_service_name)",
+              "legendFormat": "rx {{destination_service_name}}"
+            },
+            {
+              "expr": "sum(rate(istio_tcp_sent_bytes_total{source_workload_namespace=\"parkir-pintar\"}[5m])) by (source_workload)",
+              "legendFormat": "tx {{source_workload}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "Bps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 16,
+          "title": "🐘 RDS — CPU Utilization",
+          "description": "CPU utilization percentage for all RDS instances",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "CPUUtilization",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "{{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 17,
+          "title": "🐘 RDS — Database Connections",
+          "description": "Active database connections per RDS instance",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 56 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "DatabaseConnections",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "{{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 18,
+          "title": "🐘 RDS — Freeable Memory",
+          "description": "Available RAM on each RDS instance",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 64 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "FreeableMemory",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "{{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 19,
+          "title": "🐘 RDS — Read/Write IOPS",
+          "description": "Disk I/O operations per second for RDS instances",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 64 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "ReadIOPS",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "read {{DBInstanceIdentifier}}"
+            },
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "WriteIOPS",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "write {{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "iops", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 20,
+          "title": "🐘 RDS — Read/Write Latency",
+          "description": "Average time per disk I/O operation",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "ReadLatency",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "read {{DBInstanceIdentifier}}"
+            },
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "WriteLatency",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "write {{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        },
+        {
+          "id": 21,
+          "title": "🐘 RDS — Free Storage Space",
+          "description": "Available storage space on each RDS instance",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 72 },
+          "datasource": { "type": "cloudwatch", "uid": "cloudwatch" },
+          "targets": [
+            {
+              "namespace": "AWS/RDS",
+              "metricName": "FreeStorageSpace",
+              "dimensions": { "DBInstanceIdentifier": ["parkirpintar-reservation", "parkirpintar-reservation-replica", "parkirpintar-billing", "parkirpintar-payment", "parkirpintar-analytics"] },
+              "statistics": ["Average"],
+              "period": "60",
+              "region": "ap-southeast-3",
+              "label": "{{DBInstanceIdentifier}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+          }
+        }
+      ],
+      "schemaVersion": 39
+    }
