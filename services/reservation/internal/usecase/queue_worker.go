@@ -122,14 +122,26 @@ func (w *QueueWorker) processMessage(ctx context.Context, msg amqp.Delivery) {
 		logger.Warn().Err(err).Msg("lock acquisition failed")
 
 		if bm.Mode == string(model.ModeSystemAssigned) {
-			// For system-assigned: nack for requeue so the message can be
-			// retried (the usecase will pick a new spot on the next attempt)
-			_ = msg.Nack(false, true)
+			// For system-assigned: try next available spot instead of requeue
+			// (requeue with same spot_id causes infinite loop)
+			nextSpot, searchErr := w.search.GetFirstAvailable(ctx, bm.VehicleType)
+			if searchErr != nil || nextSpot == "" || nextSpot == bm.SpotID {
+				logger.Warn().Msg("no alternative spot available, rejecting")
+				_ = msg.Nack(false, false)
+				return
+			}
+			logger.Info().Str("new_spot", nextSpot).Msg("retrying with next available spot")
+			bm.SpotID = nextSpot
+			if err := w.repo.LockSpot(ctx, nextSpot); err != nil {
+				logger.Warn().Err(err).Msg("retry lock also failed, rejecting")
+				_ = msg.Nack(false, false)
+				return
+			}
 		} else {
 			// For user-selected: the specific spot is taken, nack without requeue
 			_ = msg.Nack(false, false)
+			return
 		}
-		return
 	}
 
 	// Create reservation record
